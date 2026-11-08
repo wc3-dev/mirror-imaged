@@ -65,8 +65,9 @@ public sealed class GameRunner(string game, string documents, string maps)
 
     const string AtLoginSays =
         "needs Sven: the game never got past its Battle.net login (it didn't open the account). Seen every time the runner " +
-        "ran under Claude Code's Bash tool, where the game's window stays black, and never from PowerShell (docs/facts.md): " +
-        "run the game tests from PowerShell or a normal terminal; if it happens there, look at the game in a normal window";
+        "ran under Claude Code's Bash tool, where the game's browser loads web pages from outside as a login page would, " +
+        "and never from PowerShell (docs/facts.md): run the game tests from PowerShell or a normal terminal; if it happens " +
+        "there, Sven looks at the game in a normal window (nobody else types a password into it)";
 
     /// <summary>The game's executable.</summary>
     public string Game => game;
