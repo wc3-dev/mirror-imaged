@@ -4,14 +4,17 @@ using MirrorImaged.Lua;
 
 namespace MirrorImaged.Natives;
 
-// The string and number natives as the probes strings, strings-2 and strings-3 measured them (docs/facts.md, "Strings,
+// The string and number natives as the probes strings to strings-6 measured them (docs/facts.md, "Strings,
 // numbers and hashtables"). A string is the game's bytes as UTF-8: one that isn't UTF-8 reaches C# changed (decisions
 // D38), which is where SubString and StringHash can differ from the game.
 public sealed partial class GameNatives
 {
-    const string StringsFact = "docs/facts.md, Strings, numbers and hashtables (probes strings, strings-2, strings-3)";
+    const string StringsFact = "docs/facts.md, Strings, numbers and hashtables (probes strings to strings-6)";
 
-    /// <summary>The string's length in bytes.</summary>
+    /// <summary>
+    /// The string's length in bytes. A string that isn't UTF-8 reaches C# with U+FFFD, three bytes, in place of each
+    /// bad byte (decisions D38), so its length can differ from the game's.
+    /// </summary>
     [Native(Level.Exact, Fact = StringsFact)]
     public int StringLength(string? s) => Encoding.UTF8.GetByteCount(s ?? "");
 
@@ -28,7 +31,10 @@ public sealed partial class GameNatives
         return Encoding.UTF8.GetString(bytes, start, (end < start ? bytes.Length : Math.Min(end, bytes.Length)) - start);
     }
 
-    /// <summary>The string with its ASCII letters in upper or lower case; other letters stay as they are.</summary>
+    /// <summary>
+    /// The string with its ASCII letters in upper or lower case; other letters stay as they are. A string that isn't
+    /// UTF-8 reaches C# with U+FFFD in place of each bad byte (decisions D38), and comes back so.
+    /// </summary>
     [Native(Level.Exact, Fact = StringsFact)]
     public string? StringCase(string? source, bool upper) =>
         string.Concat((source ?? "").Select(c =>
@@ -55,8 +61,9 @@ public sealed partial class GameNatives
         return (int)Lookup2(bytes);
     }
 
-    // What the game folds (strings-2, strings-3): ASCII, à to þ (÷ to × too, but not ÿ), œ, and Cyrillic; not Greek,
-    // the rest of Latin Extended-A, Armenian or full-width letters. Letters not measured are left as they are.
+    // Measured folded (strings, strings-2, strings-3): a, b, c, h, w, ä, é, ö, þ, ÷, œ, а, ё and я; measured left: ÿ, ß,
+    // ł, ą, ž, š, ő, ı, α, β, ա, ａ, ǆ and µ. The ranges a-z, à-þ, а-я and ѐ-џ are inferred from those; every other
+    // letter is left as it is, measured or not.
     static char Upper(char c) => c switch
     {
         >= 'a' and <= 'z' or >= 'à' and <= 'þ' or >= 'а' and <= 'я' => (char)(c - 32),
@@ -124,7 +131,8 @@ public sealed partial class GameNatives
     /// S2R("abc") are 0, S2R("1e3") 1. The digits make an integer, then a float in the game's arithmetic once past an
     /// integer's range, divided by 10 to the number of digits after the point: so S2R("1.5") is 1.50000012, as in the
     /// game. Close: 10 of the 77 measured strings, most with five or more digits after the point, come out a float step
-    /// from the game's.
+    /// from the game's; past the float range the sum wraps as the game's products do and the result is extrapolated
+    /// (decisions D83: 40 decimals give -1.814 where the game gives 0.123456791).
     /// </summary>
     [Native(Level.Close)]
     public float S2R(string? s)
@@ -182,12 +190,13 @@ public sealed partial class GameNatives
     public string? R2S(float r) => R2SW(r, 0, 3);
 
     /// <summary>
-    /// The number with <paramref name="precision"/> decimals (its size, at most 9), rounded half up in the game's
-    /// arithmetic, and spaces after the sign until the integer part and decimals fill <paramref name="width"/>;
-    /// precision 0 writes ".0". The game's own formatting: R2SW(1.5, 8, 2) is "     1.50", R2SW(-1.5, 4, 2) "- 1.50".
-    /// Close from 2^31 up, where the game writes about ten digits of its own and then zeros (R2S(1e20) is
-    /// "100000057600000000000.000") and this writes the float's digits, and the largest floats, which the game writes
-    /// "inf".
+    /// The number with <paramref name="precision"/> decimals (at most 9; below 0, 6 with the zeros at the end dropped but
+    /// one), rounded half up in the game's arithmetic, and spaces after the sign until the integer part and decimals fill
+    /// <paramref name="width"/>; precision 0 writes ".0". At most 255 bytes, the rest cut; "" when the length the width
+    /// asks for is past a 32-bit integer. The game's own formatting: R2SW(1.5, 8, 2) is "     1.50", R2SW(-1.5, 4, 2)
+    /// "- 1.50", R2SW(1.25, 0, -1) "1.25". Close from 2^31 up, where the game writes about ten digits of its own and then
+    /// zeros (R2S(1e20) is "100000057600000000000.000") and this writes the float's digits, for the largest floats, which
+    /// the game writes "inf", and for a number below 0 whose text passes 255 bytes, which closes the game.
     /// </summary>
     [Native(Level.Close)]
     public string? R2SW(float r, int width, int precision)
@@ -195,19 +204,32 @@ public sealed partial class GameNatives
         if (float.IsInfinity(r)) return r > 0 ? "inf" : "-inf";
         var sign = r < 0 ? "-" : "";
         r = Math.Abs(r);
-        var decimals = Math.Min(Math.Abs(precision), 9);
-        if (r >= 2147483648f) return $"{sign}{(double)r:F0}.{new string('0', Math.Max(decimals, 1))}";
-        var whole = (int)r;
-        var scale = (int)Power(10, decimals);
-        var fraction = (int)Native.mi_add(Native.mi_mul(Native.mi_sub(r, whole), scale), 0.5f);
-        if (fraction >= scale)
+        var decimals = precision < 0 ? 6 : Math.Min(precision, 9);
+        string digits, fraction;
+        if (r >= 2147483648f)
         {
-            whole++;
-            fraction -= scale;
+            digits = ((double)r).ToString("F0", CultureInfo.InvariantCulture);
+            fraction = new string('0', Math.Max(decimals, 1));
         }
-        var digits = whole.ToString(CultureInfo.InvariantCulture);
-        return $"{sign}{new string(' ', Math.Max(0, width - decimals - digits.Length))}{digits}." +
-               (decimals == 0 ? "0" : fraction.ToString(CultureInfo.InvariantCulture).PadLeft(decimals, '0'));
+        else
+        {
+            var whole = (int)r;
+            var scale = (int)Power(10, decimals);
+            var part = (int)Native.mi_add(Native.mi_mul(Native.mi_sub(r, whole), scale), 0.5f);
+            if (part >= scale)
+            {
+                whole++;
+                part -= scale;
+            }
+            digits = whole.ToString(CultureInfo.InvariantCulture);
+            fraction = decimals == 0 ? "0" : part.ToString(CultureInfo.InvariantCulture).PadLeft(decimals, '0');
+        }
+        if (precision < 0) fraction = fraction.TrimEnd('0') is { Length: > 0 } kept ? kept : "0";
+        var body = $"{digits}.{fraction}";
+        // From 2^31 the game pads nothing; the pad and the length are 32-bit integers that wrap, as the game's.
+        var pad = r >= 2147483648f ? 0 : Math.Max(0, unchecked(width - (precision == 0 ? 0 : fraction.Length) - digits.Length));
+        var length = unchecked(sign.Length + pad + body.Length);
+        return length < 0 ? "" : (sign + new string(' ', Math.Min(pad, 255)) + body)[..Math.Min(length, 255)];
     }
 
     [Native(Level.Exact, Fact = StringsFact)]

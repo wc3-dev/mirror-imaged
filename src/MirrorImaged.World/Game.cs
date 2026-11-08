@@ -100,14 +100,24 @@ public sealed class Game
     public void Seed(int seed) => _random = (uint)seed;
 
     /// <summary>
-    /// A random integer from <paramref name="low"/> up to the bounds' distance above it, both ends included: from 5 to 9
-    /// for (5, 1), as the game's GetRandomInt (docs/facts.md, "Strings, numbers and hashtables").
+    /// A random integer from <paramref name="low"/> up to the bounds' distance above it, both ends included, in 32-bit
+    /// integers that wrap as the game's GetRandomInt does (docs/facts.md, "Strings, numbers and hashtables"): from 5 to 9
+    /// for (5, 1); always <c>int.MinValue</c> for (<c>int.MinValue</c>, <c>int.MaxValue</c>), whose count of numbers
+    /// wraps to 0; past <c>int.MaxValue</c> into the negatives for (<c>int.MaxValue</c>, 0).
     /// </summary>
-    public int RandomInt(int low, int high) =>
-        unchecked((int)(low + (long)(((Next() >> 32) * (ulong)(Math.Abs((long)high - low) + 1)) >> 32)));
+    public int RandomInt(int low, int high)
+    {
+        var count = unchecked((uint)(high >= low ? high - low : low - high) + 1);
+        return unchecked(low + (int)(((Next() >> 32) * count) >> 32));
+    }
 
-    /// <summary>A random number from <paramref name="low"/> up to the bounds' distance above it, as RandomInt; from 0 to 1, never 1.</summary>
-    public float RandomReal(float low, float high) => low + Math.Abs(high - low) * ((Next() >> 40) / 16777216f);
+    /// <summary>
+    /// A random number from <paramref name="low"/> up to the bounds' distance above it, as RandomInt; from 0 to 1, never
+    /// 1. Worked out in doubles and held at the float range's ends, so finite bounds give a finite number: the game gave
+    /// numbers across (-3e38, 3e38); for (3e38, -3e38) it gave some from about 0 to 3.4e38, which this doesn't follow.
+    /// </summary>
+    public float RandomReal(float low, float high) =>
+        (float)Math.Clamp(low + Math.Abs((double)high - low) * ((Next() >> 40) / 16777216.0), -float.MaxValue, float.MaxValue);
 
     // SplitMix64: small, and the same on every platform and .NET version.
     ulong Next()

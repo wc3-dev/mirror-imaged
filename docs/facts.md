@@ -158,53 +158,71 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
 
 ## Strings, numbers and hashtables
 
-The probes `strings`, `hashtables`, `strings-2` and `strings-3` in `probes/`, run by the game runner from the
-PowerShell tool, 3.0.1.24371, single player, 11-08 (W1-3). A float is given with its bits. Every measured line is a
-case in `tests/MirrorImaged.Tests/StringNativesTests.cs`, `MathNativesTests.cs` and `HashtableNativesTests.cs`.
+The probes `strings`, `hashtables`, `strings-2` to `strings-6` in `probes/`, their game lines in
+`probes/expected/<probe>.txt`, and six probes of one `R2SW` call each, given below, all run by the game runner from the
+PowerShell tool, 3.0.1.24371, single player, 11-08 (W1-3). A float is given with its bits. Every measured line is a case
+in `tests/MirrorImaged.Tests/StringNativesTests.cs`, `MathNativesTests.cs`, `HashtableNativesTests.cs` and
+`RandomNativesTests.cs`, but for `SaveLocationHandle` and `SaveTextTagHandle`, whose handles no test can make while
+`Location` and `CreateTextTag` are Missing, and the `math.*` values left to W1-8.
 
-- A string parameter is read as Lua's `luaL_checklstring` reads it: `StringHash(nil)`, `StringLength(nil)`,
-  `StringCase(nil, true)`, `S2I(nil)`, `S2R(nil)`, `SubString(nil, 0, 1)` and `SaveStr(ht, 7, 8, nil)` raise
-  `bad argument #n to 'X' (string expected, got nil)`, `StringHash(true)` the same with `got boolean`, and a number is
-  taken as `tostring` writes it: `StringLength(12345)` is 5, `StringLength(1.5)` 3, `S2I(42)` 42, and `SubString(v, 0,
-  20)` gives `1e+20`, `3.0`, `-0.0`, `0.1`, `123456789`, `2.147484e+09` and `0.3333333` for `1e20`, `3.0`, `-0.0`, `0.1`,
-  the integer 123456789, `2 ^ 31` and `1 / 3`. A native reads a string up to its first NUL: `StringLength('a\0b')` is
-  1, `StringHash('a\0b')` is `StringHash('a')`, `SubString('a\0bc', 0, 4)` is `a`.
+- The string parameters of `StringHash`, `StringLength`, `StringCase`, `S2I`, `S2R`, `SubString` and `SaveStr` are read
+  as Lua's `luaL_checklstring` reads them (that every native's are is inferred): `StringHash(nil)`, `StringLength(nil)`,
+  `StringCase(nil, true)`, `S2I(nil)`, `S2R(nil)`, `SubString(nil, 0, 1)` and `SaveStr(ht, 7, 8, nil)` raise `bad
+  argument #n to 'X' (string expected, got nil)`, `StringHash(true)` the same with `got boolean`, and a number is taken
+  as `tostring` writes it: `StringLength(12345)` is 5, `StringLength(1.5)` 3, `S2I(42)` 42, and `SubString(v, 0, 20)`
+  gives `1e+20`, `3.0`, `-0.0`, `0.1`, `123456789`, `2.147484e+09` and `0.3333333` for `1e20`, `3.0`, `-0.0`, `0.1`, the
+  integer 123456789, `2 ^ 31` and `1 / 3`. A native reads a string up to its first NUL: `StringLength('a\0b')` is 1,
+  `StringHash('a\0b')` is `StringHash('a')`, `SubString('a\0bc', 0, 4)` is `a`.
 - `StringLength` counts bytes (`ä` 2, `中` 3). `SubString(s, start, end)` takes bytes: `abcdef` gives `abc` for 0 3,
   nothing for 2 2, `ef` for 4 2, `cdef` for 2 100, nothing for 6 7, 10 12, -1 3 and -3 -1, and `abcdef` for 0 -1; `aäb`
   1 2 gives the lone byte c3 and 2 4 the bytes a4 62. `StringCase` changes ASCII letters only (`äÖé` and `ёЁ` stay).
-- `StringHash` is Bob Jenkins's lookup2 (1996, seed 0) of the string's letters, each folded to upper case, `/` made
-  `\`, and written as one byte below 256 and as two bytes, low first, from there; `""` is 0 (lookup2 gives -1119235827).
+- `StringHash` is Bob Jenkins's lookup2 (1996, seed 0) of the string's letters, each folded to upper case, `/` made `\`,
+  and written as one byte below 256 and as two bytes, low first, from there; `""` is 0 (lookup2 gives -1119235827).
   Matched on 43 strings: ASCII of 0 to 25 bytes (`a` -1587459251, `hello world` -1563733934, `Units\Human\Footman`
   736755776), `ä` and `Ä` 159638553 (the byte c4), `中` -234949316 (2d 4e), an emoji -1471725602 (U+FFFD, fd ff).
-  Folded: a-z, à-þ (÷ to × too), œ, and Cyrillic (`а`/`А`, `ё`/`Ё`, `я`/`Я`); not folded: ÿ/Ÿ, ß, ł, ą, ž, š, ő, ı/I,
-  Greek (`αβ` hashes b1 03 b2 03), Armenian, full-width letters, ǆ, µ/Μ. Bytes that aren't UTF-8 are decoded without
-  checks: a lone 80 is U+0080 (-366431040), c3 61 is U+00A1 (-578007203), a sequence cut short by the end is one 0
-  (c3, ff and ff ff all hash as the byte 0, 1843378377; `a`, ff, `b` -2135237383), ed a0 80 is U+D800, 00 d8 (73716403).
+  Measured folded: a, b, c, h and w (against A, B, C, H and W), ä, é, ö, þ, ÷ (to ×), œ, а, ё and я; measured left as
+  they are: ÿ (not to Ÿ), ß, ł, ą, ž, š, ő, ı (not to I), α and β (`αβ` hashes b1 03 b2 03), ա, ａ, ǆ and µ (not to Μ);
+  `가` hashes -611326302. That the ranges a-z, à-þ, а-я and ѐ-џ fold is inferred from these. Bytes that aren't UTF-8 are
+  decoded without checks: a lone 80 is U+0080 (-366431040), c3 61 is U+00A1 (-578007203), a sequence cut short by the
+  end is one 0 (c3, ff and ff ff all hash as the byte 0, 1843378377; `a`, ff, `b` -2135237383), ed a0 80 is U+D800, 00
+  d8 (73716403).
 - `I2S` writes the integer. `S2I` skips spaces and tabs, takes one sign and the digits after it, and holds at the
   integer's ends: `12abc` 12, ` 12` 12, `+7` 7, `--5` and `- 5` 0, `2147483648` 2147483647, `-2147483649` -2147483648,
   `1.9` 1, `0x10` 0, `1e3` 1.
 - `S2R` takes no space before (` 2.5` is 0), one sign, digits and one point, and stops at anything else (`1e3` and
   `1e40` are 1, `1,5` 1, `1..5` 1, `1.5.5` 1.50000012, `+-1` 0, `inf` and `nan` 0, `-0` +0). The digits are summed
-  (`123456789` 123456784 and `4294967296` 4294967040, cut toward zero) and divided by ten to the decimals in the
-  game's arithmetic: `1.5` is 1.50000012 (3fc00001), `0.1` 0.100000009 (3dccccce), `0.7` 3f333334, `3.0x` 3.00000024,
-  `100.5` 100.500008, while `2.5`, `10.5`, `0.25` and `-2.25` are exact. 77 strings measured.
+  (`123456789` 123456784 and `4294967296` 4294967040, cut toward zero) and divided by ten to the decimals in the game's
+  arithmetic: `1.5` is 1.50000012 (3fc00001), `0.1` 0.100000009 (3dccccce), `0.7` 3f333334, `3.0x` 3.00000024, `100.5`
+  100.500008, while `2.5`, `10.5`, `0.25` and `-2.25` are exact. 77 strings measured. Past the float range (strings-4):
+  `1` and 38 zeros is 9.99999765e+37 (7e967697), `3` and 38 zeros 7f61b1e2, `4` and 38 zeros 7f967697 (a nan, as a
+  product past the range packs), `1` and 39 zeros -5.5173899e-39 (803c143d), the 40 digits `1234567890...7890` 80683245,
+  40 nines 0, the digits of the largest float and of 2^128 both 7f7ffffa; `0.` with 39 or 45 zeros and a 1 is 2^127
+  (7f000000), as 1/0 is; `1.` and 40 zeros 1; and `0.1234567890...7890` (40 decimals) 0.123456791 (3dfcd6ea), as
+  `0.123456789` is.
 - `I2R` cuts toward zero: 16777219 gives 16777218, 2147483647 gives 2147483520. `R2I` cuts toward zero and holds at the
   integer's ends: 1.9 1, -1.9 -1, 0.99999994 0, 1e10 and `math.huge` 2147483647, -1e10 -2147483648. `MathRound` rounds
   half away from zero (0.5 1, 2.5 3, -0.5 -1, 0.49999997 0) through a 64-bit integer: 1e10 gives 1410065408.
 - `R2S(r)` is `R2SW(r, 0, 3)`. `R2SW(r, width, precision)` writes a `-` for a number below 0 (not for -0), then spaces
-  to make up `width` less the decimals less the integer's digits (`R2SW(1.5, 8, 2)` is `     1.50`, `R2SW(-1.5, 4, 2)`
-  `- 1.50`, `R2SW(1.5, 3, 2)` `1.50`), the integer part, a point and the decimals: the fraction times ten to the
+  to make up `width` less the decimals written less the integer's digits (`R2SW(1.5, 8, 2)` is `     1.50`, `R2SW(-1.5,
+  4, 2)` `- 1.50`, `R2SW(1.5, 3, 2)` `1.50`), the integer part, a point and the decimals: the fraction times ten to the
   precision, plus 0.5, cut, in the game's arithmetic (0.0625 `0.063`, 0.0025 as 0.00249999994 `0.002`, 99.9995 as
-  99.9994965 `99.999`, 9.9995 as 9.99950027 `10.000`). The precision is taken without its sign and at most 9
-  (`R2SW(1.5, 0, -1)` `1.5`, `R2SW(0.1, 0, 12)` `0.100000000`, `R2SW(1.23456705, 0, 9)` `1.234567040`), and 0 writes
-  `.0` (`R2SW(1.5, 0, 0)` `2.0`). Below 2^31 the integer part is exact (`123456792.000`, `1000000000.000`). From 2^31
-  the game writes about ten digits of its own and then zeros, unpadded: `2147483840.000` for 2^31, `10000000640.000`
-  for 1e10, `100000057600000000000.000` for 1e20 (also at width 30), 340000512 and 30 zeros for 3.4e38; the largest
-  float (7f7fffff) gives `inf`, as `math.huge` does. 141 cases measured.
+  99.9994965 `99.999`, 9.9995 as 9.99950027 `10.000`). The precision is at most 9 (`R2SW(0.1, 0, 12)` `0.100000000`,
+  `R2SW(1.23456705, 0, 9)` `1.234567040`, `R2SW(1.5, 0, 2147483647)` `1.500000000`), and 0 writes `.0` (`R2SW(1.5, 0,
+  0)` `2.0`). Below 0 it writes 6 decimals with the zeros at the end dropped but one (strings-6 and single probes):
+  `R2SW(1.25, 0, -1)` `1.25`, `R2SW(1.23456705, 0, -3)` and `-1` `1.234567`, `R2SW(2.0, 0, -1)` `2.0`, `R2SW(0.0625, 0,
+  -1)` `0.0625`, `R2SW(123.456, 0, -2)` `123.456001`, `R2SW(1 / 3, 0, -1)` `0.333333`, `R2SW(1.5, 4, -2)` `  1.5`, and
+  `1.5` for -100 and -2^31 and `1.25` for -2147483647. The text is at most 255 bytes, the rest cut: width 253 gives 254
+  bytes, 254 gives 255, 255 gives 255 ending `1.5`, 256 ending `1.`, 1000, 5000, 100000, 2147483640 and (precision 0)
+  2147483644 give 255 spaces; width 2147483647 and -2^31 give `""`, the length past a 32-bit integer. `R2SW(-1.5, 253,
+  2)` gives 255 bytes, but -1.5 at width 254 and at 1000, each alone in a probe, closed the game (0xC0000409, a buffer
+  overrun). Below 2^31 the integer part is exact (`123456792.000`, `1000000000.000`). From 2^31 the game writes about
+  ten digits of its own and then zeros, unpadded: `2147483840.000` for 2^31, `10000000640.000` for 1e10,
+  `100000057600000000000.000` for 1e20 (also at width 30), 340000512 and 30 zeros for 3.4e38; the largest float
+  (7f7fffff) gives `inf`, as `math.huge` does; width 100 pads nothing there either. 141 cases in strings and strings-2.
 - `BlzBitAnd(-1, 5)` 5, `BlzBitOr(5, 3)` 7, `BlzBitXor(5, 3)` 6, `BlzBitXor(-1, 2147483647)` -2147483648.
-- The maths natives give `math.*`'s numbers (the same bits on 60 inputs) but for: `SquareRoot` is 0 below 0.001 (0 up
-  to 3a83126e and a root from 3a83126f, the float nearest 0.001, by bisection), `Asin` and `Acos` are 0 past ±1 (also
-  for ±1.00000012) where `math.asin(2)` is π/2 (3fc90fdb), and `Atan2(0, 0)` is 0 where `math.atan(0, 0)` is π/2.
+- The maths natives give `math.*`'s numbers (the same bits on 60 inputs) but for: `SquareRoot` is 0 below 0.001 (0 up to
+  3a83126e and a root from 3a83126f, the float nearest 0.001, by bisection), `Asin` and `Acos` are 0 past ±1 (also for
+  ±1.00000012) where `math.asin(2)` is π/2 (3fc90fdb), and `Atan2(0, 0)` is 0 where `math.atan(0, 0)` is π/2.
   `Deg2Rad(x)` is x times 0.0174532924 (3c8efa35) and `Rad2Deg(x)` x times 57.2957802 (42652ee1), cut toward zero:
   `Deg2Rad(180)` 3.1415925 (40490fda), `Rad2Deg(math.pi)` 180; the game's own `math.rad(180)` is 40490fd9 and
   `math.deg(1)` 42652ee3, so these natives differ from them.
@@ -230,7 +248,11 @@ case in `tests/MirrorImaged.Tests/StringNativesTests.cs`, `MathNativesTests.cs` 
 - The random natives: `GetRandomInt(5, 1)` gave 5 to 9 over 1,000 draws and `GetRandomReal(2, 1)` 2.0016 to 2.9992, so
   they go from the first bound up by the bounds' distance. `GetRandomInt(3, 3)` is 3 and `GetRandomReal(1, 1)` 1. After
   `SetRandomSeed(42)`, `GetRandomInt(0, 99)` gave 63 11 34 15 77, and after it again `GetRandomReal(0, 1)` 3f71d256,
-  3e8b35bc and 3e2bf0d8.
+  3e8b35bc and 3e2bf0d8. The widest bounds, 1,000 draws each (strings-4): `GetRandomInt(-2^31, 2^31-1)` always gave
+  -2^31 and `GetRandomInt(2^31-1, -2^31)` always 2^31-1; `GetRandomInt(2^31-1, 0)` gave -2146973498 to -50177, all below
+  0, and `(0, 2^31-1)` 3970624 to 2146773448: the count of numbers wraps in 32 bits. `GetRandomReal(-3e38, 3e38)` gave
+  -2.9997e38 to 2.989e38 (522 below 0), `(0, 3e38)` 4.7e35 to 2.9996e38, and `(3e38, -3e38)` -3.79e-39 to 3.40207e38,
+  355 of them below 0, all tiny.
 
 ## Players and the game
 

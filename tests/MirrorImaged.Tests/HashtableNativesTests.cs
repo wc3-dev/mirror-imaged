@@ -168,6 +168,9 @@ public sealed class HashtableNativesTests : IDisposable
         Assert.False(_natives.HaveSavedHandle(_table, 5, 5));
         Assert.Equal(0, _natives.LoadInteger(_table, 9, 9));
         Assert.Equal(21, _natives.LoadInteger(other, 1, 1));
+        Assert.False(_natives.SaveStr(_table, 9, 9, "x"));
+        Assert.False(_natives.SaveTimerHandle(_table, 9, 9, _natives.CreateTimer()));
+        Assert.False(_natives.HaveSavedString(_table, 9, 9));
     }
 
     [Fact]
@@ -185,7 +188,7 @@ public sealed class HashtableNativesTests : IDisposable
     }
 
     // Through Lua: the handle comes back as the same userdata, a real slot takes an integer as a float, LoadStr of a
-    // missing key is "", a nil string is refused, and a destroyed timer loads as nil.
+    // missing key is "", a nil string is refused and leaves what the key held, and a destroyed timer loads as nil.
     [Fact]
     public void Lua_gets_back_what_it_saved()
     {
@@ -197,15 +200,19 @@ public sealed class HashtableNativesTests : IDisposable
               SaveReal(ht, 1, 2, 3)
               SaveFogStateHandle(ht, 6, 6, FOG_OF_WAR_MASKED)
               print(LoadTimerHandle(ht, 3, 3) == t, math.type(LoadReal(ht, 1, 2)), LoadStr(ht, 1, 1) == '',
-                LoadFogStateHandle(ht, 6, 6) == FOG_OF_WAR_MASKED)
+                LoadFogStateHandle(ht, 6, 6) == FOG_OF_WAR_MASKED, tostring(ht):match('^%a+'))
               print(select(2, pcall(SaveStr, ht, 7, 8, nil)))
+              SaveStr(ht, 7, 9, 'a')
+              pcall(SaveStr, ht, 7, 9, nil)
+              print(HaveSavedString(ht, 7, 8), HaveSavedString(ht, 7, 9), LoadStr(ht, 7, 9))
               DestroyTimer(t)
               print(LoadTimerHandle(ht, 3, 3), HaveSavedHandle(ht, 3, 3))
             end
             """), "");
 
         Assert.Equal(
-            ["0.000 print: true\tfloat\ttrue\ttrue", "0.000 print: bad argument #4 to 'SaveStr' (string expected, got nil)",
+            ["0.000 print: true\tfloat\ttrue\ttrue\thashtable",
+             "0.000 print: bad argument #4 to 'SaveStr' (string expected, got nil)", "0.000 print: false\ttrue\ta",
              "0.000 print: nil\ttrue"],
             simulation.Log);
     }

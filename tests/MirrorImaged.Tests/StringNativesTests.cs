@@ -70,8 +70,58 @@ public sealed class StringNativesTests : IDisposable
     [InlineData("äa", -1686530025)]
     [InlineData("ää", -1179506023)]
     [InlineData("aB/c\\D", -2048350672)]
+    [InlineData("ł", -1722100796)]
+    [InlineData("Ł", -801877895)]
+    [InlineData("ą", 161645365)]
+    [InlineData("Ą", 442374989)]
+    [InlineData("ž", 1174702755)]
+    [InlineData("Ž", 132551244)]
+    [InlineData("š", -1788873029)]
+    [InlineData("Š", -1885192655)]
+    [InlineData("ő", -1232062144)]
+    [InlineData("Ő", -1571299577)]
+    [InlineData("œ", -480392900)]
+    [InlineData("Œ", -480392900)]
+    [InlineData("ı", 707917425)]
+    [InlineData("I", 635090976)]
+    [InlineData("ё", 2075312637)]
+    [InlineData("Ё", 2075312637)]
+    [InlineData("я", -1527763325)]
+    [InlineData("Я", -1527763325)]
+    [InlineData("ա", 1250627961)]
+    [InlineData("Ա", 2036328247)]
+    [InlineData("ａ", 2118958946)]
+    [InlineData("Ａ", 1553725623)]
+    [InlineData("ǆ", -800115492)]
+    [InlineData("Ǆ", 477485418)]
+    [InlineData("α", -1514652788)]
+    [InlineData("µ", -867977725)]
+    [InlineData("Μ", 1772299142)]
+    [InlineData("ö", 2092530722)]
+    [InlineData("Ö", 2092530722)]
+    [InlineData("þ", -1222483548)]
+    [InlineData("Þ", -1222483548)]
+    [InlineData("÷", 701044297)]
+    [InlineData("×", 701044297)]
+    [InlineData("가", -611326302)]
     public void StringHash_folds_case_and_slashes_and_hashes_with_lookup2(string s, int game) =>
         Assert.Equal(game, _natives.StringHash(s));
+
+    // Bytes that aren't UTF-8, given in Lua: the game decodes them without checks; here they reach C# as U+FFFD
+    // (decisions D38), so the hash is the model's.
+    [Theory]
+    [InlineData("\\255", 1843378377, -1471725602)]
+    [InlineData("\\128", -366431040, -1471725602)]
+    [InlineData("\\195", 1843378377, -1471725602)]
+    [InlineData("\\195a", -578007203, 570027334)]
+    [InlineData("a\\255b", -2135237383, -1479969268)]
+    [InlineData("\\255\\255", 1843378377, -1767453894)]
+    [InlineData("\\237\\160\\128", 73716403, 2020679358)]
+    public void StringHash_of_bytes_that_arent_UTF8_is_the_models(string lua, int game, int model)
+    {
+        Assert.NotEqual(game, model);
+        Assert.Equal([model.ToString(System.Globalization.CultureInfo.InvariantCulture)], Run($"print(StringHash('{lua}'))"));
+    }
 
     // probe strings-3: each pair hashed alike where the game folds the letter, apart where it doesn't
     [Theory]
@@ -93,6 +143,7 @@ public sealed class StringNativesTests : IDisposable
     [InlineData("α", "Α", false)]
     [InlineData("µ", "Μ", false)]
     [InlineData("ÿ", "Ÿ", false)]
+    [InlineData("가", "가", true)]
     public void StringHash_folds_the_letters_the_game_folds(string lower, string upper, bool same) =>
         Assert.Equal(same, _natives.StringHash(lower) == _natives.StringHash(upper));
 
@@ -236,6 +287,9 @@ public sealed class StringNativesTests : IDisposable
     [InlineData("10.5", 0x41280000u)]
     [InlineData("100.5", 0x42c90001u)]
     [InlineData("1000.5", 0x447a2001u)]
+    [InlineData("0.0000000000000000000000000000000000000001", 0x7f000000u)]
+    [InlineData("0.0000000000000000000000000000000000000000000001", 0x7f000000u)]
+    [InlineData("1.0000000000000000000000000000000000000000", 0x3f800000u)]
     public void S2R_reads_a_sign_digits_and_a_point_in_the_games_arithmetic(string s, uint game) =>
         Assert.Equal(game, Bits(_natives.S2R(s)));
 
@@ -250,6 +304,17 @@ public sealed class StringNativesTests : IDisposable
     [InlineData("0.1000000000", 0x3dcccccdu, 0x3dccccceu)]
     [InlineData("0.5555555555555", 0x3f0e38e3u, 0x3f0e38e2u)]
     [InlineData("9.999999999", 0x41200000u, 0x411fffffu)]
+    // Past the float range (strings-4), where the model is extrapolated
+    [InlineData("1234567890123456789012345678901234567890", 0x80683245u, 0x80683237u)]
+    [InlineData("0.1234567890123456789012345678901234567890", 0x3dfcd6eau, 0xbfe83237u)]
+    [InlineData("100000000000000000000000000000000000000", 0x7e967697u, 0x7e96768eu)]
+    [InlineData("300000000000000000000000000000000000000", 0x7f61b1e2u, 0x7f61b1d7u)]
+    [InlineData("400000000000000000000000000000000000000", 0x7f967697u, 0x7f96768eu)]
+    [InlineData("1000000000000000000000000000000000000000", 0x803c143du, 0x803c1431u)]
+    [InlineData("9999999999999999999999999999999999999999", 0x00000000u, 0x42c60000u)]
+    [InlineData("-400000000000000000000000000000000000000", 0xff967697u, 0xff96768eu)]
+    [InlineData("340282346638528859811704183484516925440", 0x7f7ffffau, 0x7f7fffecu)]
+    [InlineData("340282356779733661637539395458142568448", 0x7f7ffffau, 0x7f7fffecu)]
     public void S2R_is_a_float_step_off_the_game_on_these(string s, uint game, uint model)
     {
         Assert.NotEqual(game, model);
@@ -417,6 +482,19 @@ public sealed class StringNativesTests : IDisposable
     [InlineData(0x40200000u, 3, -1, " 2.5")]
     [InlineData(0x3fa00000u, 0, -2, "1.25")]
     [InlineData(0x449a5000u, 2, 0, "1235.0")]
+    [InlineData(0x3fa00000u, 0, -1, "1.25")]
+    [InlineData(0x3f9e064bu, 0, -3, "1.234567")]
+    [InlineData(0x3f9e064bu, 0, -1, "1.234567")]
+    [InlineData(0x40000000u, 0, -1, "2.0")]
+    [InlineData(0x3dcccccdu, 0, -1, "0.1")]
+    [InlineData(0x3fc00000u, 4, -2, "  1.5")]
+    [InlineData(0x3d800000u, 0, -1, "0.0625")]
+    [InlineData(0x42f6e979u, 0, -2, "123.456001")]
+    [InlineData(0x3eaaaaabu, 0, -1, "0.333333")]
+    [InlineData(0x3fc00000u, 0, -100, "1.5")]
+    [InlineData(0x3fa00000u, 0, -2147483647, "1.25")]
+    [InlineData(0x3fc00000u, 0, -2147483648, "1.5")]
+    [InlineData(0x3fc00000u, 0, 2147483647, "1.500000000")]
     public void R2SW_pads_after_the_sign_and_writes_at_most_nine_decimals(uint r, int width, int precision, string game) =>
         Assert.Equal(game, _natives.R2SW(F(r), width, precision));
 
@@ -439,10 +517,47 @@ public sealed class StringNativesTests : IDisposable
     [Theory]
     [InlineData(0x60ad78ecu, 0, 2, "100000057600000000000.00", "100000002004087734272.00")]
     [InlineData(0x60ad78ecu, 30, 2, "100000057600000000000.00", "100000002004087734272.00")]
+    [InlineData(0x60ad78ecu, 100, 2, "100000057600000000000.00", "100000002004087734272.00")]
     public void R2SW_from_2_to_the_31_writes_the_floats_digits_unpadded(uint r, int width, int precision, string game, string model)
     {
         Assert.NotEqual(game, model);
         Assert.Equal(model, _natives.R2SW(F(r), width, precision));
+    }
+
+    // probes strings-4, strings-5 and strings-6, and widths 2147483640 and 2147483644 alone: the length and the last bytes
+    [Theory]
+    [InlineData(0x3fc00000u, 30, 2, 31, "    1.50")]
+    [InlineData(0x3fc00000u, 31, 2, 32, "    1.50")]
+    [InlineData(0x3fc00000u, 100, 2, 101, "    1.50")]
+    [InlineData(0xbfc00000u, 100, 2, 102, "    1.50")]
+    [InlineData(0x3fc00000u, 253, 2, 254, "    1.50")]
+    [InlineData(0x3fc00000u, 254, 2, 255, "    1.50")]
+    [InlineData(0xbfc00000u, 253, 2, 255, "    1.50")]
+    [InlineData(0x3fc00000u, 255, 2, 255, "     1.5")]
+    [InlineData(0x3fc00000u, 256, 2, 255, "      1.")]
+    [InlineData(0x3fc00000u, 1000, 2, 255, "        ")]
+    [InlineData(0x3fc00000u, 5000, 2, 255, "        ")]
+    [InlineData(0x3fc00000u, 100000, 2, 255, "        ")]
+    [InlineData(0x3fc00000u, 2147483640, 2, 255, "        ")]
+    [InlineData(0x3fc00000u, 2147483644, 0, 255, "        ")]
+    [InlineData(0x3fc00000u, 2147483647, 2, 0, "")]
+    [InlineData(0x3fc00000u, -2147483648, 2, 0, "")]
+    public void R2SW_writes_at_most_255_bytes_and_nothing_when_the_length_wraps(uint r, int width, int precision, int length, string end)
+    {
+        var text = _natives.R2SW(F(r), width, precision)!;
+
+        Assert.Equal(length, text.Length);
+        Assert.EndsWith(end, text);
+        Assert.Equal(r >> 31 == 1, text.StartsWith('-'));
+    }
+
+    // -1.5 at width 254 and at 1000, each alone in a probe, closed the game (0xC0000409): the text with its sign passed
+    // the 255 bytes. Here it is cut there, as a number's text above 0 is.
+    [Fact]
+    public void A_number_below_0_past_255_bytes_is_cut_where_the_game_closes()
+    {
+        Assert.Equal("-" + new string(' ', 251) + "1.5", _natives.R2SW(-1.5f, 254, 2));
+        Assert.Equal(255, _natives.R2SW(-1.5f, 1000, 2)!.Length);
     }
 
     [Fact]
@@ -476,11 +591,17 @@ public sealed class StringNativesTests : IDisposable
     {
         Assert.Equal(
             ["bad argument #1 to 'StringHash' (string expected, got nil)",
-             "bad argument #1 to 'StringLength' (string expected, got boolean)",
-             "bad argument #1 to 'SubString' (string expected, got nil)"],
+             "bad argument #1 to 'StringLength' (string expected, got nil)",
+             "bad argument #1 to 'StringCase' (string expected, got nil)",
+             "bad argument #1 to 'S2I' (string expected, got nil)",
+             "bad argument #1 to 'S2R' (string expected, got nil)",
+             "bad argument #1 to 'SubString' (string expected, got nil)",
+             "bad argument #1 to 'StringHash' (string expected, got boolean)"],
             Run("""
-                for _, f in ipairs({function() return StringHash(nil) end, function() return StringLength(true) end,
-                    function() return SubString(nil, 0, 1) end}) do
+                for _, f in ipairs({function() return StringHash(nil) end, function() return StringLength(nil) end,
+                    function() return StringCase(nil, true) end, function() return S2I(nil) end,
+                    function() return S2R(nil) end, function() return SubString(nil, 0, 1) end,
+                    function() return StringHash(true) end}) do
                   print((select(2, pcall(f)):gsub('^.-: ', '', 1)))
                 end
                 """));

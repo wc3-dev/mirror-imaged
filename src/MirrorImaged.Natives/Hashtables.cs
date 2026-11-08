@@ -45,10 +45,11 @@ public sealed partial class GameNatives
         if (table is not null && table.Parents.TryGetValue(parentKey, out var children)) children.Remove((childKey, slot));
     }
 
-    // A null or destroyed handle saves nothing and gives false; a Convert native's value is saved and gives false too.
+    // A null or destroyed table or handle saves nothing and gives false; a Convert native's value is saved and gives
+    // false too.
     bool SaveHandle(hashtable? table, int parentKey, int childKey, handle? value)
     {
-        if (table is null || value is null || !Alive(value)) return false;
+        if (table is null || !Alive(table) || value is null || !Alive(value)) return false;
         Save(table, parentKey, childKey, Slot.Handle, value);
         return !(_converted.TryGetValue((value.GetType(), value.Id), out var converted) && converted == value);
     }
@@ -66,11 +67,11 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = TablesFact)]
     public void SaveBoolean(hashtable? table, int parentKey, int childKey, bool value) => Save(table, parentKey, childKey, Slot.Boolean, value);
 
-    /// <summary>Saves the string and gives true; false, saving nothing, with no table (Lua refuses a nil string).</summary>
+    /// <summary>Saves the string and gives true; false, saving nothing, with no table or a destroyed one (Lua refuses a nil string).</summary>
     [Native(Level.Exact, Fact = TablesFact)]
     public bool SaveStr(hashtable? table, int parentKey, int childKey, string? value)
     {
-        if (table is null || value is null) return false;
+        if (table is null || !Alive(table) || value is null) return false;
         Save(table, parentKey, childKey, Slot.String, value);
         return true;
     }
@@ -130,7 +131,8 @@ public sealed partial class GameNatives
         _hashtables--;
     }
 
-    // One handle a child key, whatever its type. Exact for the types the probes saved and loaded.
+    // One handle a child key, whatever its type. Exact for the types the probes saved and loaded that a test can make here;
+    // the probes' location and text tag saves gave true, but Location and CreateTextTag are Missing still.
     [Native(Level.Close)] public bool SaveAbilityHandle(hashtable? table, int parentKey, int childKey, ability? whichAbility) => SaveHandle(table, parentKey, childKey, whichAbility);
     [Native(Level.Exact, Fact = TablesFact)] public bool SaveAgentHandle(hashtable? table, int parentKey, int childKey, agent? whichAgent) => SaveHandle(table, parentKey, childKey, whichAgent);
     [Native(Level.Close)] public bool SaveBooleanExprHandle(hashtable? table, int parentKey, int childKey, boolexpr? whichBoolexpr) => SaveHandle(table, parentKey, childKey, whichBoolexpr);
@@ -150,7 +152,7 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public bool SaveItemPoolHandle(hashtable? table, int parentKey, int childKey, itempool? whichItempool) => SaveHandle(table, parentKey, childKey, whichItempool);
     [Native(Level.Close)] public bool SaveLeaderboardHandle(hashtable? table, int parentKey, int childKey, leaderboard? whichLeaderboard) => SaveHandle(table, parentKey, childKey, whichLeaderboard);
     [Native(Level.Close)] public bool SaveLightningHandle(hashtable? table, int parentKey, int childKey, lightning? whichLightning) => SaveHandle(table, parentKey, childKey, whichLightning);
-    [Native(Level.Exact, Fact = TablesFact)] public bool SaveLocationHandle(hashtable? table, int parentKey, int childKey, location? whichLocation) => SaveHandle(table, parentKey, childKey, whichLocation);
+    [Native(Level.Close)] public bool SaveLocationHandle(hashtable? table, int parentKey, int childKey, location? whichLocation) => SaveHandle(table, parentKey, childKey, whichLocation);
     [Native(Level.Close)] public bool SaveMultiboardHandle(hashtable? table, int parentKey, int childKey, multiboard? whichMultiboard) => SaveHandle(table, parentKey, childKey, whichMultiboard);
     [Native(Level.Close)] public bool SaveMultiboardItemHandle(hashtable? table, int parentKey, int childKey, multiboarditem? whichMultiboarditem) => SaveHandle(table, parentKey, childKey, whichMultiboarditem);
     [Native(Level.Exact, Fact = TablesFact)] public bool SavePlayerHandle(hashtable? table, int parentKey, int childKey, player? whichPlayer) => SaveHandle(table, parentKey, childKey, whichPlayer);
@@ -159,7 +161,7 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public bool SaveRectHandle(hashtable? table, int parentKey, int childKey, rect? whichRect) => SaveHandle(table, parentKey, childKey, whichRect);
     [Native(Level.Close)] public bool SaveRegionHandle(hashtable? table, int parentKey, int childKey, region? whichRegion) => SaveHandle(table, parentKey, childKey, whichRegion);
     [Native(Level.Close)] public bool SaveSoundHandle(hashtable? table, int parentKey, int childKey, sound? whichSound) => SaveHandle(table, parentKey, childKey, whichSound);
-    [Native(Level.Exact, Fact = TablesFact)] public bool SaveTextTagHandle(hashtable? table, int parentKey, int childKey, texttag? whichTexttag) => SaveHandle(table, parentKey, childKey, whichTexttag);
+    [Native(Level.Close)] public bool SaveTextTagHandle(hashtable? table, int parentKey, int childKey, texttag? whichTexttag) => SaveHandle(table, parentKey, childKey, whichTexttag);
     [Native(Level.Close)] public bool SaveTimerDialogHandle(hashtable? table, int parentKey, int childKey, timerdialog? whichTimerdialog) => SaveHandle(table, parentKey, childKey, whichTimerdialog);
     [Native(Level.Exact, Fact = TablesFact)] public bool SaveTimerHandle(hashtable? table, int parentKey, int childKey, timer? whichTimer) => SaveHandle(table, parentKey, childKey, whichTimer);
     [Native(Level.Close)] public bool SaveTrackableHandle(hashtable? table, int parentKey, int childKey, trackable? whichTrackable) => SaveHandle(table, parentKey, childKey, whichTrackable);
