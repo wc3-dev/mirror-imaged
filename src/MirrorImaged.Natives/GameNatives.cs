@@ -20,7 +20,8 @@ public sealed partial class GameNatives
     public GameNatives(Game game)
     {
         _game = game;
-        _players = [.. Enumerable.Range(0, 28).Select(number => Make(new player { Number = number }))];
+        _players = MakePlayers();
+        _local = _players[0];
     }
 
     T Make<T>(T handle) where T : handle

@@ -155,3 +155,54 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
   the game once per probe.
 - Not tried: the Wine and Xvfb route under WSL2 (the plan's second way to hide the game), as WSL has no distribution on
   this PC.
+
+## Players and the game
+
+Probe `probes/players.lua`, one run on 3.0.1.24371, 11-08 (W1-4): MirrorImaged's probe map (D51: one user slot, no
+custom forces, a selectable race, `config` calling `InitGenericPlayerSlots` and `main` calling `InitBlizzard`) started
+with `-loadfile` on a hidden desktop, single player; the probe ran in the first zero-second timer. The run's lines
+are in `probes/expected/players.txt`, as the game gave them.
+
+- Slot 0 is "Local Player", Playing, `MAP_CONTROL_USER`, team 0, start location 0, colour 0. Its race was
+  `RACE_UNDEAD` although `config` set `RACE_PREF_HUMAN` with the race selectable: afterwards
+  `IsPlayerRacePrefSet(p, RACE_PREF_RANDOM)` is true and `RACE_PREF_HUMAN` false, so the lobby made it random.
+- Slots 1 to 23, which the map doesn't use, are "Player 2" to "Player 24", Empty, `MAP_CONTROL_NONE`, team -1, start
+  location -1, colour their slot, and each has one of the four races (human, orc, undead, night elf), seemingly at
+  random. Slots 24 to 27 are "Player 25" to "Player 28", Playing, `MAP_CONTROL_CREEP` all four, team 0, start
+  location -1, colour their slot, and race 0 (none of the `RACE_*` constants; `GetHandleId` 0). No slot is an
+  observer, and every slot's race reads selectable (`GetPlayerSelectable`), the 23 unused ones and the neutral ones
+  too.
+- Alliances, as a mask of `ALLIANCE_*` types 0 to 9: each player to itself 255 (types 0 to 7; slots 0, 24 and 27
+  read); neutral passive (27) and slots 0 and 24, both ways, 1 (passive); after `InitBlizzard`'s
+  `ConfigureNeutralVictim`, neutral victim (25) to 0 and to 24 and 24 to 25 1, 0 to 25 0; slots 0 and 1, 1 and 2,
+  0 and 24 both ways, 0 to 26: 0. `IsPlayerAlly` follows type 0 and `IsPlayerEnemy` is its opposite in all of them.
+- Player states 0 to 16 and 25 of slots 0, 1, 24, 25 and 27: `PLAYER_STATE_GAME_RESULT` 3 (`PLAYER_GAME_RESULT_NEUTRAL`)
+  and `PLAYER_STATE_FOOD_CAP_CEILING` 100 for all; `PLAYER_STATE_GIVES_BOUNTY` 1 for 24 and 27 (25's had been set to 0
+  by `ConfigureNeutralVictim`); `PLAYER_STATE_PLACED` 1 for slot 0 only; the rest 0. Gold set to -5 reads 0, to
+  2,000,000 reads 2,000,000; food cap set to 150 reads 150, past the ceiling; `PLAYER_STATE_GOLD_GATHERED` stays 0.
+  All four handicaps read 1.
+- `GetPlayerTechMaxAllowed` reads 2147483647 for `hfoo` and for an unknown id (`zzzz`), 3 for `Rhme` (Iron Forged
+  Swords, 3 levels); a maximum set to -5 reads 2147483647. `GetPlayerTechCount` of `Rhme` reads 0 at the start, then
+  2 after `SetPlayerTechResearched` 2, 1 after setting 1 (it lowers), 3 after `AddPlayerTechResearched` 5 (stopped at
+  the upgrade's 3 levels), 2 after `BlzDecPlayerTechResearched` 1; `zzzz` set to 4 reads 4. `GetPlayerTechResearched`
+  is false at 0 and true at 2.
+- Forces: a force holding slot 5, given to `ForceEnumPlayers` with no filter, holds only slot 0 afterwards: the
+  enumeration clears the force first and takes the one playing player of slots 0 to 23, not the neutral slots, which
+  play too. `ForceEnumAllies` of slot 0 gives 0, `ForceEnumEnemies` of 0 nothing, `ForceEnumPlayersCounted` of 1 gives
+  0; `GetPlayersAll()` holds 0. `ForForce` over a force given 3, 1 and 2 in that order runs 1, 2, 3, and
+  `GetEnumPlayer()` is nil after it.
+- The game: `GetGameSpeed` `MAP_SPEED_NORMAL`, `GetGameDifficulty` `MAP_DIFFICULTY_EASY`, `GetGamePlacement`
+  `MAP_PLACEMENT_USE_MAP_SETTINGS` (as `config` set it), `GetGameTypeSelected` `GAME_TYPE_MELEE`, `GetPlayers` 1,
+  `GetTeams` 24 (`InitGenericPlayerSlots` under melee sets 24), `VersionGet` `VERSION_FROZEN_THRONE`,
+  `IsNoVictoryCheat` and `IsNoDefeatCheat` false, no map flag of 1 to 2^20 set, both integer game states 0, start
+  location 0 at (0, 0) as defined and the undefined 5 at (0, 0). `SetGameSpeed(MAP_SPEED_FASTEST)` leaves it at
+  normal; `MAP_SPEED_SLOWEST` reads slowest.
+- The time of day is 0 at the start with scale 1. Set and read back at once (with the float's bits): 7, 12, 18, 6, 0.5,
+  23.9 (`41bf3333`), 23.95, 23.98 and 23.99 (`41bfeb85`) read as set; 23.995 and 23.999 read 0; 0.1 reads 0.099999994
+  (`3dcccccc`, a float step under 0.1's `3dcccccd`). Set to 23.9, 2 s later it reads 23.9999962 (`41bffffe`); set to
+  0, 2 s later 0.0999975204 (`3dcccb80`) and 20 s later 0.999865532 (`3f7ff730`), under 0.1 and 1. Inferred: the game
+  adds each frame's share in floats and loses a little each time; adding fixed steps of 1/1024 to 1/4 s in the game's
+  arithmetic gave none of the three values, and neither did any of ten conversions tried for 0.1 (`x * 20 / 20`,
+  `x / 24 * 24` and the like). Against the workspace's facts: on a Moonwell check map (11-05) a time set to 7 read
+  6.999999, where here 7 read back exactly; that read may have come later, after the game had moved the time on, while
+  here it came at once. Not separated (W1-9's probe).

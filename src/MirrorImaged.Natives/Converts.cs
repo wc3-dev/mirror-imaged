@@ -2,11 +2,10 @@ namespace MirrorImaged.Natives;
 
 // A Convert native gives the handle standing for a value of its type: made once per type and value, so the same value
 // gives the same handle and Lua's == holds. Its id is the value; it takes none of the game's ids, and a key of its own
-// (decisions D64). Exact once their getters are written, which the facts compare them with: ConvertPlayerColor and
-// ConvertRace (game-facts.md, Version and launching: GetPlayerColor compares equal to ConvertPlayerColor(n), and
-// GetPlayerRace to RACE_*, with Lua's ==), and ConvertAttackType, ConvertDamageType and ConvertWeaponType (C# through
-// CSharp.lua: every attack, damage and weapon type dealt from code reads back the same, through Convert*Type handles
-// made once and compared with ==). Not measured: a value common.j doesn't name.
+// (decisions D64). ConvertPlayerColor and ConvertRace are Exact with their getters (decisions D90). ConvertAttackType,
+// ConvertDamageType and ConvertWeaponType become Exact once their getters are written, which the facts compare them
+// with (C# through CSharp.lua: every attack, damage and weapon type dealt from code reads back the same, through
+// Convert*Type handles made once and compared with ==). Not measured: a value common.j doesn't name.
 public sealed partial class GameNatives
 {
     readonly Dictionary<(Type, int), handle> _converted = [];
@@ -76,14 +75,14 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public pathingflag? ConvertPathingFlag(int i) => Convert<pathingflag>(i);
     [Native(Level.Close)] public pathingtype? ConvertPathingType(int i) => Convert<pathingtype>(i);
     [Native(Level.Close)] public placement? ConvertPlacement(int i) => Convert<placement>(i);
-    [Native(Level.Close)] public playercolor? ConvertPlayerColor(int i) => Convert<playercolor>(i);
+    [Native(Level.Exact, Fact = "game-facts.md, Version and launching: GetPlayerColor compares equal to ConvertPlayerColor(n) with Lua's == (10-20)")] public playercolor? ConvertPlayerColor(int i) => Convert<playercolor>(i);
     [Native(Level.Close)] public playerevent? ConvertPlayerEvent(int i) => Convert<playerevent>(i);
     [Native(Level.Close)] public playergameresult? ConvertPlayerGameResult(int i) => Convert<playergameresult>(i);
     [Native(Level.Close)] public playerscore? ConvertPlayerScore(int i) => Convert<playerscore>(i);
     [Native(Level.Close)] public playerslotstate? ConvertPlayerSlotState(int i) => Convert<playerslotstate>(i);
     [Native(Level.Close)] public playerstate? ConvertPlayerState(int i) => Convert<playerstate>(i);
     [Native(Level.Close)] public playerunitevent? ConvertPlayerUnitEvent(int i) => Convert<playerunitevent>(i);
-    [Native(Level.Close)] public race? ConvertRace(int i) => Convert<race>(i);
+    [Native(Level.Exact, Fact = "game-facts.md, Version and launching: GetPlayerRace compares equal to RACE_* with Lua's == (10-20)")] public race? ConvertRace(int i) => Convert<race>(i);
     [Native(Level.Close)] public racepreference? ConvertRacePref(int i) => Convert<racepreference>(i);
     [Native(Level.Close)] public raritycontrol? ConvertRarityControl(int i) => Convert<raritycontrol>(i);
     [Native(Level.Close)] public regentype? ConvertRegenType(int i) => Convert<regentype>(i);
