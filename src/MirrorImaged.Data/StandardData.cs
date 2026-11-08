@@ -239,13 +239,14 @@ public sealed partial class StandardData
         var build = GameInstall.Build(folder);
         var (values, objects) = Sets(info);
         var place = Path.GetFullPath(folder);
+        var key = (build, place, values, objects);
         lock (Cache)
         {
-            if (!Cache.TryGetValue((build, place, values, objects), out var data))
+            if (!Cache.TryGetValue(key, out var data))
             {
                 if (!Storages.TryGetValue((build, place), out var storage)) Storages[(build, place)] = storage = CascStorage.Open(folder);
                 byte[]? Stored(string path) { lock (storage) return storage.Read(path); }
-                Cache[(build, place, values, objects)] = data = Read(path => Stored("War3.w3mod:" + path.Replace(".w3mod/", ".w3mod:")), values, objects, build.Locale);
+                Cache[key] = data = Read(path => Stored("War3.w3mod:" + path.Replace(".w3mod/", ".w3mod:")), values, objects, build.Locale);
                 data.Storage = Stored;
             }
             return data;

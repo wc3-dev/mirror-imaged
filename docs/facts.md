@@ -1024,7 +1024,7 @@ same. The two closing probes each closed the game once, as the units probe's run
 
 ## Sounds
 
-Probes `probes/sounds.lua` (three runs) and `sounds-2.lua` (two runs), on 3.0.1.24371, 11-08 (W5-2): MirrorImaged's
+Probes `probes/sounds.lua` (five runs) and `sounds-2.lua` (four runs), on 3.0.1.24371, 11-08 (W5-2): MirrorImaged's
 probe map started with `-loadfile` on a hidden desktop from the PowerShell tool, single player, every volume group set to
 0 first (`VolumeGroupSetVolume`) and the music stopped, so nothing was heard. The lines are in `probes/expected`; the
 runs gave the same lines but where each says. The paths are the install's (W5-2 read them from its storage): most
@@ -1060,18 +1060,21 @@ sounds are stored three times, a classic file under the language's folder or non
   the length. A second `StartSound` in the same instant, or 0.6 s in, didn't change when it stopped reading playing;
   one after it had stopped played it again. A 3D sound at the origin, stopping out of range, with no distances set,
   never read playing.
-- How long a sound reads playing isn't steady: a 1.288 s sound read playing at 2.0 s and not at 4.5 s in all three
-  runs of `sounds`; polled every 0.05 s in `sounds-2`, the same sounds stopped at 4.95 s, then 5.05 s, all together,
+- How long a sound reads playing isn't steady: a 1.288 s sound read playing at 2.0 s and not at 4.5 s in all four
+  runs of `sounds` (in the fourth, those played from 1000 ms and at pitch 2 too); polled every 0.05 s in `sounds-2`,
+  the same sounds stopped all together at 4.95, 5.05, 5.25 and 4.90 s in its four runs,
   QuestNew's 3.75 s still read playing at 6 s, a sound played from 1000 ms (`SetSoundPlayPosition` after
-  `StartSound`) stopped about 1 s sooner (3.70 s, 4.05 s), one at pitch 2 0.65 s sooner (4.30, 4.45) and one at pitch
+  `StartSound`) stopped about 1 s sooner (3.70, 4.05, 4.30, 3.65 s), one at pitch 2 0.65 s sooner (4.30, 4.45, 4.65, 4.30) and one at pitch
   0.5 still played at 6 s; a play position set before `StartSound` changed nothing. So a sound's start waits a varying
-  while (about 1 s in `sounds`, 3.7 s in `sounds-2`), and it then plays its length over its pitch; `SetSoundDuration`
+  while (about 1 s in `sounds`, 3.7 to 4 s in `sounds-2`), and it then plays its length over its pitch; `SetSoundDuration`
   (3000, 500, 0, -5) changed nothing.
 - `TriggerWaitForSound` in a trigger action, from an action started at 6.5 s: a 1.288 s sound started in the same
   instant waited 1.5 s (twice; 1.5 in all three runs of `sounds`), once it had stopped 0.2 s, with offset 0.5 1.0 s,
   with `SetSoundDuration(s, 3000)` 1.5 s, a sound never started 0.2 s, with offset 2 0.2 s, nil 0.1 s, and QuestNew
-  started then waited with offset -1 0.2 s; the same in both runs. In `sounds`, from 5.0 s: a 1.288 s sound 1.5 s,
-  then offset 1.0 on a new one 0.5, 0.6 and 0.5 s in its three runs, and a sound never started 0.3 s in each.
+  started then waited with offset -1 0.2 s; the same in its four runs but offset 0.5's 0.9 s in the third and nil's 0.2 s
+  in the fourth. In `sounds`,
+  from 5.0 s: a 1.288 s sound 1.5 s, then offset 1.0 on a new one 0.5, 0.6, 0.5 and 0.5 s in its first four runs, and a
+  sound never started 0.3, 0.3, 0.3 and 0.2 s.
 - `GetDialogueSpeakerNameKey` and `GetDialogueTextKey` read "" on a new sound and, after `SetDialogueSpeakerNameKey
   (s, "TRIGSTR_70")` and `SetDialogueTextKey(s, "Some text")`, which give true, what was set; on nil they read "" and
   the sets give false. `SetSoundFacialAnimationLabel`, `SetSoundFacialAnimationGroupLabel` and

@@ -1,5 +1,7 @@
-# 3.0.1.24371, 11-08 (W5-2): the probe's lines as the game gave them, every volume group muted. Three runs, the same lines but
-# the waits after the first, which read 2.0 and 2.3, then 2.1 and 2.4 (each {t}); see docs/facts.md, "Sounds".
+# 3.0.1.24371, 11-08 (W5-2): the probe's lines as the game gave them, every volume group muted. Five runs: whether a
+# sound reads playing once started varies with how long its start waits (position and pitch 2 read true at 2.0 in the
+# fourth), so those reads are {w}; and so do the waits after the first, 0.5 or 0.6 s then 0.3 or 0.2 s (each {t}); see
+# docs/facts.md, "Sounds".
 file Units\Human\HeroPaladin\HeroPaladinWhat1.wav 1288
 file Units\Human\HeroPaladin\HeroPaladinWhat1.flac 1288
 file Units\Human\HeroPaladin\HeroPaladinWhat1.ogg 1288
@@ -54,58 +56,58 @@ facial nil false false false
 0.0 position first duration 1288 playing true loading false
 0.0 again duration 1288 playing true loading false
 0.0 pitch 2 duration 1288 playing true loading false
-0.6 plain duration 1288 playing true loading false
-0.6 set 3000 duration 1288 playing true loading false
-0.6 set -5 duration 1288 playing true loading false
+0.6 plain duration 1288 playing {w} loading false
+0.6 set 3000 duration 1288 playing {w} loading false
+0.6 set -5 duration 1288 playing {w} loading false
 0.6 loop duration 1288 playing true loading false
 0.6 missing duration 0 playing false loading false
-0.6 label duration 3750 playing true loading false
-0.6 twice duration 1288 playing true loading false
+0.6 label duration 3750 playing {w} loading false
+0.6 twice duration 1288 playing {w} loading false
 0.6 stopped duration 1288 playing false loading false
-0.6 faded duration 1288 playing false loading false
+0.6 faded duration 1288 playing {w} loading false
 0.6 killed duration 1288 playing false loading false
 0.6 idle killed duration 0 playing false loading false
 0.6 stopped killed duration 1288 playing false loading false
-0.6 position duration 1288 playing true loading false
-0.6 position first duration 1288 playing true loading false
-0.6 again duration 1288 playing true loading false
-0.6 pitch 2 duration 1288 playing true loading false
-0.6 again started duration 1288 playing true loading false
-0.8 again duration 1288 playing true loading false
-2.0 plain duration 1288 playing true loading false
-2.0 set 3000 duration 1288 playing true loading false
-2.0 set -5 duration 1288 playing true loading false
+0.6 position duration 1288 playing {w} loading false
+0.6 position first duration 1288 playing {w} loading false
+0.6 again duration 1288 playing {w} loading false
+0.6 pitch 2 duration 1288 playing {w} loading false
+0.6 again started duration 1288 playing {w} loading false
+0.8 again duration 1288 playing {w} loading false
+2.0 plain duration 1288 playing {w} loading false
+2.0 set 3000 duration 1288 playing {w} loading false
+2.0 set -5 duration 1288 playing {w} loading false
 2.0 loop duration 1288 playing true loading false
 2.0 missing duration 0 playing false loading false
-2.0 label duration 3750 playing true loading false
-2.0 twice duration 1288 playing true loading false
+2.0 label duration 3750 playing {w} loading false
+2.0 twice duration 1288 playing {w} loading false
 2.0 stopped duration 1288 playing false loading false
-2.0 faded duration 1288 playing false loading false
+2.0 faded duration 1288 playing {w} loading false
 2.0 killed duration 1288 playing false loading false
 2.0 idle killed duration 0 playing false loading false
 2.0 stopped killed duration 1288 playing false loading false
-2.0 position duration 1288 playing false loading false
-2.0 position first duration 1288 playing true loading false
-2.0 again duration 1288 playing true loading false
-2.0 pitch 2 duration 1288 playing false loading false
-2.0 plain started again duration 1288 playing true loading false
-2.5 plain duration 1288 playing true loading false
-4.5 plain duration 1288 playing false loading false
-4.5 set 3000 duration 1288 playing false loading false
-4.5 set -5 duration 1288 playing false loading false
+2.0 position duration 1288 playing {w} loading false
+2.0 position first duration 1288 playing {w} loading false
+2.0 again duration 1288 playing {w} loading false
+2.0 pitch 2 duration 1288 playing {w} loading false
+2.0 plain started again duration 1288 playing {w} loading false
+2.5 plain duration 1288 playing {w} loading false
+4.5 plain duration 1288 playing {w} loading false
+4.5 set 3000 duration 1288 playing {w} loading false
+4.5 set -5 duration 1288 playing {w} loading false
 4.5 loop duration 1288 playing true loading false
 4.5 missing duration 0 playing false loading false
-4.5 label duration 3750 playing true loading false
-4.5 twice duration 1288 playing false loading false
+4.5 label duration 3750 playing {w} loading false
+4.5 twice duration 1288 playing {w} loading false
 4.5 stopped duration 1288 playing false loading false
-4.5 faded duration 1288 playing false loading false
+4.5 faded duration 1288 playing {w} loading false
 4.5 killed duration 1288 playing false loading false
 4.5 idle killed duration 0 playing false loading false
 4.5 stopped killed duration 1288 playing false loading false
-4.5 position duration 1288 playing false loading false
-4.5 position first duration 1288 playing false loading false
-4.5 again duration 1288 playing false loading false
-4.5 pitch 2 duration 1288 playing false loading false
+4.5 position duration 1288 playing {w} loading false
+4.5 position first duration 1288 playing {w} loading false
+4.5 again duration 1288 playing {w} loading false
+4.5 pitch 2 duration 1288 playing {w} loading false
 wait 0 1.5
 wait 1.0 {t}
 wait idle {t}

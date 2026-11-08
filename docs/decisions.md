@@ -1568,7 +1568,7 @@ in `probes/expected`, and the workspace's facts' "Presentation" and "Files" soun
   again; `SetSoundPlayPosition` while it plays ends it that much sooner, and before `StartSound` does nothing;
   `StopSound` stops it at once, with a fade too, and destroys nothing; `KillSoundWhenDone` stops a sound playing at
   once and keeps it (its length reads 4.5 s later), and destroys one not playing. Each is measured as the probes saw
-  it. Not matched: the game's start waits a varying while (about 1 s in `sounds`, 3.7 s in `sounds-2`), so its sounds
+  it. Not matched: the game's start waits a varying while (about 1 s in `sounds`, 3.7 to 4 s in `sounds-2`), so its sounds
   read playing that much longer; a stop with a fade read playing in its instant; and a 3D sound at the origin with no
   distances set never read playing, where here it plays as a 2D one, as who hears isn't simulated. A pitch of 0 or
   below plays at its own speed (not measured). `GetSoundIsLoading` is false, Exact: every read was.
@@ -1579,9 +1579,9 @@ in `probes/expected`, and the workspace's facts' "Presentation" and "Files" soun
   both runs, so its own generator, seeded the same, not the map's), and a unit's acknowledgement labels name their files
   without a folder, which the game finds and MirrorImaged doesn't: they read 0. A map's own sound tables aren't read.
 - **D524. TriggerWaitForSound** waits as `TriggerSleepAction` (D71) for the time the sound has left less the offset,
-  and 0.15 s more: a sound not playing, or a negative offset, 0.15 s, so 0.2 s; nil 0, so 0.1 s. Fitted to the 25 waits
-  measured, 21 match: all 16 of `sounds-2`'s two runs; in `sounds` a sound never started waited 0.3 s in each run (here
-  0.2) and offset 1.0 once 0.6 s (here 0.5). The wait follows the sound's length, not when it stops reading playing
+  and 0.15 s more: a sound not playing, or a negative offset, 0.15 s, so 0.2 s; nil 0, so 0.1 s. Fitted to the 44 waits
+  measured, 38 match: 30 of `sounds-2`'s 32 (offset 0.5 once 0.9 s, here 1.0; nil once 0.2 s, here 0.1); in `sounds`
+  a sound never started waited 0.3 s in three runs of four (here 0.2) and offset 1.0 once 0.6 s (here 0.5). The wait follows the sound's length, not when it stops reading playing
   (D522): a 1.288 s sound waited 1.5 s in both probes, and one with `SetSoundDuration(s, 3000)` too. A looping sound's
   wait never ends (not measured). Close.
 - **D525. Music and the volume groups change nothing a native reads back,** so their natives keep nothing. `PlayMusic`
@@ -1590,8 +1590,9 @@ in `probes/expected`, and the workspace's facts' "Presentation" and "Files" soun
   group and stop the music first, so a probe makes no sound on Sven's PC; muted sounds still read playing.
 - **D526. The sound probes are compared with the install's data** and sound files, as the data probes are (D213):
   `ProbeComparison.ReadsData` takes `sounds` and `sounds-2`, so their comparison in MirrorImaged is `Needs=Game`.
-  Their lines that vary from run to run read `{t}`: two waits in `sounds`; in `sounds-2` when each sound stopped
-  reading playing, as lines that move (`~`).
+  Their lines that vary from run to run read `{t}` or `{w}`: in `sounds` the waits after the first and whether a sound
+  reads playing after its instant (the stable ones, never or always, kept); in `sounds-2` the waits after the first and
+  when each sound stopped reading playing, as lines that move (`~`).
 - **D527. The shipped maps get through their sounds.** With the natives `main` calls before `InitSounds` stood in for in
   a local run only (11-08, not committed; W5-1 brings them), `ShippedMapTests` took 432 of the 466 maps through their
   `NewSoundEnvironment`, `SetAmbientDaySound` and `SetAmbientNightSound` (blizzard.j: `CreateMIDISound`, `StartSound`),

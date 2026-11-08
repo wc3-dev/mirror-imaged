@@ -11,8 +11,8 @@ public partial class sound
 
 // Sounds as the probes sounds and sounds-2 measure them (docs/facts.md, "Sounds"): nothing is played. A sound's length is
 // its file's, read from the map or the install (GameData.SoundLength), and it reads playing from StartSound for that
-// long. The game reads a sound playing a varying while longer (a 1.288 s sound until 2 to 5 s after its start: its start
-// waits a varying while), so GetSoundIsPlaying is Close (decisions D520 to D524).
+// long. The game reads a sound playing longer, as its start waits a varying while (a 1.288 s sound until 2 to 5 s after
+// StartSound), so GetSoundIsPlaying is Close (decisions D520 to D524).
 public sealed partial class GameNatives
 {
     const string Sounds = "facts.md, Sounds: probes sounds and sounds-2 (11-08)";
@@ -55,7 +55,7 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// From StartSound until the sound's length has passed, divided by its pitch, or until it is stopped; a looping one
-    /// until stopped, and one of length 0 never. Close: the game's start waits a varying while, 1 to 3.7 s in the probes (D522).
+    /// until stopped, and one of length 0 never. Close: the game's start waits a varying while, 1 to 4 s in the probes (D522).
     /// </summary>
     [Native(Level.Close)]
     public bool GetSoundIsPlaying(sound? soundHandle) => soundHandle?.End > Seconds;
@@ -115,7 +115,7 @@ public sealed partial class GameNatives
     /// <summary>
     /// Waits in a trigger's actions until the sound has <paramref name="offset"/> seconds left, then 0.15 s more, ending
     /// on a tenth as TriggerSleepAction's waits do: 0.2 s for a sound not playing or a negative offset, 0.1 s for nil.
-    /// Close: this matches 21 of the 25 waits measured (D524).
+    /// Close: this matches 38 of the 44 waits measured (D524).
     /// </summary>
     [Native(Level.Close)]
     public void TriggerWaitForSound(sound? s, float offset) =>
