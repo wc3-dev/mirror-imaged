@@ -219,7 +219,16 @@ public sealed partial class Simulation : IDisposable
     LuaThread? Started(Func<LuaThread> start)
     {
         LuaThread? thread = null;
-        Protect(() => thread = start());
+        Protect(() =>
+        {
+            try { thread = start(); }
+            // A thread nested past Lua's limit of C calls doesn't start: a Lua map's game drops it, but a JASS map's
+            // closed (probes destructables-remove and destructables-remove-jass; the JASS machine's depth not measured)
+            catch (LuaException e) when (_jass && e.Message.Contains("C stack overflow"))
+            {
+                throw new GameClosedException("The game closes: JASS threads nested too deep, each started inside the one before");
+            }
+        });
         return thread;
     }
 

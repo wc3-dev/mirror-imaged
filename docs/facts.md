@@ -980,6 +980,13 @@ the same each time. Its lines are in `probes/expected/destructables.txt`.
   destructable's death event `GetTriggerUnit` and `GetDyingUnit` are nil and `GetTriggerWidget() ==
   GetTriggerDestructable()`. A tree killed with a trigger that waits 1 s and restores it to its most life with birth
   read 50 of 50 3 s later.
+- With no guard, `RemoveDestructable(GetTriggerDestructable())` in the destructable's own death action (World Editor's
+  "Destructible dies -> Remove (Dying destructible)"), probe `destructables-remove`, run from the probe's first timer
+  inside its `pcall`, two runs: in a Lua map the event fired 98 times for a tree killed and 98 for one removed, the code
+  after the call ran and the tree read type id 0; with the removal inside a `pcall` in the action, 65 times, and the
+  `pcall` caught no error; nothing more a second later. 98 and 65 fit Lua's 200 C calls, two a level and three with the
+  `pcall`: the next callback doesn't start, and the game drops that. In a JASS map (`destructables-remove-jass`, each
+  case in a thread of its own) the game closed before the probe's lines, two runs.
 - `GetLocationZ` on flat ground at 0 around a YT16 made at (0, -1280), standing at (32, -1280): 286.5 at its place,
   277.5, 255.0, 247.1, 198.8 and 158.2 at 128, 256, -256, 512 and -640 north, 288.9 at 128 east, 0 at 256 east and
   west and 300 east: it runs north-south. An LT06 made at (-1280, 0), standing at (-1280, 32): 274.2 at its place and

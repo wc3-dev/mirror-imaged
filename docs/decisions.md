@@ -1361,9 +1361,10 @@ each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions belo
 
 ### Destructables, trees and doodads (W2-4)
 
-The measurements are the probe `probes/destructables.lua` (six runs as it grew, the lines they shared the same), in
-`docs/facts.md`, "Destructables", with its lines in `probes/expected`, and the facts' "Units" and "World Editor and map
-files". What it leaves is in `docs/tasks/later.md` (D255, D257) and W2-6's task.
+The measurements are the probes `probes/destructables.lua` (six runs as it grew, the lines they shared the same),
+`destructables-remove.lua` and `destructables-remove-jass.j`, in `docs/facts.md`, "Destructables", with their lines in
+`probes/expected`, and the facts' "Units" and "World Editor and map files". What it leaves is in `docs/tasks/later.md`
+(D255, D257) and W2-6's task.
 
 - **D250. A destructable is its type's data with its own life, most life, place, scale, occluder height and
   invulnerability** (`Destructables.cs`). It is dead while its life is 0: `KillDestructable` fires nothing on one whose
@@ -1372,15 +1373,22 @@ files". What it leaves is in `docs/tasks/later.md` (D255, D257) and W2-6's task.
   `RemoveDestructable` (dead or not, with the life it had), with `GetTriggerDestructable` and `GetTriggerWidget` the
   destructable (`==` holds), `GetTriggerUnit` and `GetDyingUnit` nil, and the event id `EVENT_WIDGET_DEATH`; a firing
   carries the destructable beside W2-2's unit (`Firing.Destructable`, `Firing.Unit`). A `RemoveDestructable` inside its
-  own death event fires the event again there, nested, each time (probe: three deep, the probe stopping it), so a map
-  removing it in its death trigger without a guard recurses, as in the game; a tree brought back a second after it died
-  stands again. Invulnerability is a flag that stops neither native's death (damage is W2-5's). The life rules are the
-  probe's: a set keeps its fraction and is held to the most life, and 0.405 lives; `SetDestructableMaxLife` rounds
-  halves away from 0 (80.5 is 81, 80.4 80), keeps 0 and below, and the life keeps its share, at least 0 (20 of 50 is 40
-  of 100), killing nothing; `DestructableRestoreLife` on a dead one gives the life from 0.5 up to the most, 0 the most,
-  and on a living one nothing. One made dead reads 0 of its most. The 28 `BlzCreate*Destructable*` natives make one as
-  `CreateDestructable` does and are Close: their skin, colour, pitch and roll aren't read back, and no probe made one.
-  After a removal every native reads it as nil (its handle is gone).
+  own death event fires the event again there, nested, each time (probe: three deep, the probe stopping it); a tree
+  brought back a second after it died stands again. Without a guard, as World Editor's "Destructible dies -> Remove
+  (Dying destructible)" writes it, the game's Lua map fired the event 98 times, killed or removed, and 65 with a pcall
+  around the removal, which caught nothing, and went on after the call (probe destructables-remove): its callback
+  threads nest in the thread starting them, two of Lua's 200 C calls a level and one more for the pcall, and the next
+  doesn't start, silently. So a thread a native starts or runs on is now resumed from the Lua thread calling that native
+  (`LuaState`'s calling thread; before, from the main thread, which let 196 nest), which matches all three counts; the
+  failed start is logged here (D48). A JASS map doing the same closed the game (probe destructables-remove-jass), so in
+  a JASS map a thread too deep to start stops the run with a `GameClosedException` (D122), at the same depth: how deep
+  the JASS machine went before it closed isn't measured. Invulnerability is a flag that stops neither native's death
+  (damage is W2-5's). The life rules are the probe's: a set keeps its fraction and is held to the most life, and 0.405
+  lives; `SetDestructableMaxLife` rounds halves away from 0 (80.5 is 81, 80.4 80), keeps 0 and below, and the life keeps
+  its share, at least 0 (20 of 50 is 40 of 100), killing nothing; `DestructableRestoreLife` on a dead one gives the life
+  from 0.5 up to the most, 0 the most, and on a living one nothing. One made dead reads 0 of its most. The 28
+  `BlzCreate*Destructable*` natives make one as `CreateDestructable` does and are Close: their skin, colour, pitch and
+  roll aren't read back, and no probe made one. After a removal every native reads it as nil (its handle is gone).
 - **D251. Where a destructable is put** (probe: eight types at twelve places, a free type at fifteen facings; the
   facts' LTlt at 1000,1000 and YT16 at 2600,-1200): a place is cut down to a quarter (floor: -10.1 is -10.25); then a
   type with a pathing texture is put on the 64 grid toward 0 (-96 is -64), or 32 off it away from 0 (0 is 32, -10 is

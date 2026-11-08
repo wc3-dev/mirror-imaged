@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using MirrorImaged.Data;
 using MirrorImaged.Natives;
 using War3Net.Build;
+using War3Net.Build.Info;
 using War3Net.Build.Widget;
 using War3Net.Common.Extensions;
 
@@ -527,6 +528,72 @@ public sealed class DestructableTests : IDisposable
         Assert.Equal("TriggerRegisterDeathEvent",
             Assert.Throws<MissingNativeException>(() => natives.TriggerRegisterDeathEvent(natives.CreateTrigger(), potion)).Native);
         Assert.Equal(0, natives.GetWidgetLife(null));
+    }
+
+    // probe destructables-remove: removed inside its own death event with no guard, as World Editor's "Destructible dies
+    // -> Remove (Dying destructible)", the event fires 98 times in a Lua map, killed or removed, and 65 with a pcall
+    // around the removal, which catches nothing: the next nested thread doesn't start, past Lua's limit of C calls. As
+    // there, it runs in a timer's callback inside a pcall (the probe's guard), as the depth counts from there.
+    [Fact]
+    public void An_unguarded_removal_in_its_own_death_event_nests_until_lua_stops_it()
+    {
+        using var simulation = Load("""
+            TimerStart(CreateTimer(), 0, false, function() pcall(function()
+            local function count(start)
+              local n = 0
+              local t = CreateTrigger()
+              local tree = CreateDestructable(FourCC("LTlt"), 0, 0, 270, 1, 0)
+              TriggerRegisterDeathEvent(t, tree)
+              TriggerAddAction(t, function()
+                n = n + 1
+                RemoveDestructable(GetTriggerDestructable())
+              end)
+              start(tree)
+              return n, tree
+            end
+            local killed, tree = count(KillDestructable)
+            print("killed " .. killed .. " type " .. GetDestructableTypeId(tree))
+            print("removed " .. count(RemoveDestructable))
+            local n, problem = 0, nil
+            local t = CreateTrigger()
+            local guarded = CreateDestructable(FourCC("LTlt"), 0, 0, 270, 1, 0)
+            TriggerRegisterDeathEvent(t, guarded)
+            TriggerAddAction(t, function()
+              n = n + 1
+              local ok, e = pcall(RemoveDestructable, GetTriggerDestructable())
+              if not ok and problem == nil then problem = tostring(e) end
+            end)
+            KillDestructable(guarded)
+            print("pcall " .. n .. " " .. tostring(problem))
+            end) end)
+            """);
+        simulation.Advance(TimeSpan.FromSeconds(0.1));
+
+        Assert.Equal(["killed 98 type 0", "removed 98", "pcall 65 nil"], Printed(simulation).Where(line => !line.Contains("C stack overflow")));
+    }
+
+    // probe destructables-remove-jass: the same in a JASS map closed the game
+    [Fact]
+    public void An_unguarded_removal_in_its_own_death_event_closes_a_jass_maps_game()
+    {
+        using var simulation = Simulation.Load(_maps.Build("""
+            function Dies takes nothing returns nothing
+                call RemoveDestructable(GetTriggerDestructable())
+            endfunction
+
+            function config takes nothing returns nothing
+            endfunction
+
+            function main takes nothing returns nothing
+                local trigger t = CreateTrigger()
+                local destructable d = CreateDestructable('LTlt', 0, 0, 270, 1, 0)
+                call TriggerRegisterDeathEvent(t, d)
+                call TriggerAddAction(t, function Dies)
+                call KillDestructable(d)
+            endfunction
+            """, ScriptLanguage.Jass), "", data: Standard);
+
+        Assert.IsType<GameClosedException>(simulation.Stopped?.InnerException);
     }
 
     // probe destructables: in a destructable's death event GetTriggerUnit and GetDyingUnit are nil and GetTriggerWidget
