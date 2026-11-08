@@ -1,0 +1,58 @@
+# Where MirrorImaged differs from the game's lines in expected/numbers-fine-2.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# atan is the double model's, a float step or two off; the game's is x (1 - 2^-20) near 0 (D32, D152, Close).
+- atan tiny 0 00000000 377ffff0 37fffff0 383ffff4 387ffff0 389ffff6 38bffff4 38dffff2 38fffff0 390ffff7 391ffff6 392ffff5 393ffff4 394ffff3 395ffff2 396ffff1 397ffff0 3987fff7 398ffff7 3997fff6 399ffff6 39a7fff5 39affff5 39b7fff4
++ atan tiny 0 00000000 377fffff 37ffffff 383fffff 387fffff 389fffff 38bfffff 38dfffff 38ffffff 390fffff 391fffff 392fffff 393fffff 394fffff 395fffff 396fffff 397fffff 3987ffff 398fffff 3997ffff 399fffff 39a7ffff 39afffff 39b7ffff
+- atan tiny 24 39bffff4 39c7fff3 39cffff3 39d7fff2 39dffff2 39e7fff1 39effff1 39f7fff0 39fffff0 3a03fff7 3a07fff7 3a0bfff7 3a0ffff7 3a13fff6 3a17fff6 3a1bfff6 3a1ffff6 3a23fff5 3a27fff3 3a2bfff2 3a2ffff2 3a33fff3 3a37fff2 3a3bfff2
++ atan tiny 24 39bfffff 39c7ffff 39cfffff 39d7ffff 39dfffff 39e7ffff 39effffe 39f7fffe 39fffffe 3a03ffff 3a07ffff 3a0bffff 3a0fffff 3a13fffe 3a17fffe 3a1bfffe 3a1ffffe 3a23fffe 3a27fffe 3a2bfffe 3a2ffffe 3a33fffe 3a37fffe 3a3bfffd
+- atan tiny 48 3a3ffff2 3a43fff2 3a47fff2 3a4bfff0 3a4fffef 3a53ffef 3a57ffef 3a5bffef 3a5fffef 3a63ffef 3a67ffef 3a6bffed 3a6fffec 3a73ffec 3a77ffec 3a7bffec 3a7fffed 3a81fff5 3a83fff4 3a85fff4 3a87fff4 3a89fff4 3a8bfff4 3a8dfff4
++ atan tiny 48 3a3ffffd 3a43fffd 3a47fffd 3a4bfffd 3a4ffffd 3a53fffc 3a57fffc 3a5bfffc 3a5ffffc 3a63fffc 3a67fffc 3a6bfffb 3a6ffffb 3a73fffb 3a77fffb 3a7bfffa 3a7ffffa 3a81fffd 3a83fffd 3a85fffc 3a87fffc 3a89fffc 3a8bfffc 3a8dfffc
+- atan tiny 72 3a8ffff3 3a91fff2 3a93fff2 3a95fff2 3a97fff2 3a99fff2 3a9bfff1 3a9dfff0 3a9ffff0 3aa1fff0 3aa3fff0 3aa5fff0 3aa7fff0 3aa9fff0 3aabffee 3aadffee 3aafffee 3ab1ffed 3ab3ffee 3ab5ffed 3ab7ffed 3ab9ffed 3abbffec 3abdffeb
++ atan tiny 72 3a8ffffc 3a91fffc 3a93fffb 3a95fffb 3a97fffb 3a99fffb 3a9bfffb 3a9dfffa 3a9ffffa 3aa1fffa 3aa3fffa 3aa5fffa 3aa7fff9 3aa9fff9 3aabfff9 3aadfff9 3aaffff9 3ab1fff8 3ab3fff8 3ab5fff8 3ab7fff8 3ab9fff7 3abbfff7 3abdfff7
+- atan tiny 96 3abfffeb 3ac1ffeb 3ac3ffe9 3ac5ffe9 3ac7ffea 3ac9ffea 3acbffe8 3acdffe8 3acfffe8 3ad1ffe8 3ad3ffe7 3ad5ffe6 3ad7ffe5 3ad9ffe5 3adbffe6 3addffe4 3adfffe4 3ae1ffe4 3ae3ffe3 3ae5ffe2 3ae7ffe2 3ae9ffe2 3aebffe1 3aedffe1
++ atan tiny 96 3abffff7 3ac1fff6 3ac3fff6 3ac5fff6 3ac7fff5 3ac9fff5 3acbfff5 3acdfff4 3acffff4 3ad1fff4 3ad3fff3 3ad5fff3 3ad7fff3 3ad9fff2 3adbfff2 3addfff2 3adffff1 3ae1fff1 3ae3fff0 3ae5fff0 3ae7fff0 3ae9ffef 3aebffef 3aedffee
+- atan tiny 120 3aefffe0 3af1ffe0 3af3ffde 3af5ffdf 3af7ffdf 3af9ffdc 3afbffdc 3afdffdd 3affffdd 3b00ffed 3b01ffed 3b02ffed 3b03ffeb 3b04ffeb 3b05ffec 3b06ffeb 3b07ffeb 3b08ffeb 3b09ffea 3b0affe9 3b0bffe9 3b0cffea 3b0dffe9 3b0effe8
++ atan tiny 120 3aefffee 3af1ffed 3af3ffed 3af5ffed 3af7ffec 3af9ffec 3afbffeb 3afdffeb 3affffea 3b00fff5 3b01fff4 3b02fff4 3b03fff4 3b04fff4 3b05fff3 3b06fff3 3b07fff3 3b08fff2 3b09fff2 3b0afff2 3b0bfff2 3b0cfff1 3b0dfff1 3b0efff1
+
+# exp is the double model's (D32, D152, Close): the game's is a table on a straight line by its steps, and 1 over
+# exp(-x) below 0, as here.
+- exp 1 0 402df853 402df85d 402df868 402df873 402df87e 402df889 402df894 402df89f 402df8a9 402df8b4 402df8bf 402df8ca 402df8d5 402df8e0 402df8eb 402df8f6 402df900 402df90b 402df916 402df921 402df92c 402df937 402df942 402df94d
++ exp 1 0 402df854 402df85f 402df86a 402df874 402df87f 402df88a 402df895 402df8a0 402df8ab 402df8b6 402df8c1 402df8cb 402df8d6 402df8e1 402df8ec 402df8f7 402df902 402df90d 402df918 402df922 402df92d 402df938 402df943 402df94e
+- exp 1 24 402df957 402df962 402df96d 402df978 402df983 402df98e 402df999 402df9a4 402df9ae 402df9b9 402df9c4 402df9cf 402df9da 402df9e5 402df9f0 402df9fb 402dfa05 402dfa10 402dfa1b 402dfa26 402dfa31 402dfa3c 402dfa47 402dfa52
++ exp 1 24 402df959 402df964 402df96f 402df979 402df984 402df98f 402df99a 402df9a5 402df9b0 402df9bb 402df9c6 402df9d0 402df9db 402df9e6 402df9f1 402df9fc 402dfa07 402dfa12 402dfa1d 402dfa27 402dfa32 402dfa3d 402dfa48 402dfa53
+- exp 1 48 402dfa5c 402dfa67 402dfa72 402dfa7d 402dfa88 402dfa93 402dfa9e 402dfaa9 402dfab3 402dfabe 402dfac9 402dfad4 402dfadf 402dfaea 402dfaf5 402dfb00 402dfb0a 402dfb15 402dfb20 402dfb2b 402dfb36 402dfb41 402dfb4c 402dfb56
++ exp 1 48 402dfa5e 402dfa69 402dfa74 402dfa7e 402dfa89 402dfa94 402dfa9f 402dfaaa 402dfab5 402dfac0 402dfacb 402dfad5 402dfae0 402dfaeb 402dfaf6 402dfb01 402dfb0c 402dfb17 402dfb21 402dfb2c 402dfb37 402dfb42 402dfb4d 402dfb58
+- exp 1 72 402dfb61 402dfb6c 402dfb77 402dfb82 402dfb8d 402dfb98 402dfba3 402dfbad 402dfbb8 402dfbc3 402dfbce 402dfbd9 402dfbe4 402dfbef 402dfbfa 402dfc04 402dfc0f 402dfc1a 402dfc25 402dfc30 402dfc3b 402dfc46 402dfc51 402dfc5b
++ exp 1 72 402dfb63 402dfb6e 402dfb78 402dfb83 402dfb8e 402dfb99 402dfba4 402dfbaf 402dfbba 402dfbc5 402dfbcf 402dfbda 402dfbe5 402dfbf0 402dfbfb 402dfc06 402dfc11 402dfc1c 402dfc26 402dfc31 402dfc3c 402dfc47 402dfc52 402dfc5d
+- exp 1 96 402dfc66 402dfc71 402dfc7c 402dfc87 402dfc92 402dfc9d 402dfca8 402dfcb2 402dfcbd 402dfcc8 402dfcd3 402dfcde 402dfce9 402dfcf4 402dfcff 402dfd09 402dfd14 402dfd1f 402dfd2a 402dfd35 402dfd40 402dfd4b 402dfd56 402dfd60
++ exp 1 96 402dfc68 402dfc73 402dfc7d 402dfc88 402dfc93 402dfc9e 402dfca9 402dfcb4 402dfcbf 402dfcca 402dfcd4 402dfcdf 402dfcea 402dfcf5 402dfd00 402dfd0b 402dfd16 402dfd21 402dfd2b 402dfd36 402dfd41 402dfd4c 402dfd57 402dfd62
+- exp 1 120 402dfd6b 402dfd76 402dfd81 402dfd8c 402dfd97 402dfda2 402dfdad 402dfdb7 402dfdc2 402dfdcd 402dfdd8 402dfde3 402dfdee 402dfdf9 402dfe03 402dfe0e 402dfe19 402dfe24 402dfe2f 402dfe3a 402dfe45 402dfe50 402dfe5a 402dfe65
++ exp 1 120 402dfd6d 402dfd78 402dfd82 402dfd8d 402dfd98 402dfda3 402dfdae 402dfdb9 402dfdc4 402dfdcf 402dfdd9 402dfde4 402dfdef 402dfdfa 402dfe05 402dfe10 402dfe1b 402dfe26 402dfe30 402dfe3b 402dfe46 402dfe51 402dfe5c 402dfe67
+
+# log is the double model's (D32, D152, Close): the game's is right near 1 and off from 1.5 up (log(1000) by 41
+# float steps).
+- log 1 0 00000000 377fff80 37ffff00 383ffedf 387ffe00 389ffe6f 38bffdbe 38dffcef 38fffc00 390ffd78 391ffce0 392ffc38 393ffb7f 394ffab8 395ff9e0 396ff8f7 397ff801 3987fb7c 398ffaf0 3997fa5c 399ff9c0 39a7f91c 39aff871 39b7f7bd
++ log 1 0 00000000 377fff80 37ffff00 383ffee0 387ffe00 389ffe70 38bffdc0 38dffcf0 38fffc00 390ffd78 391ffce0 392ffc38 393ffb80 394ffab8 395ff9e0 396ff8f8 397ff800 3987fb7c 398ffaf0 3997fa5c 399ff9c0 39a7f91c 39aff870 39b7f7bc
+- log 1 24 39bff700 39c7f63d 39cff572 39d7f49e 39dff3c1 39e7f2de 39eff1f1 39f7f0fe 39fff003 3a03f77f 3a07f6f9 3a0bf66f 3a0ff5e1 3a13f54f 3a17f4b9 3a1bf420 3a1ff382 3a23f2e0 3a27f23a 3a2bf191 3a2ff0e3 3a33f030 3a37ef7b 3a3beec1
++ log 1 24 39bff700 39c7f63c 39cff570 39d7f49c 39dff3c0 39e7f2dc 39eff1f1 39f7f0fd 39fff001 3a03f77e 3a07f6f8 3a0bf66e 3a0ff5e0 3a13f54f 3a17f4b9 3a1bf41f 3a1ff381 3a23f2df 3a27f239 3a2bf18f 3a2ff0e1 3a33f02f 3a37ef79 3a3beec0
+- log 1 48 3a3fee03 3a43ed41 3a47ec7b 3a4bebb1 3a4feae4 3a53ea11 3a57e93c 3a5be862 3a5fe784 3a63e6a3 3a67e5bd 3a6be4d2 3a6fe3e5 3a73e2f4 3a77e1fe 3a7be104 3a7fe007 3a81ef82 3a83eeff 3a85ee7a 3a87edf3 3a89ed6a 3a8becdf 3a8dec52
++ log 1 48 3a3fee02 3a43ed40 3a47ec7a 3a4bebb0 3a4feae2 3a53ea11 3a57e93b 3a5be861 3a5fe783 3a63e6a1 3a67e5bb 3a6be4d2 3a6fe3e4 3a73e2f2 3a77e1fc 3a7be103 3a7fe005 3a81ef81 3a83eefe 3a85ee7a 3a87edf3 3a89ed6a 3a8becdf 3a8dec52
+- log 1 72 3a8febc4 3a91eb33 3a93eaa0 3a95ea0b 3a97e974 3a99e8dc 3a9be841 3a9de7a4 3a9fe705 3aa1e664 3aa3e5c1 3aa5e51f 3aa7e478 3aa9e3cf 3aabe326 3aade279 3aafe1ca 3ab1e119 3ab3e066 3ab5dfb1 3ab7def9 3ab9de40 3abbdd87 3abddcca
++ log 1 72 3a8febc3 3a91eb32 3a93eaa0 3a95ea0b 3a97e974 3a99e8db 3a9be840 3a9de7a4 3a9fe705 3aa1e664 3aa3e5c1 3aa5e51c 3aa7e476 3aa9e3cd 3aabe322 3aade275 3aafe1c6 3ab1e116 3ab3e063 3ab5dfae 3ab7def7 3ab9de3f 3abbdd84 3abddcc7
+- log 1 96 3abfdc0b 3ac1db4a 3ac3da87 3ac5d9c3 3ac7d8fb 3ac9d833 3acbd769 3acdd69e 3acfd5cf 3ad1d4fe 3ad3d42b 3ad5d356 3ad7d27f 3ad9d1a7 3adbd0cb 3addcff0 3adfcf11 3ae1ce30 3ae3cd4d 3ae5cc68 3ae7cb81 3ae9ca9b 3aebc9b0 3aedc8c3
++ log 1 96 3abfdc08 3ac1db48 3ac3da85 3ac5d9c0 3ac7d8fa 3ac9d831 3acbd766 3acdd69a 3acfd5cb 3ad1d4fa 3ad3d428 3ad5d353 3ad7d27c 3ad9d1a4 3adbd0c9 3addcfec 3adfcf0e 3ae1ce2d 3ae3cd4b 3ae5cc66 3ae7cb7f 3ae9ca97 3aebc9ac 3aedc8c0
+- log 1 120 3aefc7d6 3af1c6e5 3af3c5f2 3af5c4fd 3af7c400 3af9c308 3afbc20c 3afdc10f 3affc014 3b00df89 3b01df08 3b02de87 3b03de03 3b04dd7f 3b05dcfa 3b06dc74 3b07dbec 3b08db64 3b09dadb 3b0ada4f 3b0bd9c5 3b0cd938 3b0dd8ab 3b0ed81d
++ log 1 120 3aefc7d1 3af1c6e0 3af3c5ee 3af5c4f9 3af7c403 3af9c30a 3afbc210 3afdc113 3affc015 3b00df8a 3b01df09 3b02de86 3b03de03 3b04dd7f 3b05dcfa 3b06dc73 3b07dbec 3b08db64 3b09dadb 3b0ada51 3b0bd9c5 3b0cd939 3b0dd8ac 3b0ed81e
+- log 1.5 0 3ecf990e 3ecf9921 3ecf9938 3ecf994e 3ecf9964 3ecf9979 3ecf998f 3ecf99a5 3ecf99b9 3ecf99cd 3ecf99e2 3ecf99f8 3ecf9a0e 3ecf9a23 3ecf9a39 3ecf9a4e 3ecf9a63 3ecf9a79 3ecf9a8d 3ecf9aa4 3ecf9ab8 3ecf9acf 3ecf9ae3 3ecf9afa
++ log 1.5 0 3ecf991f 3ecf9934 3ecf994a 3ecf995f 3ecf9974 3ecf998a 3ecf999f 3ecf99b4 3ecf99ca 3ecf99df 3ecf99f4 3ecf9a0a 3ecf9a1f 3ecf9a34 3ecf9a4a 3ecf9a5f 3ecf9a74 3ecf9a8a 3ecf9a9f 3ecf9ab4 3ecf9aca 3ecf9adf 3ecf9af4 3ecf9b0a
+- log 1.5 24 3ecf9b10 3ecf9b24 3ecf9b39 3ecf9b4d 3ecf9b62 3ecf9b7a 3ecf9b8d 3ecf9ba3 3ecf9bb9 3ecf9bce 3ecf9be4 3ecf9bf6 3ecf9c0e 3ecf9c24 3ecf9c3a 3ecf9c4e 3ecf9c64 3ecf9c7a 3ecf9c8f 3ecf9ca4 3ecf9cb7 3ecf9ccd 3ecf9ce2 3ecf9cf8
++ log 1.5 24 3ecf9b1f 3ecf9b34 3ecf9b4a 3ecf9b5f 3ecf9b74 3ecf9b8a 3ecf9b9f 3ecf9bb4 3ecf9bca 3ecf9bdf 3ecf9bf4 3ecf9c0a 3ecf9c1f 3ecf9c34 3ecf9c4a 3ecf9c5f 3ecf9c74 3ecf9c8a 3ecf9c9f 3ecf9cb4 3ecf9cca 3ecf9cdf 3ecf9cf4 3ecf9d0a
+- log 1.5 48 3ecf9d0d 3ecf9d25 3ecf9d38 3ecf9d4e 3ecf9d64 3ecf9d78 3ecf9d8e 3ecf9da3 3ecf9db9 3ecf9dcf 3ecf9de5 3ecf9dfa 3ecf9e0f 3ecf9e22 3ecf9e39 3ecf9e4d 3ecf9e62 3ecf9e78 3ecf9e8d 3ecf9ea6 3ecf9eb8 3ecf9ece 3ecf9ee3 3ecf9ef9
++ log 1.5 48 3ecf9d1f 3ecf9d34 3ecf9d4a 3ecf9d5f 3ecf9d74 3ecf9d8a 3ecf9d9f 3ecf9db4 3ecf9dca 3ecf9ddf 3ecf9df4 3ecf9e0a 3ecf9e1f 3ecf9e34 3ecf9e4a 3ecf9e5f 3ecf9e74 3ecf9e8a 3ecf9e9f 3ecf9eb4 3ecf9eca 3ecf9edf 3ecf9ef4 3ecf9f0a
+- log 1.5 72 3ecf9f0f 3ecf9f24 3ecf9f39 3ecf9f4c 3ecf9f64 3ecf9f7a 3ecf9f8e 3ecf9fa4 3ecf9fba 3ecf9fcd 3ecf9fe3 3ecf9ff8 3ecfa010 3ecfa023 3ecfa038 3ecfa04e 3ecfa063 3ecfa07b 3ecfa08e 3ecfa0a4 3ecfa0b9 3ecfa0ce 3ecfa0e5 3ecfa0f6
++ log 1.5 72 3ecf9f1f 3ecf9f34 3ecf9f4a 3ecf9f5f 3ecf9f74 3ecf9f8a 3ecf9f9f 3ecf9fb4 3ecf9fca 3ecf9fdf 3ecf9ff4 3ecfa00a 3ecfa01f 3ecfa034 3ecfa04a 3ecfa05f 3ecfa074 3ecfa08a 3ecfa09f 3ecfa0b4 3ecfa0ca 3ecfa0df 3ecfa0f4 3ecfa10a
+- log 1.5 96 3ecfa10f 3ecfa125 3ecfa139 3ecfa14f 3ecfa163 3ecfa178 3ecfa190 3ecfa1a3 3ecfa1b8 3ecfa1ce 3ecfa1e3 3ecfa1f9 3ecfa20e 3ecfa224 3ecfa239 3ecfa24f 3ecfa263 3ecfa279 3ecfa28e 3ecfa2a2 3ecfa2ba 3ecfa2d0 3ecfa2e2 3ecfa2fa
++ log 1.5 96 3ecfa11f 3ecfa134 3ecfa149 3ecfa15f 3ecfa174 3ecfa189 3ecfa19f 3ecfa1b4 3ecfa1c9 3ecfa1df 3ecfa1f4 3ecfa209 3ecfa21f 3ecfa234 3ecfa249 3ecfa25f 3ecfa274 3ecfa289 3ecfa29f 3ecfa2b4 3ecfa2c9 3ecfa2df 3ecfa2f4 3ecfa309
+- log 1.5 120 3ecfa30e 3ecfa323 3ecfa339 3ecfa34e 3ecfa364 3ecfa379 3ecfa38e 3ecfa3a4 3ecfa3b9 3ecfa3ce 3ecfa3e3 3ecfa3f7 3ecfa410 3ecfa425 3ecfa43b 3ecfa44f 3ecfa464 3ecfa478 3ecfa48d 3ecfa4a3 3ecfa4b8 3ecfa4ce 3ecfa4e6 3ecfa4f9
++ log 1.5 120 3ecfa31f 3ecfa334 3ecfa349 3ecfa35f 3ecfa374 3ecfa389 3ecfa39f 3ecfa3b4 3ecfa3c9 3ecfa3df 3ecfa3f4 3ecfa409 3ecfa41f 3ecfa434 3ecfa449 3ecfa45f 3ecfa474 3ecfa489 3ecfa49f 3ecfa4b4 3ecfa4c9 3ecfa4df 3ecfa4f4 3ecfa509

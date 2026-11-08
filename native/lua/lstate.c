@@ -79,9 +79,10 @@ typedef struct LG {
     memcpy(b + p, &t, sizeof(t)); p += sizeof(t); }
 
 static unsigned int makeseed (lua_State *L) {
-  /* MirrorImaged: one seed, so string keys are visited in the same order every run (no addresses or time) */
+  /* MirrorImaged: the game's seed, measured (probes lua-config and string-order), so string keys are visited in the
+     game's order every run (no addresses or time) */
   (void)L;
-  return 0;
+  return 0x1c46318e;
 }
 
 
