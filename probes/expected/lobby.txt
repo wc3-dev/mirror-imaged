@@ -1,4 +1,4 @@
-# probes/lobby.lua on 3.0.1.24371, single player, 11-08, on the probe map with a computer: the game's lines. Three runs
+# probes/lobby.lua on 3.0.1.24371, single player, 11-08, on the probe map with a computer: the game's lines. Four runs
 # (one without war3map.w3i's selectable-race flag), the same but for the start locations of slots 0 and 1, which the
 # lobby's placement (teams together) gave at random, and the race of slot 3, which no longer prints.
 # A line starting "~ " varies from run to run: each {t} in it stands for a number, the rest must match exactly, and the

@@ -1,4 +1,5 @@
-# probes/forforce-wait.lua on 3.0.1.24371, single player, 11-08: the game's lines. One run.
+# probes/forforce-wait.lua on 3.0.1.24371, single player, 11-08: the game's lines. Five runs, the same as far as each
+# was read; cases 9 to 12 came in the last three, after the probe gained them (decisions D148).
 # A line starting "~ " varies from run to run: each {t} in it stands for a number, the rest must match exactly, and the
 # run may give it anywhere. The other lines come in order, exactly. Lines starting "# " are notes.
 1 base: ended
@@ -10,3 +11,5 @@
 7 next: ended
 8 polled: ended
 ids: force 1048708, then trigger 1048709, timer 1048711
+9 ForForce one, destroy, a wait 1 s later: ended; 10 next: ended
+11 a wait running across ForForce one, destroy: ended; a new one beside it: waiting; 12 next: ended

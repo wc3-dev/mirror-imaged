@@ -63,7 +63,7 @@ public sealed partial class Simulation : IDisposable
             Protect(() => _lua.Call("config"));
             var flags = info?.MapFlags ?? 0;
             _natives.Seat(users, computers, others, flags.HasFlag(MapFlags.UseCustomForces), flags.HasFlag(MapFlags.FixedPlayerSettingsForCustomForces),
-                info?.Players.DistinctBy(p => p.Id).ToDictionary(p => p.Id, p => p.Name));
+                info?.Players.Where(p => p.Controller == PlayerController.Computer).DistinctBy(p => p.Id).ToDictionary(p => p.Id, p => p.Name));
             Protect(() => _lua.Call("main"));
         }
         catch (LuaException e) when (_lua.Halted is not null)

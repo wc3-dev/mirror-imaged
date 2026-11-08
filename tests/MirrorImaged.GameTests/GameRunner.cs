@@ -72,7 +72,8 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// <summary>The game's executable.</summary>
     public string Game => game;
 
-    string Data => Path.Combine(documents, "CustomMapData", ProbeMap.Folder);
+    /// <summary>The folder the probes write to, <c>CustomMapData\MirrorImaged</c> in the game's documents.</summary>
+    public string Data => Path.Combine(documents, "CustomMapData", ProbeMap.Folder);
 
     // Beside the maps' folder: the hashes of the replays probe runs made, one a line.
     string ProbeReplays => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(maps))!, "probe-replays.txt");

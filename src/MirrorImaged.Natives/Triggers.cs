@@ -289,13 +289,14 @@ public sealed partial class GameNatives
     /// <summary>
     /// Waits in a trigger's actions or ExecuteFunc's function until the first tenth of a second of game time after the
     /// timeout (decisions D71). A wait in a timer's callback or a condition never ends; in the main thread, or past a C
-    /// function, it raises. The first wait after a force ForForce ran over was destroyed never ends either (DestroyForce).
+    /// function, it raises. The first wait started in the step a force ForForce ran over was destroyed in never ends
+    /// either (DestroyForce).
     /// </summary>
     [Native(Level.Close)]
     public void TriggerSleepAction(float timeout)
     {
-        _sleep = _waitLost ? float.PositiveInfinity : timeout;
-        _waitLost = false;
+        _sleep = _waitLost == _game.Step ? float.PositiveInfinity : timeout;
+        _waitLost = -1;
         if (Threads is null) throw new InvalidOperationException("attempt to yield from outside a coroutine");
         Threads.Yield();
     }

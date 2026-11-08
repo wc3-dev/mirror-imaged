@@ -67,8 +67,18 @@ public sealed class GameProbeTests
     [GameFact]
     public void The_lobby_probe_gives_the_lines_measured() => Measured("lobby", withComputer: true);
 
+    // and EndGame's evidence (decisions D147): the probe's code after it and a 0 s timer started before it write their
+    // files, and the end-level event's action never writes its own
     [GameFact]
-    public void The_events_probe_gives_the_lines_measured() => Measured("events", withComputer: true);
+    public void The_events_probe_gives_the_lines_measured()
+    {
+        var files = new[] { "events-after.pld", "events-timer.pld", "events-end.pld" }.Select(file => Path.Combine(GameRunner.Default.Data, file)).ToList();
+        files.ForEach(File.Delete);
+
+        Measured("events", withComputer: true);
+
+        Assert.Equal([true, true, false], files.Select(File.Exists));
+    }
 
     [GameFact]
     public void The_forforce_wait_probe_gives_the_lines_measured() => Measured("forforce-wait");

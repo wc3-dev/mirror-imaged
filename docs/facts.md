@@ -232,7 +232,8 @@ callback; handle ids are read with `GetHandleId`, times with a 1000 s timer's el
 - The time of day (suspended, limit 12), set to 20, then 10, 11, 12, 12, 13, 12, 11, 10 and 14: the events read the
   time inside them as `LESS_THAN` and `LESS_THAN_OR_EQUAL` 10.0 and 12.0, `EQUAL` 12.0 twice, `GREATER_THAN_OR_EQUAL`
   and `GREATER_THAN` 12.0, 13.0 and 14.0, and `NOT_EQUAL` fired never; which sets fired them is inferred from those
-  reads (at 10 and the first 12, and so on), as the probe logged no set. The event's id is 3, `EVENT_GAME_STATE_LIMIT`.
+  reads (at 10 and the first 12, and so on), as the probe logged no set; W1-9's events probe logged them and bore the
+  inference out ("Player and game events"). The event's id is 3, `EVENT_GAME_STATE_LIMIT`.
 - `BlzTriggerIsRunning` is false for a new trigger, true in its action and while a run of it waits, also for two runs at
   once, and false once they have ended (read 1 s later), and in its condition under `TriggerEvaluate`.
   `BlzTriggerInterrupt` on a trigger whose run waits: that run never goes on, nor does its next action, and
@@ -387,7 +388,7 @@ are in `probes/expected/players.txt`, as the game gave them.
   arithmetic gave none of the three values, and neither did any of ten conversions tried for 0.1 (`x * 20 / 20`,
   `x / 24 * 24` and the like). Against the workspace's facts: on a Moonwell check map (11-05) a time set to 7 read
   6.999999, where here 7 read back exactly; that read may have come later, after the game had moved the time on, while
-  here it came at once. Not separated (W1-9's probe).
+  here it came at once. W1-9's lobby probe separated them (below): neither read gives 6.999999.
 
 ## Files and game cache
 
@@ -450,7 +451,7 @@ an outside program wrote and tried more paths (`files-paths`), and read a file t
   wrote it (still 177 bytes, written 07:24:50, after runs at 07:46, 08:11, 08:12 and 08:13). `Classic.w3p` in the same
   folder is rewritten by every game, saving or not.
 
-Probe `probes/lobby.lua`, three runs on 3.0.1.24371, 11-08 (W1-9), on the probe map with a computer (decisions D140:
+Probe `probes/lobby.lua`, four runs on 3.0.1.24371, 11-08 (W1-9), on the probe map with a computer (decisions D140:
 a user in slot 0, a computer in 1 and a user slot 2 no one plays, named "Probe User", "Probe Computer" and "Probe
 Empty" in `war3map.w3i`, human and selectable, custom forces with fixed player settings, placement teams together),
 single player, `-loadfile`. The second run without `war3map.w3i`'s selectable-race flag gave the same lines. The lines
@@ -463,10 +464,11 @@ are in `probes/expected/lobby.txt`.
 - After: slot 0 "Local Player", Playing, user, team 0; slot 1 "Probe Computer" (its `war3map.w3i` name), Playing,
   `MAP_CONTROL_COMPUTER`, team 1, `PLACED` 1; slot 2 "Player 3", Empty, `MAP_CONTROL_USER` (as `config` set it), team -1
   though `config` set 0, `PLACED` 0. All three human, with the human preference set and the random one not, though
-  selectable (in the players probe, without custom forces, the same `config` gave a random race). An unused slot (3)
-  had a random race and the random preference, the neutral slots the random preference.
+  selectable (in the players probe, without custom forces, the same `config` gave a random race). The neutral slots
+  had the random preference. In the first two runs, whose probe also printed slot 3 (the committed probe no longer
+  does), the unused slot 3 had a random race (orc, then undead) and the random preference.
 - The lobby moved the start locations: `config` gave slots 0, 1 and 2 locations 0, 1 and 2; slots 0 and 1 read 2 and 0
-  in the first run, 1 and 2 in the second; slot 2 kept 2.
+  in the first run, 1 and 2 in the second (the later runs' weren't kept); slot 2 kept 2.
 - The computer's alliances are the user's: none with 0 or 2 either way (different forces, not allied), 255 to itself,
   passive with neutral passive both ways, 25 to it passive and it to 25 not, none with 24 or 26. Its states and
   handicaps are a user's (game result 3, food cap ceiling 100, `PLACED` 1, handicaps 1). `ForceEnumPlayers` held 0 and
@@ -481,11 +483,13 @@ are in `probes/expected/lobby.txt`.
 ## Player and game events
 
 Two probes on 3.0.1.24371, 11-08 (W1-9), single player, `-loadfile`: `probes/events.lua` on the probe map with a
-computer (decisions D140), three runs, and `probes/forforce-wait.lua` on the usual probe map, two runs. Their lines are
+computer (decisions D140), four runs, and `probes/forforce-wait.lua` on the usual probe map, five runs (its last two
+cases in the last three). Their lines are
 in `probes/expected`; the first run of `events` called RemovePlayer in another order, as below. Each part ran in the
 probe's zero-second timer unless timed; times are a 1000 s timer's elapsed time.
 
-- Filters: `ForceEnumPlayers` with a filter called it for slots 0 and 1 (the playing players of 0 to 23), in that
+- Filters (each enumeration run in the probe's zero-second timer, outside any event or `ForForce`):
+  `ForceEnumPlayers` with a filter called it for slots 0 and 1 (the playing players of 0 to 23), in that
   order, with `GetFilterPlayer` the player, `GetEnumPlayer` and `GetTriggerPlayer` nil, and `GetFilterPlayer` nil
   after. The force was cleared first (slot 5 gone). A filter returning true, false or "is player 1" gave 0 1, nothing
   and 1. `ForceEnumPlayersCounted(f, filter, 1)`: with a filter passing all, called for 0 only and held 0; with one
@@ -493,15 +497,17 @@ probe's zero-second timer unless timed; times are a 1000 s timer's elapsed time.
   held 0, and 1. A filter returning 1 passed; 0, "x", nil and a table failed; one that raised failed for both. A
   `Condition` as the filter worked; `And(filter(true), filter(false))` ran both for 0, then both for 1, and held
   nothing; `Filter(nil)` held 0 and 1 without running anything. A filter destroyed before a `Condition` was made, then
-  given to `ForceEnumPlayers`, ran that condition's function, twice, and held 0 and 1: the destroyed handle's id was
-  reused (inferred).
+  given to `ForceEnumPlayers`, ran that condition's function, twice, and held 0 and 1: the condition had taken the
+  destroyed filter's place (inferred; W1-6's handle places).
 - Alliances: `SetPlayerAlliance(0, 1, ALLIANCE_PASSIVE, true)` fired, inside the call, player 0's
   `EVENT_PLAYER_ALLIANCE_CHANGED` registration first and then its `TriggerRegisterPlayerAllianceChange` for passive
   (registered before it), both with event id 12 (`EVENT_PLAYER_ALLIANCE_CHANGED`) and `GetTriggerPlayer` nil, the
   alliance reading true inside; setting it true again fired nothing; false fired both again, false again nothing.
   1 to 0 fired player 1's, not player 0's. Shared vision on and off fired only its own registration. Of alliance types
   0 to 9 set on and off, only 0 (passive) fired `EVENT_PLAYER_ALLIANCE_CHANGED`. `SetPlayerAlliance(0, 0, PASSIVE,
-  false)` fired nothing and the alliance still read true.
+  false)` fired nothing and the alliance still read true. Against the workspace's facts (11-06), which say the
+  alliance-type event fires "each time it is set": setting the same value again fired nothing here, so that means each
+  change.
 - Player states: `TriggerRegisterPlayerStateEvent` on player 0's gold with limit 2 and each comparison, gold set from 0
   to 5, 0, 1, 2, 2, 3, 2, 1, 0, 4, -1, 0, read inside: `LESS_THAN` 0, 1, 1, 0, 0; `LESS_THAN_OR_EQUAL` 0, 1, 2, 2, 1,
   0, 0; `EQUAL` 2, 2; `GREATER_THAN_OR_EQUAL` 5, 2, 3, 2, 4; `GREATER_THAN` 5, 3, 4; `NOT_EQUAL` 5, 0, 1, 3, 1, 0, 4, 0
@@ -521,7 +527,11 @@ probe's zero-second timer unless timed; times are a 1000 s timer's elapsed time.
   suspended, scale 1 and set to 12: inside the set `EQUAL`, `GREATER_THAN` and `GREATER_THAN_OR_EQUAL`, then at
   5.0048 all five but `NOT_EQUAL`, then nothing for 2.5 s. At 7.5001 set to 13: nothing, then nothing. At 10.0000
   resumed and set to 12 (from 13): inside `LESS_THAN_OR_EQUAL` and `LESS_THAN`, at 10.0043 `EQUAL`, `GREATER_THAN` and
-  `GREATER_THAN_OR_EQUAL`. The first two runs gave the same times; the third's weren't kept.
+  `GREATER_THAN_OR_EQUAL`. The first two runs gave the same times; the later runs' weren't kept. Against the
+  workspace's facts (11-05), which say setting the time on from exactly the hour (6 to 18, 18 to 17) fires the old
+  hour's event too: sets from exactly 12 (12 to 13 and 12 to 11, above) fired no `EQUAL` inside the set, and 12 to 13
+  after frames at 12 fired nothing in the frames after either; whether the 11-05 firing came from a running day's
+  frames isn't separated.
 - RemovePlayer, with `EVENT_PLAYER_VICTORY`, `DEFEAT`, `LEAVE` and `END_CINEMATIC` registered for players 0 and 1:
   on the computer (1, Playing) victory fired its `EVENT_PLAYER_VICTORY` inside the call (event id 14, trigger player
   1, slot Playing and game result 0 already); it stayed Playing with result 0. Then victory again, tie, defeat and
@@ -530,11 +540,14 @@ probe's zero-second timer unless timed; times are a 1000 s timer's elapsed time.
   fired nothing, inside or 1 s later, and left it Playing with result 0.
 - `TriggerRegisterGameEvent` for every `gameevent` (0 to 10, 256 to 259, 310): none fired in the whole probe, through
   its timers, state sets, the victories and `EndGame` (no `EVENT_GAME_VICTORY` either).
-- `EndGame(false)`, the last call of the probe's `done`: no `EVENT_GAME_END_LEVEL` fired (its action would have written
-  `events-end.pld`, which never came); the code after the call ran (`events-after.pld`) and so did a 0 s timer started
-  before it (`events-timer.pld`), in all three runs.
+- `EndGame(false)`, the last call of the probe's `done`: the code after the call ran (`events-after.pld`) and so did a
+  0 s timer started before it (`events-timer.pld`), in all four runs (the fourth's files deleted before it and checked
+  after by the events game test). That no `EVENT_GAME_END_LEVEL` fired is inferred: its action would have written
+  `events-end.pld`, which never came.
 - `forforce-wait`: steps 1.5 s apart, each then executing a trigger whose action waits 0.5 s: none, a force made and
   destroyed, `ForForce` over a new empty force, over one holding player 0, each ended; `ForForce` over an empty force
   then destroyed, and over one holding 0 then destroyed, each never ended; the next step's wait (no force) and a
   `PolledWait(0.5)` after it ended. The force destroyed had id 1048708, the trigger made after it 1048709, the timer
-  1048711.
+  1048711. Then, in the last three runs: after `ForForce` over a force holding 0 and its destroy, a trigger's wait
+  started 1 s later ended, and so did the next step's; a trigger waiting 1.5 s, started 0.5 s before such a destroy,
+  ended, while a new trigger's wait started beside the destroy in the same instant never did; the next step's ended.

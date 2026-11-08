@@ -51,8 +51,9 @@ public sealed partial class GameNatives
     /// <paramref name="users"/>, the first of them the local player, called "Local Player" when alone, and computers in
     /// <paramref name="computers"/>, each slot playing with its controller set, and the map's neutral and rescuable
     /// slots in <paramref name="others"/>, playing with the controller <c>config</c> gave them; the other slots of 0 to
-    /// 23 are empty, on team -1, with their controller as <c>config</c> left it. A computer takes its slot's name in
-    /// <paramref name="names"/> (<c>war3map.w3i</c>'s), every other slot of 0 to 23 is "Player N". A playing slot whose
+    /// 23 are empty, on team -1, with their controller as <c>config</c> left it. A slot of 0 to 23 <c>config</c> named
+    /// keeps its name; else a computer takes its slot's name in <paramref name="names"/> (<c>war3map.w3i</c>'s for the
+    /// map's computer slots), and every other slot is "Player N" (decisions D141). A playing slot whose
     /// race is selectable gets the random preference, unless the map has custom forces with
     /// <paramref name="fixedSettings"/>, which keep every preference; a slot whose preference names a race has it, and
     /// the others get a random race, from a generator of their own seeded by the run's seed, drawn for every slot in
@@ -74,14 +75,14 @@ public sealed partial class GameNatives
             if (user || computer) p.Controller = user ? User : Computer;
             p.SlotState = playing ? Playing : Empty;
             p.States[Placed] = playing ? 1 : 0;
-            p.Name = computer && names?.GetValueOrDefault(p.Number) is { } name ? name : $"Player {p.Number + 1}";
+            if (p.Name == "")
+                p.Name = user && users.Count == 1 ? "Local Player" : computer && names?.GetValueOrDefault(p.Number) is { } name ? name : $"Player {p.Number + 1}";
             if (!playing) p.Team = -1;
             if (playing && p.Selectable && !fixedRaces) p.RacePreference = RandomRace;
             var drawn = races.RandomInt(1, 4);
             p.Race = FixedRace(p.RacePreference) ?? drawn;
         }
         _local = _players[users[0]];
-        if (users.Count == 1) _local.Name = "Local Player";
         if (fixedRaces) _mapFlags |= 1024 | 1 << 20; // MAP_LOCK_ALLIANCE_CHANGES
     }
 
@@ -150,9 +151,9 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// "" for slots 0 to 23 until the lobby seats them, then "Player N" for slot N - 1, "Local Player" for the one person
-    /// of a single-player game and a computer's name in <c>war3map.w3i</c>, as the players and lobby probes read them.
-    /// Close until the strings file is read (W2-1): World Editor writes those names as <c>TRIGSTR_n</c>, which the game
-    /// reads from it.
+    /// of a single-player game and a computer's name in <c>war3map.w3i</c>, as the players and lobby probes read them;
+    /// a name <c>config</c> set is kept (not measured). Close until the strings file is read (W2-1): World Editor writes
+    /// those names as <c>TRIGSTR_n</c>, which the game reads from it.
     /// </summary>
     [Native(Level.Close)]
     public string? GetPlayerName(player? whichPlayer) => whichPlayer?.Name;

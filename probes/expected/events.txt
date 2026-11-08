@@ -1,6 +1,7 @@
-# probes/events.lua on 3.0.1.24371, single player, 11-08, on the probe map with a computer: the game's lines. Two runs
-# of this probe, the same to the last digit; the times of the day's passes are marked to vary all the same. A first run
-# with RemovePlayer's results in another order is in docs/facts.md. EndGame's files are there too.
+# probes/events.lua on 3.0.1.24371, single player, 11-08, on the probe map with a computer: the game's lines. Three
+# runs of this probe, the first two the same to the last digit; the times of the day's passes are marked to vary all
+# the same. A first run with RemovePlayer's results in another order is in docs/facts.md. EndGame's evidence is in side
+# files, which the events game test checks (decisions D147).
 # A line starting "~ " varies from run to run: each {t} in it stands for a number, the rest must match exactly, and the
 # run may give it anywhere. The other lines come in order, exactly. Lines starting "# " are notes.
 filter true 0,1>0 1; false 0,1>; is 1 0,1>1; after nil

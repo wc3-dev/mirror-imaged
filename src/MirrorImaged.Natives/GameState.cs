@@ -4,8 +4,10 @@ namespace MirrorImaged.Natives;
 
 // The game's speed, pause, difficulty and states, and the time of day as a clock (facts, "Time of day"): an hour every
 // 20 game seconds at scale 1, a day of 24 hours, the standard gameplay constants (DayLength 480, DayHours 24; a map's
-// own come with the game data). The time is worked out from the clock, so it doesn't drift; the game adds each frame's
-// share and loses a little (2.5 millionths of an hour in 2 s, 0.00013 in 20, docs/facts.md), which isn't modelled.
+// own come with the game data). The time is worked out from the clock, not added up frame by frame, so it moves only
+// where an event's pass sets it to its limit, by under a step's share each time (decisions D144); the game adds each
+// frame's share and loses a little (2.5 millionths of an hour in 2 s, 0.00013 in 20, docs/facts.md), which isn't
+// modelled.
 public sealed partial class GameNatives
 {
     const double HoursPerSecond = 24.0 / 480;
@@ -13,7 +15,8 @@ public sealed partial class GameNatives
     int _speed = 2, _difficulty; // MAP_SPEED_NORMAL, MAP_DIFFICULTY_EASY
     readonly Dictionary<int, int> _integerStates = [];
     double _day; // the time of day at _dayStep, in hours
-    long _dayStep, _dayVersion; // _dayVersion: which ScheduleDay's pass is still due
+    long _dayStep, _daySetStep = -1; // _daySetStep: the step of the last SetFloatGameState
+    Action? _dayPass; // the one pass of a limit queued
     float _dayScale = 1;
     bool _daySuspended;
 
@@ -67,16 +70,19 @@ public sealed partial class GameNatives
                     _ => false,
                 })
                 Fire(registered, Convert<gameevent>(3), state); // EVENT_GAME_STATE_LIMIT
-        ScheduleDay(fromSet: true);
+        _daySetStep = _game.Step;
+        ScheduleDay();
     }
 
     // Schedules the next moment the running day passes a limit of the time's events, which fires them with the time
     // at the limit (the events probe): forward its EQUAL, GREATER_THAN_OR_EQUAL and GREATER_THAN events, backward its
     // EQUAL, LESS_THAN_OR_EQUAL and LESS_THAN ones. The day passes a limit it is at a day later, unless it was just set
-    // there: then it passes it at the next step.
-    void ScheduleDay(bool fromSet = false)
+    // there in this step: then it passes it at the next step. Only the nearest pass is queued, so a map setting the
+    // time every frame doesn't fill the queue.
+    void ScheduleDay()
     {
-        var version = ++_dayVersion;
+        if (_dayPass is not null) _game.Cancel(_dayPass);
+        _dayPass = null;
         if (_daySuspended || _dayScale == 0) return;
         var (now, forward) = (Day(), _dayScale > 0);
         double? nearest = null;
@@ -85,21 +91,22 @@ public sealed partial class GameNatives
         {
             if (state is not fgamestate { Id: 2 } || l is not (>= 0 and < 24)) continue;
             var hours = forward ? l - now : now - l;
-            if (hours < 0 || hours == 0 && !fromSet) hours += 24;
+            if (hours < 0 || hours == 0 && _game.Step != _daySetStep) hours += 24;
             if (hours < nearest || nearest is null) (nearest, limit) = (hours, l);
         }
         if (nearest is not { } distance) return;
         var steps = Math.Max(1, Math.Ceiling(distance / (Math.Abs(_dayScale) * HoursPerSecond) * Game.StepsPerSecond));
         if (steps >= 1L << 60) return; // past the clock's range: never
-        _game.At(_game.Step + (long)steps, () =>
+        _dayPass = () =>
         {
-            if (version != _dayVersion) return;
+            _dayPass = null;
             (_day, _dayStep) = (limit, _game.Step);
             foreach (var (state, op, l, registered) in _stateEvents.ToArray())
                 if (state is fgamestate { Id: 2 } && l == limit && (op.Id == 2 || (forward ? op.Id is 3 or 4 : op.Id is 0 or 1)))
                     Fire(registered, Convert<gameevent>(3), state);
-            if (version == _dayVersion) ScheduleDay();
-        });
+            ScheduleDay();
+        };
+        _game.At(_game.Step + (long)steps, _dayPass);
     }
 
     /// <summary>Sets the time's speed; an infinite or NaN scale is refused and the scale stays (not measured).</summary>

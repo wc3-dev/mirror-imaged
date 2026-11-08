@@ -12,20 +12,21 @@ public partial class force
 public sealed partial class GameNatives
 {
     player? _enumPlayer, _filterPlayer;
-    bool _waitLost;
+    long _waitLost = -1; // the step a force ForForce ran over was destroyed in, until a wait is lost to it
 
     [Native(Level.Close)]
     public force? CreateForce() => Make(new force());
 
     /// <summary>
-    /// Destroying a force that ForForce has run over makes the next wait never end, as the forforce-wait probe and the
-    /// facts' three probes saw (a wait after it ended); why isn't known.
+    /// Destroying a force that ForForce has run over makes the next wait started in the same step never end, as the
+    /// forforce-wait probe and the facts' three probes saw; a wait started 1 s later, or one already running, ends.
+    /// Why isn't known.
     /// </summary>
     [Native(Level.Close)]
     public void DestroyForce(force? whichForce)
     {
         if (whichForce is null) return;
-        _waitLost |= whichForce.Looped;
+        if (whichForce.Looped) _waitLost = _game.Step;
         _game.Remove(whichForce.Key);
     }
 

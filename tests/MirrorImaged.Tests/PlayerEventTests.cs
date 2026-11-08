@@ -14,7 +14,7 @@ public sealed class PlayerEventTests : IDisposable
 
     public void Dispose() => _maps.Dispose();
 
-    Simulation Load(string main, string config = "") => Simulation.Load(_maps.Build($$"""
+    Simulation Load(string main, string config = "", SimulationOptions? options = null) => Simulation.Load(_maps.Build($$"""
         local log = {}
         local function flush() local s = table.concat(log, ",") log = {} return s end
         local names = {"LT", "LE", "EQ", "GE", "GT", "NE"}
@@ -39,7 +39,7 @@ public sealed class PlayerEventTests : IDisposable
         info.MapFlags |= MapFlags.UseCustomForces | MapFlags.FixedPlayerSettingsForCustomForces;
         info.Players.Clear();
         info.Players.AddRange([Slot(0, PlayerController.User, "Probe User"), Slot(1, PlayerController.Computer, "Probe Computer"), Slot(2, PlayerController.User, "Probe Empty")]);
-    }), "");
+    }), "", options);
 
     static PlayerData Slot(int id, PlayerController controller, string name) =>
         new() { Id = id, Controller = controller, Race = PlayerRace.Human, Flags = PlayerFlags.RaceSelectable, Name = name };
@@ -76,6 +76,17 @@ public sealed class PlayerEventTests : IDisposable
             "0.000 3\tPlayer 4\tempty\tnone\ttrue\t-1\ttrue\tfalse\t0",
             "0.000 true\ttrue\ttrue\tfalse",
         ], Printed(simulation));
+    }
+
+    // decisions D141, not measured: a name config set is kept, and a computer seated in a user slot isn't given that
+    // slot's war3map.w3i name
+    [Fact]
+    public void A_name_config_set_is_kept_and_a_computer_in_a_user_slot_is_Player_N()
+    {
+        using var simulation = Load(config: "SetPlayerName(Player(2), \"Arthas\")", main: "print(GetPlayerName(Player(0)), GetPlayerName(Player(1)), GetPlayerName(Player(2)))",
+            options: new SimulationOptions { Users = [2], Computers = [0, 1] });
+
+        Assert.Equal(["0.000 Player 1\tProbe Computer\tArthas"], Printed(simulation));
     }
 
     const string RemoveEvents = """
@@ -331,6 +342,30 @@ public sealed class PlayerEventTests : IDisposable
         Assert.Equal(["485.501 EQ\t12", "485.501 GE\t12", "485.501 GT\t12"], Printed(simulation).Skip(16));
     }
 
+    // decisions D144: a set onto a limit while the day runs passes it at the next step, whatever else reschedules the
+    // day in the set's step
+    [Fact]
+    public void A_set_onto_a_limit_passes_it_at_the_next_step_after_another_registration()
+    {
+        using var simulation = Load("""
+              local tod = GAME_STATE_TIME_OF_DAY
+              for _, name in ipairs(names) do
+                local t = CreateTrigger()
+                TriggerRegisterGameStateEvent(t, tod, ops[name], 12)
+                TriggerAddAction(t, function() print(name, string.format("%.9g", GetFloatGameState(tod))) end)
+              end
+              TimerStart(CreateTimer(), 1, false, function()
+                SetFloatGameState(tod, 12)
+                TriggerRegisterGameStateEvent(CreateTrigger(), GAME_STATE_DIVINE_INTERVENTION, EQUAL, 1)
+                SetTimeOfDayScale(1)
+              end)
+            """);
+
+        simulation.Advance(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(["1.000 GE\t12", "1.000 GT\t12", "1.001 EQ\t12", "1.001 GE\t12", "1.001 GT\t12"], Printed(simulation));
+    }
+
     // the events probe: none of TriggerRegisterGameEvent's events fire for timers, game state sets, a victory or EndGame
     [Fact]
     public void No_game_event_fires_in_a_run()
@@ -429,8 +464,9 @@ public sealed class PlayerEventTests : IDisposable
         Assert.Equal(["1.000 after EndGame", "1.000 0 s timer"], Printed(simulation));
     }
 
-    // the forforce-wait probe: a wait right after a force ForForce ran over was destroyed never ends, whether or not
-    // the callback ran; ForForce or destroying alone don't, and the next wait after it ends
+    // the forforce-wait probe: a wait started right after a force ForForce ran over was destroyed never ends, whether or
+    // not the callback ran; ForForce or destroying alone don't, and the next wait after it ends; nor does a wait started
+    // 1 s after the destroy, or one running across it while a new one beside it is lost
     [Fact]
     public void The_first_wait_after_destroying_a_force_ForForce_ran_over_never_ends()
     {
@@ -450,6 +486,20 @@ public sealed class PlayerEventTests : IDisposable
                   for i, s in ipairs(steps) do print(i .. " " .. s[1] .. ": " .. tostring(results[i])) end
                   return
                 end
+                if n == 1 then
+                  local function waiter(label, timeout)
+                    local t = CreateTrigger()
+                    results[label] = "waiting"
+                    TriggerAddAction(t, function() TriggerSleepAction(timeout) results[label] = "ended" end)
+                    TriggerExecute(t)
+                  end
+                  local function lose() local f = CreateForce() ForForce(f, function() end) DestroyForce(f) end
+                  local function after(s, f) TimerStart(CreateTimer(), s, false, f) end
+                  after(12, function() lose() after(1, function() waiter("later", 0.5) end) end)
+                  after(15, function() waiter("running", 1.5) end)
+                  after(15.5, function() lose() waiter("beside", 0.5) end)
+                  after(18, function() print(results.later, results.running, results.beside) end)
+                end
                 steps[n][2]()
                 local t = CreateTrigger()
                 results[n] = "waiting"
@@ -460,7 +510,7 @@ public sealed class PlayerEventTests : IDisposable
               step(1)
             """);
 
-        simulation.Advance(TimeSpan.FromSeconds(12));
+        simulation.Advance(TimeSpan.FromSeconds(19));
 
         Assert.Equal([
             "10.500 1 base: ended",
@@ -470,6 +520,7 @@ public sealed class PlayerEventTests : IDisposable
             "10.500 5 ForForce empty, destroy: waiting",
             "10.500 6 ForForce one, destroy: waiting",
             "10.500 7 next: ended",
+            "18.000 ended\tended\twaiting",
         ], Printed(simulation));
     }
 }
