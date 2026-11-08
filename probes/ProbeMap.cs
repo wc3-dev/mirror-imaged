@@ -37,7 +37,8 @@ public static partial class ProbeMap
     /// the probe too.
     /// </param>
     /// <param name="path">The map to write.</param>
-    public static void Build(string name, string lua, string path)
+    /// <param name="change">Changes the map before it is written: its info, strings or object data.</param>
+    public static void Build(string name, string lua, string path, Action<Map>? change = null)
     {
         if (!Name().IsMatch(name))
             throw new ArgumentException($"A probe's name is letters, digits and dashes, not \"{name}\"", nameof(name));
@@ -126,7 +127,9 @@ public static partial class ProbeMap
         info.MapName = name;
         info.MapFlags &= ~MapFlags.MeleeMap;
         info.Forces[0].Players = new Bitmask32(1);
-        var builder = new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info), Script = script });
+        var map = new Map { Info = info, Environment = MapFactory.Environment(info), Script = script };
+        change?.Invoke(map);
+        var builder = new MapBuilder(map);
         builder.AddFiles(MpqFile.New(new MemoryStream(Minimap), "war3mapMap.tga"));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         builder.Build(path);

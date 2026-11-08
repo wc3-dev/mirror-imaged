@@ -2029,12 +2029,6 @@ public sealed partial class GameNatives
     public unit? GetLoadedUnit() => throw new MissingNativeException("GetLoadedUnit");
 
     [Native(Level.Missing)]
-    public int GetLocalizedHotkey(string? source) => throw new MissingNativeException("GetLocalizedHotkey");
-
-    [Native(Level.Missing)]
-    public string? GetLocalizedString(string? source) => throw new MissingNativeException("GetLocalizedString");
-
-    [Native(Level.Missing)]
     public float GetLocationX(location? whichLocation) => throw new MissingNativeException("GetLocationX");
 
     [Native(Level.Missing)]

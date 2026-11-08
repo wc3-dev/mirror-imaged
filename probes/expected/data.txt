@@ -1,0 +1,44 @@
+# 3.0.1.24371, 11-08 (W2-1): the probe's lines as the game gave them, on DataProbeTests' map for it
+slot 0 Local Player controller 0 state 1
+slot 1 Player 2 controller 5 state 0
+slot 2 Computer (Normal) controller 1 state 1
+slot 3 Player 4 controller 5 state 0
+hfoo Probe Footman
+hkni Skin Knight
+h000 Footman
+max Rhme 5 R000 3 Rhar 3
+added Rhme 5 R000 3 Rhar 3
+string [TRIGSTR_001] [Probe Alpha]
+string [TRIGSTR_1] [Probe Alpha]
+string [TRIGSTR_0001] [Probe Alpha]
+string [TRIGSTR_004] [Fourth string]
+string [TRIGSTR_999] [TRIGSTR_999]
+string [trigstr_001] [trigstr_001]
+string [TRIGSTR_001 ] [Probe Alpha]
+string [PLAYER] [Player]
+string [player] [player]
+string [GAMEOVER_CONTINUE] [|CFFFFFFFFC|Rontinue]
+string [KEY_HOTKEYS] [|CffffffffH|Rotkeys]
+string [AGILITY] [Agility]
+string [ERROR_ID_INVALIDPARAMS] [The parameters provided are invalid.]
+string [MONTH_01] [January]
+string [WESTRING_APPNAME] [WESTRING_APPNAME]
+string [NO_SUCH_KEY_ZZ] [NO_SUCH_KEY_ZZ]
+string [] []
+hotkey [GAMEOVER_CONTINUE] 67
+hotkey [GAMEOVER_QUIT_GAME] 81
+hotkey [GAMEOVER_OK] 79
+hotkey [KEY_DELETE] 68
+hotkey [MinimapTerrain] 0
+hotkey [gameover_continue] 67
+hotkey [PLAYER] 0
+hotkey [ACCEPT] 0
+hotkey [KEY_HOTKEYS] 0
+hotkey [NO_SUCH_KEY_ZZ] 0
+hotkey [TRIGSTR_001] 0
+hotkey [] 0
+named The Horde
+length 11 case probe alpha
+oshm 335
+ebsh 1000
+fapo 0

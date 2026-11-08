@@ -54,7 +54,7 @@ public sealed class PlayerSimulationTests : IDisposable
 
         Assert.Equal([
             "0.000 print: 0\tLocal Player\tplaying\tuser\t0",
-            "0.000 print: 1\tPlayer 2\tplaying\tcomputer\t1",
+            "0.000 print: 1\tComputer (Normal)\tplaying\tcomputer\t1",
             "0.000 print: 2\tPlayer 3\tempty\tuser\t0",
             "0.000 print: 3\tPlayer 4\tplaying\trescuable\t2",
             "0.000 print: 4\tPlayer 5\tempty\tnone\t-1",
@@ -82,7 +82,7 @@ public sealed class PlayerSimulationTests : IDisposable
     {
         using var simulation = Simulation.Load(Map(Lineup), "", new SimulationOptions { Users = [2], Computers = [0, 1] });
 
-        Assert.Equal("0.000 print: 0\tPlayer 1\tplaying\tcomputer\t0", simulation.Log[0]);
+        Assert.Equal("0.000 print: 0\tComputer (Normal)\tplaying\tcomputer\t0", simulation.Log[0]);
         Assert.Equal("0.000 print: 2\tLocal Player\tplaying\tuser\t0", simulation.Log[2]);
     }
 

@@ -18,3 +18,19 @@ Draft, not posted. `constant real bj_MELEE_MINE_SEARCH_RADIUS = 2000` in `blizza
 `bj_MELEE_MINE_SEARCH_RADIUS = 2000`, a Lua integer, where JASS holds the real 2000.0. So `math.type` reads
 `integer`, and arithmetic on it in the game's 32-bit Lua can wrap where JASS's real wouldn't. Expected: `2000.0`. Left
 as it is in MirrorImaged for now (decisions D68).
+
+## War3Net.Build.Core: three of the install's maps have a file its readers refuse
+
+Draft, not posted. War3Net.Build.Core 6.1.2 reads an enum value it doesn't define as an error, where the game loads the
+map. In 3.0.1.24371's install: `Maps/(10)DustwallowKeys.w3m`'s `war3map.w3e` has a cliff type 0 ("Value '0' is not
+defined for enum of type CliffType"), `Maps/ForsakenKingdom/Scenario/(1)SilverpineSprint.w3x`'s `war3map.doo` a doodad
+state 14 (`DoodadState`), and `Maps/FrozenThrone/(4)Roundabout.w3x`'s `war3mapUnits.doo` a random unit mode 641
+(`RandomUnitDataMode`). Expected: the value kept as read. MirrorImaged leaves such a file out and names it in
+`MapArchive.Unread` (decisions D209); the other 270 maps read whole.
+
+## War3Net.Build.Core: an object's id is kept in the reverse byte order of the game's
+
+Not a bug, a trap, noted for whoever reads War3Net's object data: `SimpleObjectModification.OldId` and the field ids
+keep an id's first letter in the lowest byte (`"hfoo".FromRawcode()`), where the game's `FourCC` keeps it in the
+highest. A map built with ids in the game's order (`'h' << 24 | ...`) loads without error, but its objects are
+`oofh` and none of its changes act (probe `data`'s first runs, 11-08). MirrorImaged reverses them as it reads (D204).

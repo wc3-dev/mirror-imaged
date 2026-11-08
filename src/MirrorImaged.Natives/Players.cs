@@ -1,3 +1,4 @@
+using MirrorImaged.Data;
 using MirrorImaged.World;
 
 namespace MirrorImaged.Natives;
@@ -44,7 +45,7 @@ public sealed partial class GameNatives
     /// <summary>
     /// Seats the players as the lobby does once <c>config</c> has run: people in <paramref name="users"/>, the first of
     /// them the local player, called "Local Player" when alone, and computers in <paramref name="computers"/>, each
-    /// slot playing with its controller set, and the map's neutral and rescuable slots in <paramref name="others"/>,
+    /// slot playing with its controller set and called "Computer (Normal)", and the map's neutral and rescuable slots in <paramref name="others"/>,
     /// playing with the controller <c>config</c> gave them; the other slots of 0 to 23 are empty. A playing slot whose
     /// race is selectable gets the random preference; it and every slot without a fixed race get a random race, from a
     /// generator of their own seeded by the run's seed, drawn for every slot in order so that a slot's race and the
@@ -64,6 +65,7 @@ public sealed partial class GameNatives
             var (user, computer) = (users.Contains(p.Number), computers.Contains(p.Number));
             var playing = user || computer || others.Contains(p.Number);
             if (user || computer) p.Controller = user ? User : Computer;
+            if (computer) p.Name = "Computer (Normal)";
             p.SlotState = playing ? Playing : Empty;
             p.States[Placed] = playing ? 1 : 0;
             if (playing && p.Selectable) p.RacePreference = 32; // RACE_PREF_RANDOM
@@ -140,9 +142,9 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// "Player N" for slot N - 1, and "Local Player" for the one person of a single-player game, as the facts and the
-    /// players probe read them. Close until the names a map gives its slots in <c>war3map.w3i</c> are read (W2-1): the
-    /// score screen showed one ("The Horde", facts).
+    /// "Player N" for slot N - 1, "Local Player" for the one person of a single-player game and "Computer (Normal)" for a
+    /// computer, as the facts and the players and data probes read them; the names a map gives its slots in
+    /// <c>war3map.w3i</c> aren't read (data probe). Close: several people's names, their accounts', aren't known.
     /// </summary>
     [Native(Level.Close)]
     public string? GetPlayerName(player? whichPlayer) => whichPlayer?.Name;
@@ -302,12 +304,15 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// The limit set, 2147483647 for none or a negative one. Close until the game's data: an upgrade's limit is its
-    /// level count (3 for Iron Forged Swords, facts), here 2147483647 too.
+    /// The limit set; for none or a negative one, an upgrade's level count, with the map's change (a new upgrade's is
+    /// its standard base's), and 2147483647 for anything else.
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game (Rhme 3, hfoo and zzzz 2147483647, -5 set) and The game's data (Rhme changed to 5, R000 made from it 3)")]
     public int GetPlayerTechMaxAllowed(player? whichPlayer, int techid) =>
-        whichPlayer is not null && whichPlayer.TechMax.TryGetValue(techid, out var max) && max >= 0 ? max : int.MaxValue;
+        whichPlayer is not null && whichPlayer.TechMax.TryGetValue(techid, out var max) && max >= 0 ? max : Levels(techid) ?? int.MaxValue;
+
+    // An upgrade's level count; null for anything else.
+    int? Levels(int techid) => Data.Object(ObjectKind.Upgrade, techid)?.Levels;
 
     [Native(Level.Exact, Fact = "game-facts.md, Version and launching: a limit of 0 and of 2147483647 read back (10-20); docs/facts.md, Players and the game: a negative one reads 2147483647")]
     public void SetPlayerTechMaxAllowed(player? whichPlayer, int techid, int maximum)
@@ -328,7 +333,7 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Sets the level, also lower (the players probe), and not below 0 (not measured). Close: setting an upgrade above
-    /// its level count isn't measured, and that count comes with the game's data (W2-1).
+    /// its level count isn't measured.
     /// </summary>
     [Native(Level.Close)]
     public void SetPlayerTechResearched(player? whichPlayer, int techid, int setToLevel)
@@ -336,10 +341,13 @@ public sealed partial class GameNatives
         if (whichPlayer is not null) whichPlayer.TechLevels[techid] = Math.Max(setToLevel, 0);
     }
 
-    /// <summary>Close until the game's data: the game stops an upgrade at its level count (the players probe; W2-1).</summary>
+    /// <summary>
+    /// Adds levels, stopping an upgrade at its level count (the players and data probes) and anything else at
+    /// 2147483647. Close: a count that already passes the level count isn't measured, nor a limit set below it.
+    /// </summary>
     [Native(Level.Close)]
     public void AddPlayerTechResearched(player? whichPlayer, int techid, int levels) =>
-        SetPlayerTechResearched(whichPlayer, techid, (int)Math.Min((long)GetPlayerTechCount(whichPlayer, techid, true) + levels, int.MaxValue));
+        SetPlayerTechResearched(whichPlayer, techid, (int)Math.Min((long)GetPlayerTechCount(whichPlayer, techid, true) + levels, Levels(techid) ?? int.MaxValue));
 
     [Native(Level.Close)]
     public void BlzDecPlayerTechResearched(player? whichPlayer, int techid, int levels) => AddPlayerTechResearched(whichPlayer, techid, -levels);

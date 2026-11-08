@@ -3,7 +3,8 @@ namespace MirrorImaged.Data;
 /// <summary>The install's active build, from its <c>.build.info</c>.</summary>
 /// <param name="Version">The game's version (<c>3.0.1.24371</c>).</param>
 /// <param name="Key">The build key, which changes with every update of the game's files.</param>
-public sealed record GameBuild(string Version, string Key);
+/// <param name="Locale">The language of the installed text (<c>enUS</c>), from the build's tags; <c>enUS</c> when they name none.</param>
+public sealed record GameBuild(string Version, string Key, string Locale = "enUS");
 
 /// <summary>
 /// Where a Warcraft III install is: a folder given, else the folder <see cref="Variable"/> names, else the usual folder.
@@ -49,11 +50,15 @@ public static class GameInstall
         {
             var row = head.Zip(line.Split('|')).ToDictionary(pair => pair.First, pair => pair.Second);
             if (row.GetValueOrDefault("Active") == "1")
-                return new GameBuild(row.GetValueOrDefault("Version", ""), row.GetValueOrDefault("Build Key", ""));
+                return new GameBuild(row.GetValueOrDefault("Version", ""), row.GetValueOrDefault("Build Key", ""), Locale(row.GetValueOrDefault("Tags", "")));
         }
 
         throw new InvalidDataException($"{Path.Combine(folder, BuildInfo)} names no active build");
     }
+
+    // The tags name the text's language as "enUS text" among others ("Windows EU? enUS speech?:Windows EU? enUS text?").
+    static string Locale(string tags) =>
+        tags.Split('?', ':').Select(tag => tag.Trim().Split(' ')).FirstOrDefault(words => words is [{ Length: 4 }, "text"])?[0] ?? "enUS";
 
     internal static string Place(string? folder, string? variable) =>
         !string.IsNullOrWhiteSpace(folder) ? folder

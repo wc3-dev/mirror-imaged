@@ -35,11 +35,11 @@ public sealed partial class Simulation
             };
         if (type == typeof(bool)) return value is not (null or false);
         // As luaL_checklstring: a number is written as tostring writes it, nil is refused, and the native reads up to
-        // the first NUL (docs/facts.md, "Strings, numbers and hashtables").
+        // the first NUL (docs/facts.md, "Strings, numbers and hashtables"). A TRIGSTR_n is the map's string n (decisions D206).
         if (type == typeof(string))
             return value switch
             {
-                string s => s.IndexOf('\0') is >= 0 and var end ? s[..end] : s,
+                string s when (s.IndexOf('\0') is >= 0 and var end ? s[..end] : s) is var text => _natives.Data.Map?.Resolve(text) ?? text,
                 int n => n.ToString(CultureInfo.InvariantCulture),
                 float f => Native.Text(f),
                 _ => throw BadArgument(position, function, $"string expected, got {TypeName(value)}"),

@@ -1,0 +1,4 @@
+# 3.0.1.24371, 11-08 (W2-1): the probe's lines as the game gave them, on DataProbeTests' map for it
+oshm 350
+ebsh 1000
+fapo 0

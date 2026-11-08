@@ -84,7 +84,7 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// <exception cref="InvalidOperationException">A Warcraft III that this runner didn't start is running.</exception>
     /// <exception cref="ArgumentException">The name is not a probe's, or makes the map's path too long for the game.</exception>
     /// <exception cref="TimeoutException">Another run kept the game longer than five minutes.</exception>
-    public ProbeRun Run(string name, string lua, TimeSpan timeout)
+    public ProbeRun Run(string name, string lua, TimeSpan timeout, Action<War3Net.Build.Map>? change = null)
     {
         using var one = new Mutex(false, OneRunAtATime);
         bool mine;
@@ -105,7 +105,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         {
             if (Process.GetProcessesByName("Warcraft III").Length > 0)
                 throw new InvalidOperationException("Warcraft III is already running; the runner uses only a game it starts itself");
-            return RunAlone(name, lua, timeout);
+            return RunAlone(name, lua, timeout, change);
         }
         finally
         {
@@ -113,7 +113,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         }
     }
 
-    ProbeRun RunAlone(string name, string lua, TimeSpan timeout)
+    ProbeRun RunAlone(string name, string lua, TimeSpan timeout, Action<War3Net.Build.Map>? change)
     {
         var map = MapPath(maps, name);
         var output = Path.Combine(Data, name + ".pld");
@@ -137,7 +137,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         GameProcess? running = null;
         try
         {
-            ProbeMap.Build(name, lua, map);
+            ProbeMap.Build(name, lua, map, change);
             Directory.CreateDirectory(Data);
             File.Delete(output);
             File.Delete(loaded);

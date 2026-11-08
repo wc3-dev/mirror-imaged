@@ -1,33 +1,113 @@
+using War3Net.Build;
 using War3Net.Build.Extensions;
-using War3Net.Build.Info;
 using War3Net.IO.Mpq;
 
 namespace MirrorImaged.Data;
 
-/// <summary>Reads a map's files from its archive, a <c>.w3x</c> or <c>.w3m</c>.</summary>
-public static class MapArchive
+/// <summary>
+/// A map's files, read from its archive (a <c>.w3x</c> or <c>.w3m</c>) with War3Net into <see cref="Files"/>: the info
+/// (<c>war3map.w3i</c>), strings (<c>war3map.wts</c>), object data and its skin files, terrain (<c>w3e</c>), pathing
+/// (<c>wpm</c>), doodads and destructables (<c>war3map.doo</c>), placed units (<c>war3mapUnits.doo</c>), regions
+/// (<c>w3r</c>), cameras (<c>w3c</c>), sounds (<c>w3s</c>) and the import list (<c>imp</c>); a file the map lacks is null,
+/// and so is one War3Net can't read, which <see cref="Unread"/> names (decisions D209). <c>war3mapMisc.txt</c> is kept
+/// as it is, and any other file, such as an FDF or TOC file, is read by name.
+/// </summary>
+public sealed class MapArchive
 {
-    /// <summary>The map's <c>war3map.lua</c>, as it is stored.</summary>
-    /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>, as a JASS map has none.</exception>
-    public static byte[] ReadLua(string path)
+    readonly string _path;
+    readonly Dictionary<uint, string> _strings = [];
+
+    MapArchive(string path, Map map, byte[]? script, byte[]? misc, IReadOnlyList<string> unread)
     {
-        using var archive = MpqArchive.Open(path, false);
-        if (!archive.TryOpenFile("war3map.lua", out var stream))
-            throw new FileNotFoundException($"{path} has no war3map.lua; only Lua maps run so far", path);
-        using (stream)
-        {
-            var script = new MemoryStream();
-            stream.CopyTo(script);
-            return script.ToArray();
-        }
+        _path = path;
+        Files = map;
+        Script = script;
+        Misc = misc;
+        Unread = unread;
+        foreach (var text in map.TriggerStrings?.Strings ?? []) _strings.TryAdd(text.Key, text.Value ?? "");
     }
 
-    /// <summary>The map's <c>war3map.w3i</c>, with its players, forces and settings; null when it has none.</summary>
-    public static MapInfo? ReadInfo(string path)
+    /// <summary>The files War3Net reads, in its <c>Map</c>.</summary>
+    public Map Files { get; }
+
+    /// <summary>The map's <c>war3map.lua</c>, as it is stored; null for a map without one, as a JASS map is.</summary>
+    public byte[]? Script { get; }
+
+    /// <summary>The map's <c>war3mapMisc.txt</c>, its changes to the gameplay constants.</summary>
+    public byte[]? Misc { get; }
+
+    /// <summary>The files the map has that War3Net can't read, each with why: <c>war3map.w3e: Value '0' is not ...</c>.</summary>
+    public IReadOnlyList<string> Unread { get; }
+
+    /// <summary>Reads the map at <paramref name="path"/>.</summary>
+    public static MapArchive Read(string path)
     {
         using var archive = MpqArchive.Open(path, false);
-        if (!archive.TryOpenFile("war3map.w3i", out var stream)) return null;
-        using var reader = new BinaryReader(stream);
-        return reader.ReadMapInfo();
+        var unread = new List<string>();
+        T? Read<T>(string name, Func<BinaryReader, T> read) where T : class
+        {
+            if (Bytes(archive, name) is not { } bytes) return null;
+            try { return read(new BinaryReader(new MemoryStream(bytes))); }
+            catch (Exception e) when (e is not OutOfMemoryException)
+            {
+                unread.Add($"{name}: {e.Message}");
+                return null;
+            }
+        }
+
+        var map = new Map
+        {
+            Info = Read("war3map.w3i", reader => reader.ReadMapInfo()),
+            TriggerStrings = Read("war3map.wts", reader => new StreamReader(reader.BaseStream).ReadTriggerStrings()),
+            Environment = Read("war3map.w3e", reader => reader.ReadMapEnvironment()),
+            PathingMap = Read("war3map.wpm", reader => reader.ReadMapPathingMap()),
+            Doodads = Read("war3map.doo", reader => reader.ReadMapDoodads()),
+            Units = Read("war3mapUnits.doo", reader => reader.ReadMapUnits()),
+            Regions = Read("war3map.w3r", reader => reader.ReadMapRegions()),
+            Cameras = Read("war3map.w3c", reader => reader.ReadMapCameras()),
+            Sounds = Read("war3map.w3s", reader => reader.ReadMapSounds()),
+            ImportedFiles = Read("war3map.imp", reader => reader.ReadImportedFiles()),
+            UnitObjectData = Read("war3map.w3u", reader => reader.ReadUnitObjectData()),
+            ItemObjectData = Read("war3map.w3t", reader => reader.ReadItemObjectData()),
+            DestructableObjectData = Read("war3map.w3b", reader => reader.ReadDestructableObjectData()),
+            DoodadObjectData = Read("war3map.w3d", reader => reader.ReadDoodadObjectData()),
+            AbilityObjectData = Read("war3map.w3a", reader => reader.ReadAbilityObjectData()),
+            BuffObjectData = Read("war3map.w3h", reader => reader.ReadBuffObjectData()),
+            UpgradeObjectData = Read("war3map.w3q", reader => reader.ReadUpgradeObjectData()),
+            UnitSkinObjectData = Read("war3mapSkin.w3u", reader => reader.ReadUnitObjectData()),
+            ItemSkinObjectData = Read("war3mapSkin.w3t", reader => reader.ReadItemObjectData()),
+            DestructableSkinObjectData = Read("war3mapSkin.w3b", reader => reader.ReadDestructableObjectData()),
+            DoodadSkinObjectData = Read("war3mapSkin.w3d", reader => reader.ReadDoodadObjectData()),
+            AbilitySkinObjectData = Read("war3mapSkin.w3a", reader => reader.ReadAbilityObjectData()),
+            BuffSkinObjectData = Read("war3mapSkin.w3h", reader => reader.ReadBuffObjectData()),
+            UpgradeSkinObjectData = Read("war3mapSkin.w3q", reader => reader.ReadUpgradeObjectData()),
+        };
+        return new MapArchive(path, map, Bytes(archive, "war3map.lua"), Bytes(archive, "war3mapMisc.txt"), unread);
+    }
+
+    /// <summary>A file of the map by its name in the archive (<c>war3mapImported\ui.toc</c>); null when it has none.</summary>
+    public byte[]? File(string name)
+    {
+        using var archive = MpqArchive.Open(_path, false);
+        return Bytes(archive, name);
+    }
+
+    /// <summary>
+    /// <paramref name="text"/> with a <c>TRIGSTR_n</c> replaced by string n of <c>war3map.wts</c>, n read as C's
+    /// <c>atoi</c> reads it (<c>TRIGSTR_1</c>, <c>TRIGSTR_0001</c> and <c>TRIGSTR_001 </c> are string 1; the prefix in
+    /// capitals, probe <c>data</c>); any other text, and a string the file doesn't have, as it is.
+    /// </summary>
+    public string Resolve(string text) =>
+        text.StartsWith("TRIGSTR_", StringComparison.Ordinal) && _strings.TryGetValue((uint)Numbers.Integer(text[8..]), out var value) ? value : text;
+
+    static byte[]? Bytes(MpqArchive archive, string name)
+    {
+        if (!archive.TryOpenFile(name, out var stream)) return null;
+        using (stream)
+        {
+            var bytes = new MemoryStream();
+            stream.CopyTo(bytes);
+            return bytes.ToArray();
+        }
     }
 }
