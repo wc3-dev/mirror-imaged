@@ -6,10 +6,10 @@ namespace MirrorImaged.Tests;
 /// <summary>The ground's height from <c>war3map.w3e</c>, by the rules game-facts' "Units" measures for <c>GetLocationZ</c>.</summary>
 public sealed class TerrainTests
 {
-    // A map of 5 by 5 corners from (-256, -256), flat at cliff level 2, with the corners changed.
+    // A map of 4 by 4 tiles, 5 by 5 corners, from (-256, -256), flat at cliff level 2, with the corners changed.
     static Terrain Ground(params (int X, int Y, Action<TerrainTile> Change)[] corners)
     {
-        var environment = new MapEnvironment(MapEnvironmentFormatVersion.v11) { Width = 5, Height = 5, Left = -256, Bottom = -256 };
+        var environment = new MapEnvironment(MapEnvironmentFormatVersion.v11) { Width = 4, Height = 4, Left = -256, Bottom = -256 };
         for (var i = 0; i < 25; i++) environment.TerrainTiles.Add(new TerrainTile { Height = 0, CliffLevel = 2 });
         foreach (var (x, y, change) in corners) change(environment.TerrainTiles[y * 5 + x]);
         return new Terrain(environment);
@@ -82,13 +82,19 @@ public sealed class TerrainTests
         Assert.Equal(0, Ground((2, 2, corner => corner.IsRamp = true), (3, 2, corner => corner.CliffLevel = 3)).Height(0, 0));
     }
 
-    // Inferred, not measured (W2-6 measures it)
+    // probe terrain-edge: off the map 0, but within an eighth of a unit past an edge, where the edge tile's blend
+    // carries on (0.1 past it measured, 0.2 not)
     [Fact]
-    public void A_point_off_the_map_reads_its_nearest_edge()
+    public void A_point_off_the_map_reads_0_but_just_past_an_edge()
     {
-        var ground = Ground((4, 4, corner => corner.Height = 1));
+        var ground = Ground((4, 2, corner => corner.Height = 1), (0, 2, corner => corner.Height = 1));
 
-        Assert.Equal(128, ground.Height(1000, 1000));
-        Assert.Equal(0, ground.Height(-1000, 1000));
+        Assert.Equal(128, ground.Height(256, 0));
+        Assert.Equal(128.1f, ground.Height(256.1f, 0), 3);
+        Assert.Equal(128.1f, ground.Height(-256.1f, 0), 3);
+        Assert.Equal(0, ground.Height(256.2f, 0));
+        Assert.Equal(0, ground.Height(-256.2f, 0));
+        Assert.Equal(0, ground.Height(1000, 0));
+        Assert.Equal(0, ground.Height(0, -1e6f));
     }
 }

@@ -136,7 +136,10 @@ public static class ProbeComparison
     public static bool ReadsData(string name) => name.StartsWith("data", StringComparison.Ordinal) || name.StartsWith("units", StringComparison.Ordinal)
         || name.StartsWith("destructables", StringComparison.Ordinal);
 
-    /// <summary>How a probe's map is changed, if it is: the data probes' info, strings and object data (decisions D213).</summary>
+    /// <summary>
+    /// How a probe's map is changed, if it is: the data probes' info, strings and object data (decisions D213), and
+    /// terrain-edge's ground.
+    /// </summary>
     public static Action<Map>? Change(string name) => name switch
     {
         "data" or "data-objects" or "data-tags" => DataProbeMaps.Data,
@@ -144,8 +147,18 @@ public static class ProbeComparison
         "data-sets-tft" => DataProbeMaps.FrozenThroneMelee,
         "data-sets-fk" => DataProbeMaps.ForsakenKingdom,
         "data-names" => DataProbeMaps.Names,
+        "terrain-edge" => Plane,
         _ => null,
     };
+
+    // The ground of probe terrain-edge: each corner of the 128 grid at x * 8 + y * 32 (War3Net's Height is in 128s)
+    static void Plane(Map map)
+    {
+        var ground = map.Environment!;
+        for (var y = 0; y <= ground.Height; y++)
+            for (var x = 0; x <= ground.Width; x++)
+                ground.TerrainTiles[(int)(y * (ground.Width + 1) + x)].Height = x / 16f + y / 4f;
+    }
 
     /// <summary>The game's lines of a probe, <c>probes/expected/&lt;probe&gt;.txt</c>.</summary>
     public static string Expected(string name) => Path.Combine(Probes, "expected", name + ".txt");

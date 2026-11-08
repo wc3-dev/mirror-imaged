@@ -66,7 +66,7 @@ public sealed partial class Simulation : IDisposable
             AddPreloader();
             if (_jass) AddJassRules();
             _lua.Run(blizzard, "blizzard.lua");
-            if (_jass) _lua.OperationLimit = OperationLimit;
+            if (_jass) (_lua.OperationLimit, _lua.NestsInMain) = (OperationLimit, true);
             Protect(() => _lua.Run(script, "war3map.lua"));
             Protect(() => _lua.Call("config"));
             var flags = info?.MapFlags ?? 0;
@@ -223,7 +223,8 @@ public sealed partial class Simulation : IDisposable
         {
             try { thread = start(); }
             // A thread nested past Lua's limit of C calls doesn't start: a Lua map's game drops it, but a JASS map's
-            // closed (probes destructables-remove and destructables-remove-jass; the JASS machine's depth not measured)
+            // closes (probes destructables-remove and destructables-remove-jass), here from about 190 threads deep, as
+            // they nest from the main thread, where the game's JASS machine ran 900 and closed by 1000 (decisions D277)
             catch (LuaException e) when (_jass && e.Message.Contains("C stack overflow"))
             {
                 throw new GameClosedException("The game closes: JASS threads nested too deep, each started inside the one before");

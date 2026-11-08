@@ -68,17 +68,20 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = UnitsProbe)]
     public float GetUnitY(unit? whichUnit) => whichUnit?.Y ?? 0;
 
-    /// <summary>Moves the unit, ignoring pathing and the map's bounds (facts, Units: x 5096 past an edge of 4096 stays).</summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Units: SetUnitX/Y ignore pathing and bounds (10-21); " + UnitsProbe)]
+    /// <summary>
+    /// Moves the unit, ignoring pathing and the map's bounds (facts, Units: x 5096 past an edge of 4096 stays), firing the
+    /// regions' events (probe units-regions).
+    /// </summary>
+    [Native(Level.Exact, Fact = "game-facts.md, Units: SetUnitX/Y ignore pathing and bounds (10-21); " + UnitsProbe + "; " + RegionsProbe)]
     public void SetUnitX(unit? whichUnit, float newX)
     {
-        if (whichUnit is not null) whichUnit.X = newX;
+        if (whichUnit is not null) Move(whichUnit, newX, whichUnit.Y);
     }
 
-    [Native(Level.Exact, Fact = "game-facts.md, Units: SetUnitX/Y ignore pathing and bounds (10-21); " + UnitsProbe)]
+    [Native(Level.Exact, Fact = "game-facts.md, Units: SetUnitX/Y ignore pathing and bounds (10-21); " + UnitsProbe + "; " + RegionsProbe)]
     public void SetUnitY(unit? whichUnit, float newY)
     {
-        if (whichUnit is not null) whichUnit.Y = newY;
+        if (whichUnit is not null) Move(whichUnit, whichUnit.X, newY);
     }
 
     /// <summary>The ground under the unit, not its height above it (facts, Units: 0 for a lifted footman on flat ground).</summary>

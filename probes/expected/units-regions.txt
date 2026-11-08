@@ -1,0 +1,65 @@
+# 3.0.1.24371, 11-08 (W2-6): the probe's lines as the game gave them
+cells
+cell 1100101
+rect 1010
+clear 001011
+clear cell 00110
+edge 100011
+swapped 111
+loc 1000
+at loc 110
+removed 0
+unit 00100
+unit cleared 01
+unit dead 1
+unit removed 1
+events
+> made
+> x
+> y
+> out
+> removed
+> enter A 2 at 1050,1050 2/nil/nil event 5 region true player nil type 1
+> enter A 3 at 1500,1100 3/nil/nil event 5 region true player nil type 1
+> enter A 4 at 1150,1100 4/nil/nil event 5 region true player nil type 1
+> timer
+> enter B 3 at 1500,1100 3/nil/nil event 5 region true player nil type 1
+> enter B 4 at 1150,1100 4/nil/nil event 5 region true player nil type 1
+> leave B 3 at 1500,1100 nil/3/nil event 6 region true player nil type 1
+> leave A 3 at 1500,1100 nil/3/nil event 6 region true player nil type 1
+-- create and move
+> within
+> position out
+> position in
+> killed
+> dead out
+> dead in
+> hidden in
+> removed inside
+> leave A 2 at 1050,1050 nil/2/nil event 6 region true player nil type 1
+> leave A 2 at 1050,1050 nil/2/nil event 6 region true player nil type 1
+> enter A 2 at 1050,1050 2/nil/nil event 5 region true player nil type 1
+> enter A 2 at 1050,1050 2/nil/nil event 5 region true player nil type 1
+> enter A 3 at 1150,1100 3/nil/nil event 5 region true player nil type 1
+> enter B 3 at 1150,1100 3/nil/nil event 5 region true player nil type 1
+-- moves
+> enter A 5 at 1050,1150 5/nil/nil event 5 region true player nil type 1
+-- made inside
+cleared under 0
+> moved in cleared
+added under 1
+> moved in added
+> moved out of added
+> x out
+> leave A 6 at 700,1150 nil/6/nil event 6 region true player nil type 1
+> leave A 5 at 1500,1150 nil/5/nil event 6 region true player nil type 1
+-- changed regions
+> enter C 7 at -1100,1100 7/nil/nil event 5 region true player nil type 1
+> enter C 8 at -1072,900 8/nil/nil event 5 region true player nil type 1
+> enter C 7 at -1100,1100 7/nil/nil event 5 region true player nil type 1
+> enter C 8 at -1072,900 8/nil/nil event 5 region true player nil type 1
+-- filters
+filter calls 0/nil/nil/0,0/nil/nil/0
+> into removed B
+> enter A 9 at 1150,1100 9/nil/nil event 5 region true player nil type 1
+-- removed region

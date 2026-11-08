@@ -95,7 +95,7 @@ public sealed class UnitTests : IDisposable
             """, map: map =>
         {
             var ground = map.Environment!;
-            ground.TerrainTiles[(int)((0 - ground.Bottom) / 128 * ground.Width + (0 - ground.Left) / 128)].CliffLevel++;
+            ground.TerrainTiles[(int)((0 - ground.Bottom) / 128 * (ground.Width + 1) + (0 - ground.Left) / 128)].CliffLevel++;
         });
 
         Assert.Equal(["128.0	64.0	64.0	240.0", "0.0"], Printed(simulation));

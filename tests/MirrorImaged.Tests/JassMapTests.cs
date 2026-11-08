@@ -226,6 +226,46 @@ public sealed class JassMapTests : IDisposable
         Assert.Matches(@"^war3map\.lua:\d+: The game closes: -2147483648 was divided by -1", simulation.Stopped.Message);
     }
 
+    // probes jass-executefunc-120 to -1000 (decisions D277): the game's JASS ran ExecuteFunc 900 deep and closed by 1000;
+    // here a JASS map's threads nest from the main thread, which gives 120 and closes from about 190 (Close)
+    [Theory]
+    [InlineData(120, "deepest 120 returned 120")]
+    [InlineData(185, "deepest 185 returned 185")]
+    [InlineData(200, null)]
+    public void ExecuteFunc_nests_deeper_in_a_jass_map_than_in_lua(int guard, string? printed)
+    {
+        using var simulation = Simulation.Load(_maps.Build($$"""
+            globals
+                integer depth = 0
+                integer deepest = 0
+                integer returned = 0
+            endglobals
+
+            function nest takes nothing returns nothing
+                set depth = depth + 1
+                if depth > deepest then
+                    set deepest = depth
+                endif
+                if depth < {{guard}} then
+                    call ExecuteFunc("nest")
+                endif
+                set returned = returned + 1
+                set depth = depth - 1
+            endfunction
+
+            function config takes nothing returns nothing
+            endfunction
+
+            function main takes nothing returns nothing
+                call ExecuteFunc("nest")
+                call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "deepest " + I2S(deepest) + " returned " + I2S(returned))
+            endfunction
+            """, ScriptLanguage.Jass), "");
+
+        if (printed is null) Assert.IsType<GameClosedException>(simulation.Stopped?.InnerException);
+        else Assert.Equal("0.000 player 0: " + printed, Assert.Single(simulation.Log));
+    }
+
     // The game doesn't load a map whose JASS doesn't compile (a rawcode 'a\bc': the loaded mark never came, D130)
     [Theory]
     [InlineData("    call Unknown()", "Unknown is not declared")]

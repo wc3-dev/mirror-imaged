@@ -1,0 +1,7 @@
+# Where MirrorImaged differs from the game's lines in expected/jass-executefunc-900.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# A JASS map's threads nest from the main thread here, which closes the game from about 190 deep; the game's JASS
+# machine ran 900 deep and closed by 1000 (D277, Close).
+- deepest 900 returned 900
++ ! the game closes

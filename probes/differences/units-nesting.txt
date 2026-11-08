@@ -1,0 +1,13 @@
+# Where MirrorImaged differs from the game's lines in expected/units-nesting.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# The deepest callback here ends at its call, as the start of the next one fails past Lua's 200 C calls in its own
+# thread; the game's goes on (D277, Close).
+- forforce deepest 99 returned 99
++ forforce deepest 99 returned 98
+- forgroup deepest 99 returned 99
++ forgroup deepest 99 returned 98
+- filter deepest 99 returned 99
++ filter deepest 99 returned 98
+- executefunc deepest 98 returned 98
++ executefunc deepest 98 returned 97

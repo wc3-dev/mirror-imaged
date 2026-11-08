@@ -72,6 +72,13 @@ public sealed unsafe class LuaState : IDisposable
     const int NoReference = -2;  // Lua's LUA_NOREF, which mirror_limit reads as the main thread
 
     /// <summary>
+    /// Whether a thread is run on from the main thread rather than the one calling the C# function running now, so
+    /// threads nest about twice as deep before Lua's limit of C calls stops them: a JASS map's, as the game's JASS
+    /// machine nests far deeper than its Lua (probes jass-executefunc-120 to -1000).
+    /// </summary>
+    public bool NestsInMain { get; set; }
+
+    /// <summary>
     /// Adds the functions transpiled JASS calls to keep JASS's rules (<c>MirrorImaged_Read</c>, <c>_Divide</c>,
     /// <c>_DivideReal</c>, <c>_Join</c>, <c>_Equal</c>, <c>_Real</c>, <c>_Bits</c> and the mark <c>MirrorImaged_Unset</c>),
     /// written in C so <see cref="OperationLimit"/> counts only their calls. <c>MirrorImaged_Divide</c> calls the global
@@ -134,7 +141,7 @@ public sealed unsafe class LuaState : IDisposable
             return yielded != 0 ? ([], true) : (Results(l, top, status, argument: true), false);
         });
 
-    nint Nesting(nint main) => _calling != 0 ? _calling : main;
+    nint Nesting(nint main) => _calling != 0 && !NestsInMain ? _calling : main;
 
     /// <summary>
     /// Makes the Lua thread calling the C# function now running yield when that function returns, until it is resumed

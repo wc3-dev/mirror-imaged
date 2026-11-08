@@ -1,0 +1,2 @@
+# 3.0.1.24371, 11-08 (W2-6): the probe's lines as the game gave them; 300, 500, 700 and 800 levels gave theirs too, run once each
+deepest 900 returned 900

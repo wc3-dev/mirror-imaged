@@ -14,10 +14,10 @@
 - face 3600.5 0.5002212
 + face 3600.5 0.5
 
-# A unit made off the map is moved onto it by the game, which the pathing and the map's bounds (wave 3, W2-6) bring
-# (D223, Close).
+# A unit made off the map is held in the world here as a flier is; the game also moves a ground unit off the map's
+# edge by its pathing (wave 3; D223, D273, Close).
 - far 2032.0 -2000.0
-+ far 5000.0 -5000.0
++ far 2016.0 -2048.0
 
 # The clock's 1/1024 s steps: 0.4 s is the step at 0.4004 (D45, Close).
 - killed at 0.4000

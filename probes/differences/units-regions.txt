@@ -1,0 +1,8 @@
+# Where MirrorImaged differs from the game's lines in expected/units-regions.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# The game moved unit 8, made 50 from unit 7, off it by pathing (wave 3).
+- > enter C 8 at -1072,900 8/nil/nil event 5 region true player nil type 1
++ > enter C 8 at -1100,900 8/nil/nil event 5 region true player nil type 1
+- > enter C 8 at -1072,900 8/nil/nil event 5 region true player nil type 1
++ > enter C 8 at -1100,900 8/nil/nil event 5 region true player nil type 1

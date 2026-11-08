@@ -1,0 +1,35 @@
+# 3.0.1.24371, 11-08 (W2-6): the probe's lines as the game gave them
+timer forgroup own/false/false,own/false/false
+timer forforce own/false/false,own/false/false
+timer unit filter own/false/false,own/false/false
+timer player filter own/false/false
+timer destructable own/false/false,own/false/false
+action yieldable false
+action forgroup own/false/false,own/false/false
+action forforce own/false/false,own/false/false
+action unit filter own/false/false,own/false/false
+action player filter own/false/false
+action destructable own/false/false,own/false/false
+forgroup start 1.5
+forgroup callback 1.5
+forgroup callback 1.5
+forgroup after call 1.5 true nil
+forgroup after execute 1.5
+forforce start 3.0
+forforce callback 3.0
+forforce callback 3.0
+forforce after call 3.0 true nil
+forforce after execute 3.0
+unit filter start 4.5
+unit filter callback 4.5
+unit filter callback 4.5
+unit filter after call 4.5 true nil
+unit filter after execute 4.5
+player filter start 6.0
+player filter callback 6.0
+player filter after call 6.0 true nil
+player filter after execute 6.0
+destructable start 7.5
+destructable callback 7.5
+destructable after call 7.5 true nil
+destructable after execute 7.5

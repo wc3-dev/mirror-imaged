@@ -1,0 +1,2 @@
+# 3.0.1.24371, 11-08 (W2-6): the game closed before the probe's lines
+! the game closes

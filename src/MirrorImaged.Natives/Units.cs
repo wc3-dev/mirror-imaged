@@ -65,6 +65,7 @@ public sealed partial class GameNatives
             Type = type, Owner = owner, X = x, Y = y, Skin = skin, HeroLevel = hero ? 1 : 0, Color = owner.Color, Scale = type.Real(ModelScale),
             Facing = new(Angle(face)), FlyHeight = type.Real(Code("umvh")),
         });
+        Arrived(u);
         // A hero's most life and mana count its strength and intelligence (facts, Units: StrHitPointBonus, IntManaBonus)
         u.MaxLife = type.Integer(HitPoints) + (hero ? Data.Constant("StrHitPointBonus", 25) * type.Integer(Strength) : 0);
         u.MaxMana = type.Integer(ManaMaximum) + (hero ? Data.Constant("IntManaBonus", 15) * type.Integer(Intelligence) : 0);
@@ -78,10 +79,12 @@ public sealed partial class GameNatives
     static float Angle(float degrees) => degrees % 360 is var a && a < 0 ? a + 360 : a;
 
     /// <summary>
-    /// A unit of the type for the player, taking one id, alive, at full life, at the place and facing given; nil for an
-    /// id that is no unit's (an item's, a destructable's, an ability's, 0) and for no player (probe units). Close: the
-    /// game moves a unit made where others stand off them, and one made off the map onto it (wave 3's pathing, W2-6's
-    /// bounds), and keeps a facing outside 0 to 360 a little otherwise (decisions D223, D224).
+    /// A unit of the type for the player, taking one id, alive, at full life, at the place and facing given, held in the
+    /// world (from its west and south edges to 32 short of its east and north ones, probe units-bounds), entering the
+    /// regions there; nil for an id that is no unit's (an item's, a destructable's, an ability's, 0) and for no player
+    /// (probe units). Close: the game moves a ground unit made where others stand off them, and one near the map's edge
+    /// off it, by its pathing (wave 3), and keeps a facing outside 0 to 360 a little otherwise (decisions D223, D224,
+    /// D273).
     /// </summary>
     [Native(Level.Close)]
     public unit? CreateUnit(player? id, int unitid, float x, float y, float face) => Create(id, unitid, x, y, face, unitid);
@@ -115,6 +118,7 @@ public sealed partial class GameNatives
         if (!u.Removed) return;
         _game.Remove(u.Key);
         _widgetEvents.Remove(u);
+        _units.Remove(u.Id);
     }
 
     /// <summary>

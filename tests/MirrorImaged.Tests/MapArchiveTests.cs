@@ -146,7 +146,28 @@ public sealed class MapArchiveTests : IDisposable
         return path;
     }
 
-    // The install's (4)Roundabout, (10)DustwallowKeys and (1)SilverpineSprint each have one such file; the game loads them
+    // decisions D270: (10)DustwallowKeys' war3map.w3e has a cliff type 0, which War3Net refuses and the game loads; read
+    // here, the type kept and the ground the same
+    [Fact]
+    public void A_terrain_file_with_a_type_War3Net_doesnt_define_is_read_as_written()
+    {
+        var path = _maps.Build("function main() end", map: map =>
+        {
+            map.Environment!.CliffTypes[0] = 0;
+            map.Environment.TerrainTiles[40].Height = 1.5f;
+        });
+
+        var map = MapArchive.Read(path);
+
+        Assert.Empty(map.Unread);
+        var ground = map.Files.Environment!;
+        Assert.Equal(0, (int)ground.CliffTypes[0]);
+        Assert.Equal((32u, 32u, -2048f, -2048f, 33 * 33), (ground.Width, ground.Height, ground.Left, ground.Bottom, ground.TerrainTiles.Count));
+        Assert.Equal(1.5f, ground.TerrainTiles[40].Height);
+    }
+
+    // The install's (4)Roundabout, (10)DustwallowKeys and (1)SilverpineSprint each had one such file; the game loads them.
+    // Roundabout's war3mapUnits.doo is still left out (DustwallowKeys' and SilverpineSprint's are read: D270, D258).
     [Theory]
     [InlineData("war3map.w3e")]
     [InlineData("war3map.doo")]

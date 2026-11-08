@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
 using System.Numerics;
 using War3Net.Build;
+using War3Net.Build.Common;
+using War3Net.Build.Environment;
 using War3Net.Build.Extensions;
 using War3Net.Build.Info;
 using War3Net.Build.Widget;
@@ -13,9 +15,9 @@ namespace MirrorImaged.Data;
 /// (<c>war3map.w3i</c>), strings (<c>war3map.wts</c>), object data and its skin files, terrain (<c>w3e</c>), pathing
 /// (<c>wpm</c>), doodads and destructables (<c>war3map.doo</c>), placed units (<c>war3mapUnits.doo</c>), regions
 /// (<c>w3r</c>), cameras (<c>w3c</c>), sounds (<c>w3s</c>) and the import list (<c>imp</c>); a file the map lacks is null.
-/// The terrain and placed-unit files, which no wave reads yet, are null too when War3Net can't read them, and
-/// <see cref="Unread"/> names them (decisions D209); a doodad file whose doodad states War3Net refuses is read here
-/// (decisions D258), and is left out only when it can't be read either. Two kinds of info and sound file War3Net
+/// The placed-unit file, which no wave reads yet, is null too when War3Net can't read it, and <see cref="Unread"/> names
+/// it (decisions D209); a terrain file whose tile or cliff types War3Net refuses, and a doodad file whose doodad states
+/// it refuses, are read here (decisions D270, D258), and are left out only when they can't be read either. Two kinds of info and sound file War3Net
 /// refuses are mended before it reads them (D300, D301). <c>war3mapMisc.txt</c> is kept as it is, and any other file,
 /// such as an FDF or TOC file, is read by name.
 /// </summary>
@@ -53,8 +55,8 @@ public sealed class MapArchive
     /// <summary>The files left out as War3Net can't read them, each with why: <c>war3map.w3e: Value '0' is not ...</c>.</summary>
     public IReadOnlyList<string> Unread { get; }
 
-    // Two of the install's maps have a terrain or placed-unit file War3Net can't read (D209); a doodad file neither it nor
-    // Doodads reads is left out too (D258).
+    // One of the install's maps has a placed-unit file War3Net can't read (D209); a terrain or doodad file neither it nor
+    // Ground or Doodads reads is left out too (D258, D270).
     static readonly string[] LeftOut = ["war3map.w3e", "war3map.doo", "war3mapUnits.doo"];
 
     /// <summary>Reads the map at <paramref name="path"/>.</summary>
@@ -80,7 +82,15 @@ public sealed class MapArchive
         {
             Info = Read("war3map.w3i", reader => reader.ReadMapInfo(), PlayerRaceHuds),
             TriggerStrings = Read("war3map.wts", reader => new StreamReader(reader.BaseStream).ReadTriggerStrings()),
-            Environment = Read("war3map.w3e", reader => reader.ReadMapEnvironment()),
+            Environment = Read("war3map.w3e", reader =>
+            {
+                try { return reader.ReadMapEnvironment(); }
+                catch (ArgumentException)
+                {
+                    reader.BaseStream.Position = 0;
+                    return Ground(reader);
+                }
+            }),
             PathingMap = Read("war3map.wpm", reader => reader.ReadMapPathingMap()),
             Doodads = Read("war3map.doo", reader =>
             {
@@ -169,6 +179,19 @@ public sealed class MapArchive
             doodads.Doodads.Add(doodad);
         }
         return doodads;
+    }
+
+    // war3map.w3e read as War3Net reads it, but its tile and cliff types kept as written: War3Net refuses a type it
+    // doesn't define, as (10)DustwallowKeys' cliff type 0, which the game loads. Nothing reads the types.
+    static MapEnvironment Ground(BinaryReader reader)
+    {
+        if (reader.ReadInt32() != MapEnvironment.FileFormatSignature) throw new InvalidDataException("war3map.w3e doesn't start with W3E!");
+        var ground = new MapEnvironment((MapEnvironmentFormatVersion)reader.ReadInt32()) { Tileset = (Tileset)reader.ReadByte(), IsCustomTileset = reader.ReadInt32() != 0 };
+        for (var n = reader.ReadInt32(); n > 0; n--) ground.TerrainTypes.Add((TerrainType)reader.ReadInt32());
+        for (var n = reader.ReadInt32(); n > 0; n--) ground.CliffTypes.Add((CliffType)reader.ReadInt32());
+        (ground.Width, ground.Height, ground.Left, ground.Bottom) = (reader.ReadUInt32() - 1, reader.ReadUInt32() - 1, reader.ReadSingle(), reader.ReadSingle());
+        for (var n = (ground.Width + 1) * (ground.Height + 1); n > 0; n--) ground.TerrainTiles.Add(reader.ReadTerrainTile(ground.FormatVersion));
+        return ground;
     }
 
     static Vector3 Vector(BinaryReader reader) => new(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());

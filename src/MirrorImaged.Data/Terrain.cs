@@ -20,7 +20,8 @@ public sealed class Terrain
 
     public Terrain(MapEnvironment environment)
     {
-        (_width, _height, _left, _bottom) = ((int)environment.Width, (int)environment.Height, environment.Left, environment.Bottom);
+        // War3Net's Width and Height count tiles; the file holds a corner more each way
+        (_width, _height, _left, _bottom) = ((int)environment.Width + 1, (int)environment.Height + 1, environment.Left, environment.Bottom);
         var tiles = environment.TerrainTiles;
         _corners = new float[tiles.Count];
         _ground = new float[tiles.Count];
@@ -40,9 +41,13 @@ public sealed class Terrain
             }
     }
 
+    /// <summary>The map from its west and south edges to its east and north ones, as GetWorldBounds reads it.</summary>
+    public (float MinX, float MinY, float MaxX, float MaxY) Bounds => (_left, _bottom, _left + (_width - 1) * Tile, _bottom + (_height - 1) * Tile);
+
     /// <summary>
-    /// The ground's height at (<paramref name="x"/>, <paramref name="y"/>); a point off the map reads its nearest edge
-    /// (inferred; W2-6 measures it).
+    /// The ground's height at (<paramref name="x"/>, <paramref name="y"/>); a point off the map reads 0, but within an
+    /// eighth of a unit past an edge, which reads its edge tile's blend carried on (probe terrain-edge: 0.1 past an
+    /// edge carried on, 0.2 and further 0).
     /// </summary>
     public float Height(float x, float y) => Blend(_corners, x, y);
 
@@ -51,18 +56,22 @@ public sealed class Terrain
 
     float Blend(float[] corners, float x, float y)
     {
-        var (column, u) = Cell((x - _left) / Tile, _width);
-        var (row, v) = Cell((y - _bottom) / Tile, _height);
+        double across = (x - _left) / Tile, up = (y - _bottom) / Tile;
+        if (Off(across, _width) || Off(up, _height)) return 0;
+        var (column, u) = Cell(across, _width);
+        var (row, v) = Cell(up, _height);
         float At(int dx, int dy) => corners[(row + dy) * _width + column + dx];
         return (float)((1 - v) * ((1 - u) * At(0, 0) + u * At(1, 0)) + v * ((1 - u) * At(0, 1) + u * At(1, 1)));
     }
 
-    // The tile a coordinate in tiles falls in, kept on the map, and how far across it the coordinate is, 0 to 1.
+    // Past an edge by an eighth of a unit (1/1024 of a tile) or more; shortcut: the game's line is between 0.1 and 0.2
+    static bool Off(double at, int corners) => at <= -1.0 / 1024 || at >= corners - 1 + 1.0 / 1024;
+
+    // The tile a coordinate in tiles falls in, the edge's for one just past it, and how far across it the coordinate is
     static (int Tile, double Across) Cell(double at, int corners)
     {
-        var clamped = Math.Clamp(at, 0, corners - 1);
-        var tile = Math.Min((int)clamped, corners - 2);
-        return (tile, clamped - tile);
+        var tile = Math.Clamp((int)Math.Floor(at), 0, corners - 2);
+        return (tile, at - tile);
     }
 
     bool HasRampAbove(List<TerrainTile> tiles, int tileX, int tileY, int level)

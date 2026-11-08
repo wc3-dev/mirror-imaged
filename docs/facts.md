@@ -1122,3 +1122,127 @@ same. The two closing probes each closed the game once, as the units probe's run
   1), and the one with bonus refuses a set; strength set to 30 makes life and most life 850. Reading `UNIT_IF_AGILITY`
   on a footman closes the game (probe `units-attribute` and the units probe's first two runs), and so does setting a
   footman's primary attribute to 3 (`units-primary` and the units probe's third run); 7 is refused there.
+
+## Groups
+
+Probes `probes/units-groups.lua` (two runs as it grew, the lines they shared the same) and `units-order.lua` (three
+runs) on 3.0.1.24371, 11-08 (W2-6), MirrorImaged's probe map (32 by 32 tiles, flat), single player, custom_v1's data.
+Their lines are in `probes/expected`.
+
+- A group holds a unit once: `GroupAddUnit` gives true, false for a unit already in it, nil or no group;
+  `GroupRemoveUnit` true when it was in it. `BlzGroupGetSize` counts, `BlzGroupUnitAt` reads by index from 0 (nil at
+  -1 and at the size), `FirstOfGroup` is index 0; nil and no group read 0 and nil. A destroyed group reads 0 and nil
+  and takes nothing. `BlzGroupAddGroupFast(a, b)` adds a's units to b and gives how many were new (2 of 4);
+  `BlzGroupRemoveGroupFast(a, b)` takes a's out of b and gives how many were there (2 of 3); with nil, 0.
+- A group's order is its own, not the order added: 64 footmen made in one go came in the order made (their handle ids
+  0 to 63 apart, in order), however they were added (forwards, backwards, by an enumeration). Units made around a
+  Paladin and a peasant came Paladin first and peasant last, and footmen made after others had been removed came in a
+  scrambled order (6, 7, 2, 1, 4, 5, 3 for the 1st to 7th made, their ids in order): the order of the units' memory,
+  inferred.
+- `ForGroup` runs over the units the group held as it started, in its order: a unit taken out by the callback
+  before its turn is still visited, one added isn't, and `GroupClear` in the first callback leaves the rest visited.
+  `GetEnumUnit` is the outer unit again after a nested `ForGroup`, nil outside.
+- A dead unit stays in its groups and is visited. A removed unit (`RemoveUnit`, or an exploded death) reads as before
+  for the rest of its step, `FirstOfGroup` giving it. After a 0 s timer it stays in the group, counted by
+  `BlzGroupGetSize`, but reads nil at its index, so `FirstOfGroup` is nil while it is first though the group holds
+  others (the facts' claim); `ForGroup` passes it over; adding, removing and `IsUnitInGroup` work on the others;
+  only `GroupClear` takes it out.
+- The enumerations empty their group first. By place (`GroupEnumUnitsInRect`, `GroupEnumUnitsInRange`,
+  `...OfLoc`): a dead unit is found, a hidden one and one removed in the same step aren't. Of a player
+  (`GroupEnumUnitsOfPlayer`) and of a type (`GroupEnumUnitsOfType`, every player's): hidden, dead and removed in the
+  step too. `GroupEnumUnitsOfType` reads the name as `UnitId` does: "footman" and "Footman" find footmen, "hfoo" none.
+  A nil rect leaves the group as it was; a nil group, nothing.
+- The `...Counted` enumerations pass the count over: 3, 2, 1, 0 and -1 all gave every unit.
+- A filter is called once for each unit taken, before it is added, with `GetFilterUnit` the unit (`GetEnumUnit` and
+  `GetTriggerUnit` nil in a timer's callback), nil after; it passes on 1 and fails on nil, `Filter(nil)` passing all.
+  An enumeration in a filter gives the outer filter its unit back after.
+- The order the filter sees: of a player or a type, newest first. By place, in squares of 256 world units, rows from
+  the south, west to east, the last unit to enter a square first: the 64 footmen made out of order came by square,
+  newest first in each; one moved into another square by `SetUnitPosition` came first there; one moved within its
+  square by `SetUnitX` kept its place. A unit's square is that of its place less its collision size: a footman (31) at
+  x 276 was in the square below 256 with one at 100, and a gryphon rider (8) at 270 and a peasant (16) at 280 in the
+  square from 256 (the squares of the place itself, or of the place less a fixed amount, fit neither run).
+- Edges, a footman (collision 31) at (40, 50): a rect finds it when its 32 cell (32 to 64, 32 to 64) lies in the rect,
+  the cell's west and south edges past the rect's: (0, 0)-(64, 100) finds it; (32, ...), (33, ...), (40, ...) and
+  (0, 0)-(63, 100) don't, nor (0, 49)-(100, 51); a swapped rect (100, 100, 0, 0) finds it. A range from (0, 0) finds a
+  footman at (200, 0) at 200 and 200.01, not 199.99 nor 169: its place alone; a range of 0 at its place finds it, -1
+  doesn't.
+- `IsUnitInRangeXY` adds the collision size and compares squared: the footman at 200 is in range of (0, 0) from 169,
+  not 168.9; at its own place every distance down to -32 reads true. `IsUnitInRangeLoc` the same. `IsUnitInRange` of
+  a footman and a Paladin (32) 300 apart is true from 237 (300 less both sizes) either way round; a unit with itself
+  true at 0 and -1; nil false.
+- `BlzGetUnitCollisionSize`: footman 31, Paladin 32, knight 32, rifleman 32, peasant 16, sheep 16, gryphon rider 8,
+  barracks 144.
+
+## Regions
+
+Probe `probes/units-regions.lua` on 3.0.1.24371, 11-08 (W2-6), the probe map, custom_v1's data. Its lines are in
+`probes/expected/units-regions.txt`.
+
+- Cells, as the facts measured: `RegionAddCell(10, 10)` covers 0 to 32 and `(-10, -10)` -32 to 0; `RegionAddRect` of
+  (100.5, 100.5)-(300.5, 300.5) 96 to 320. `RegionClearRect` clears by the same cells ((150, 150)-(200, 200) clears 128
+  to 224) and `RegionClearCell` one cell; an add after a clear covers again. A swapped rect covers as the rect in
+  order. `RegionAddCellAtLoc` and `RegionClearCellAtLoc` as the cell natives. nil reads false, and a removed region too.
+- `IsUnitInRegion` reads the unit's place against the cells as they are now: true at once for a cell added under a
+  standing unit, false for one cleared; true for a dead unit and one removed in the step.
+- Enter and leave events fire for `CreateUnit` in a region, `SetUnitX`, `SetUnitY` and `SetUnitPosition` into or out
+  of it, for a dead unit moved too, a hidden one, and one removed in the step after it moved; nothing for a move within
+  the region, a death or a removal inside, nor for a cell added or cleared under a unit standing still, then or when it
+  moves within: a region reads places, not who is in it.
+- None fires inside the call. Each registration keeps the units it has to fire for and fires them in turn later in
+  the same step, at the place it took among what falls due when its first unit came: a unit made in A, then a 0 s
+  timer started, then a unit moved into A and B (B's triggers registered first) and out of both, and one made in A
+  and B and removed: A's enters (all three), the timer, B's enters, B's leave, A's leave. A leave registration whose
+  first unit came before an enter one's fires first. Two regions entered in one move take their places in the order
+  their triggers were registered (the facts). Each unit is read where it is as its event fires.
+- A filter runs inside the call that moved the unit, with `GetFilterUnit` the unit (in `CreateUnit`, before the probe
+  set its data), `GetTriggerUnit`, `GetEnteringUnit` nil and the event id 0 there. A trigger registered twice on a
+  region fires twice.
+- In the event: `GetTriggerUnit` the unit, `GetEnteringUnit` it in an enter event and nil in a leave, `GetLeavingUnit`
+  the other way, `GetFilterUnit` nil, `GetTriggerEventId` 5 (`EVENT_GAME_ENTER_REGION`) or 6, `GetTriggeringRegion`
+  the region, `GetTriggerPlayer` nil. A removed region's events fire nothing.
+
+## Rects and locations
+
+Probes `probes/units-bounds.lua` (two runs as it grew) and `terrain-edge.lua` (three runs, on the probe map with its
+ground a plane, `ProbeComparison.Change`) on 3.0.1.24371, 11-08 (W2-6). The probe map's world is -2048 to 2048 each way
+(32 tiles from -2048), its playable area -1280 to 1280 across and -1536 to 1024 up.
+
+- A rect keeps its corners in order whichever way they are given (`Rect(30, 40, 10, 20)` reads 10, 20, 30, 40), and
+  `Rect`, `SetRect`, `RectFromLoc` and `SetRectFromLoc` hold each corner from the world's west (south) edge to 32 short
+  of its east (north) one: (-3e38, -1, 3e38, 1e38) reads -2048, -1, 2016, 2016; (2020, 2020)-(2040, 2040) 2016 four
+  times. `MoveRectTo` keeps the size about the new centre and isn't held (to 5000, 5000: 4950 to 5050).
+  `GetRectCenterX` and `Y` are the middle; a removed rect and nil read 0.
+- `GetWorldBounds` gives a new rect each call (ids one apart) of the world, -2048 to 2048, not held, and another after
+  one was removed. blizzard.j's `bj_mapInitialPlayableArea` read -512, -256, 512, 256: the camera's bounds, which this
+  map's `main` never sets, 0, and its margins.
+- Locations are places anywhere (5000, -5000 kept); a removed one reads (0, 0). `GetUnitLoc` and `GetStartLocationLoc`
+  give a new location each call; an undefined start location's is (0, 0), not nil. `DefineStartLocationLoc` defines
+  as `DefineStartLocation`; with nil, nothing.
+- `CreateUnit`, `CreateUnitAtLoc` and `SetUnitPosition` hold a unit in the world as a rect's corner: a gryphon rider
+  asked at (5000, -5000) stood at (2016, -2048), at (-5000, 5000) at (-2048, 2016), at (0, -2040) where asked. A ground
+  unit is also kept off the map's west and south edges by its pathing: a footman and a peasant at (2032, -2000),
+  (-2000, 2000), (-2000, -2000) and (48, -2000) for (0, -2040), a Paladin at (2000, -2000) and (2000, 48) for (2040, 0);
+  a barracks on the 64 grid toward 0 (1500 at 1472). A footman made on another was put at (272, 240) for (300, 300).
+  `SetUnitX` and `SetUnitY` hold nothing (5000, -5000 kept). `CreateUnitAtLoc` of nil is nil; `SetUnitPositionLoc` of
+  nil moves nothing.
+- `GetLocationZ` off the map reads 0, but less than a fifth of a unit past an edge, which reads the edge tile's blend
+  carried on: on a plane of heights x * 8 + y * 32 by corner, 0.1 past each edge read the plane's value there (793.006
+  at x 2048.1), and 0.2, 0.25, 0.5, 1 and on to 951 past it, and points far off, 0. Inside, every point read the plane,
+  the corners 33 to a row on the 32-tile map.
+
+## Callbacks' threads and nesting
+
+Probes `probes/units-threads.lua`, `units-nesting.lua` and `jass-executefunc-120.j`, `-200.j`, `-900.j` and `-1000.j`
+(and 300, 500, 700 and 800, run once each, not kept) on 3.0.1.24371, 11-08 (W2-6).
+
+- `ForGroup`'s and `ForForce`'s callbacks, the unit and player enumerations' filters and `EnumDestructablesInRect`'s
+  filter and callback each run in a thread of their own, not the caller's, from a trigger's action and from a timer's
+  callback alike: `coroutine.isyieldable()` false, not the main thread. A trigger's action isn't yieldable either.
+- A `TriggerSleepAction` in any of them lets that callback go at the wait (nothing after it ran, 10 s later), and the
+  call returns at once; the calling action goes on in the same instant, and the next callbacks run (a waiting filter
+  fails, so `EnumDestructablesInRect` called nothing back).
+- In a Lua map, `ForForce`, `ForGroup` and an enumeration's filter each calling themselves again went 99 deep and every
+  level went on after its call; `ExecuteFunc` 98 deep, the same.
+- In a JASS map, `ExecuteFunc` calling itself went 120, 200, 300, 500, 700, 800 and 900 deep, every level going on
+  after its call; guarded at 1000 the game closed.
