@@ -26,7 +26,7 @@ public enum ProbeState
     /// <summary>The map loaded, but the probe's Preload file didn't come in time.</summary>
     NoOutput,
 
-    /// <summary>The map loaded and the game exited by itself before the probe's lines came: it closed, as on some calls (docs/facts.md).</summary>
+    /// <summary>The probe's game started and then exited by itself before its lines came: it closed, as on some calls (docs/facts.md).</summary>
     Closed,
 }
 
@@ -126,10 +126,10 @@ public sealed class GameRunner(string game, string documents, string maps)
         var events = new List<string> { Version() };
         IReadOnlyList<string>? lines = null;
 
-        // The probe's game replaces the account's last replay and rewrites its Classic.w3p, and SaveGameCache rewrites its
-        // Campaigns.w3v (facts): Sven's are copied aside first. Nothing is ever put back.
+        // The probe's game replaces the account's last replay and rewrites its campaigns' profiles, and SaveGameCache
+        // rewrites a Campaigns.w3v (facts): Sven's are copied aside first. Nothing is ever put back.
         var files = AccountFiles(documents);
-        events.AddRange(SaveFiles(files.Select(file => file.File), ProbeFiles).Select(copy => $"saved Sven's file as {copy}"));
+        events.AddRange(SaveFiles(files, ProbeFiles).Select(copy => $"saved Sven's file as {copy}"));
 
         // The game rewrites the preferences once it has logged in to Battle.net and opened the account (facts).
         var preferences = Path.Combine(documents, "War3Preferences.txt");
@@ -137,6 +137,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         bool LoggedIn() => File.Exists(preferences) && File.GetLastWriteTimeUtc(preferences) != preferencesBefore;
         var loggedIn = false;
         var stillRunning = false;
+        var gameStarted = false;
 
         using var watch = new Watch();
         GameProcess? running = null;
@@ -151,6 +152,7 @@ public sealed class GameRunner(string game, string documents, string maps)
             lines = Wait(output, loaded, started, timeout, watch, running, LoggedIn, events);
             loggedIn = LoggedIn();
             stillRunning = !running.Process.HasExited;
+            gameStarted = File.Exists(started);
             events.Add($"in the game's job: {string.Join(", ", running.Ids().Select(Name))}");
         }
         finally
@@ -171,7 +173,7 @@ public sealed class GameRunner(string game, string documents, string maps)
                 File.Delete(map);
         }
 
-        var state = Ending(lines is not null, File.Exists(loaded), stillRunning, loggedIn);
+        var state = Ending(lines is not null, File.Exists(loaded), gameStarted, stillRunning, loggedIn);
         if (state == ProbeState.AtLogin)
             events.Insert(0, AtLoginSays);
         return new ProbeRun(state, lines ?? [], $"""
@@ -198,8 +200,8 @@ public sealed class GameRunner(string game, string documents, string maps)
             : $"game {version}; warning: the facts this runner relies on were measured on {MeasuredOn} (docs/facts.md)";
     }
 
-    // Each account's LastReplay.w3g and its campaigns' Campaigns.w3v and Classic.w3p, with each one's hash before the run
-    // (null when there is none).
+    // Each account's LastReplay.w3g and each of its campaigns' Campaigns.w3v and profile (named after the campaign's folder:
+    // Classic\Classic.w3p), with each one's hash before the run (null when there is none).
     internal static List<(string File, string? Hash)> AccountFiles(string documents)
     {
         var accounts = Path.Combine(documents, "BattleNet");
@@ -209,7 +211,7 @@ public sealed class GameRunner(string game, string documents, string maps)
             {
                 var campaigns = Path.Combine(account, "Campaigns");
                 var saves = Directory.Exists(campaigns)
-                    ? Directory.GetDirectories(campaigns).SelectMany(campaign => new[] { Path.Combine(campaign, "Campaigns.w3v"), Path.Combine(campaign, "Classic.w3p") })
+                    ? Directory.GetDirectories(campaigns).SelectMany(campaign => new[] { Path.Combine(campaign, "Campaigns.w3v"), Path.Combine(campaign, Path.GetFileName(campaign) + ".w3p") })
                     : [];
                 return saves.Prepend(Path.Combine(account, "Replays", "LastReplay.w3g"));
             })
@@ -217,20 +219,25 @@ public sealed class GameRunner(string game, string documents, string maps)
     }
 
     /// <summary>
-    /// Copies each file that no probe run made (its hash isn't in <paramref name="probeFiles"/>) to
+    /// Copies each file, by its hash before the run, that no probe run made (the hash isn't in <paramref name="probeFiles"/>) to
     /// <c>Saved by MirrorImaged\&lt;its name&gt; &lt;its write time&gt;&lt;its extension&gt;</c> beside it
     /// (<c>LastReplay 2026-11-08 011715.w3g</c>), or with the start of its hash added when another file holds that name;
     /// never over a file, and not again when a copy there has its content, whatever its name. Says which copies it made.
     /// </summary>
-    internal static List<string> SaveFiles(IEnumerable<string> files, string probeFiles)
+    internal static List<string> SaveFiles(IEnumerable<(string File, string? Hash)> files, string probeFiles)
     {
         var probes = File.Exists(probeFiles) ? File.ReadAllLines(probeFiles).ToHashSet(StringComparer.Ordinal) : [];
         var saved = new List<string>();
-        foreach (var file in files)
+        var copied = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (file, hash) in files)
         {
+            if (hash is null || probes.Contains(hash))
+                continue;
             var folder = Path.Combine(Path.GetDirectoryName(file)!, "Saved by MirrorImaged");
-            // Every game rewrites Classic.w3p with the same bytes (facts), so its write time alone would copy it each run.
-            if (Hash(file) is not { } hash || probes.Contains(hash) || Directory.Exists(folder) && Directory.EnumerateFiles(folder).Any(copy => Hash(copy) == hash))
+            // Every game rewrites the profiles with the same bytes (facts), so their write time alone would copy them each run.
+            if (!copied.TryGetValue(folder, out var there))
+                copied[folder] = there = Directory.Exists(folder) ? Directory.EnumerateFiles(folder).Select(copy => Hash(copy)!).ToHashSet(StringComparer.Ordinal) : [];
+            if (!there.Add(hash))
                 continue;
             var name = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(file)} {File.GetLastWriteTime(file).ToString("yyyy-MM-dd HHmmss", CultureInfo.InvariantCulture)}");
             var extension = Path.GetExtension(file);
@@ -282,12 +289,13 @@ public sealed class GameRunner(string game, string documents, string maps)
     }
 
     /// <summary>
-    /// How a run ended: with its lines; with the map loaded and the game exited by itself; with the map loaded but no
-    /// lines; with the game still running and never logged in; or otherwise without the map loaded.
+    /// How a run ended: with its lines; with the game exited by itself after the probe's game started (its
+    /// <c>started.pld</c> came, which the probes closing the game write before they close it); with the map loaded but
+    /// no lines; with the game still running and never logged in; or otherwise without the map loaded.
     /// </summary>
-    internal static ProbeState Ending(bool lines, bool loaded, bool stillRunning, bool loggedIn) =>
+    internal static ProbeState Ending(bool lines, bool loaded, bool started, bool stillRunning, bool loggedIn) =>
         lines ? ProbeState.Done
-        : loaded && !stillRunning ? ProbeState.Closed
+        : started && !stillRunning ? ProbeState.Closed
         : loaded ? ProbeState.NoOutput
         : stillRunning && !loggedIn ? ProbeState.AtLogin
         : ProbeState.Queued;

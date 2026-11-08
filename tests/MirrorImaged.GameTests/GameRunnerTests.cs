@@ -32,17 +32,18 @@ public sealed class GameRunnerTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true, true, true, true, ProbeState.Done)]
-    [InlineData(true, true, false, true, ProbeState.Done)]
-    [InlineData(false, true, false, true, ProbeState.Closed)]
-    [InlineData(false, false, false, false, ProbeState.Queued)]
-    [InlineData(false, true, true, true, ProbeState.NoOutput)]
-    [InlineData(false, true, true, false, ProbeState.NoOutput)]
-    [InlineData(false, false, true, false, ProbeState.AtLogin)]
-    [InlineData(false, false, true, true, ProbeState.Queued)]
-    public void A_run_ends_by_how_far_the_game_got(bool lines, bool loaded, bool stillRunning, bool loggedIn, ProbeState ending)
+    [InlineData(true, true, true, true, true, ProbeState.Done)]
+    [InlineData(true, true, true, false, true, ProbeState.Done)]
+    [InlineData(false, true, true, false, true, ProbeState.Closed)]
+    [InlineData(false, true, false, false, true, ProbeState.NoOutput)]
+    [InlineData(false, false, false, false, false, ProbeState.Queued)]
+    [InlineData(false, true, true, true, true, ProbeState.NoOutput)]
+    [InlineData(false, true, false, true, false, ProbeState.NoOutput)]
+    [InlineData(false, false, false, true, false, ProbeState.AtLogin)]
+    [InlineData(false, false, false, true, true, ProbeState.Queued)]
+    public void A_run_ends_by_how_far_the_game_got(bool lines, bool loaded, bool started, bool stillRunning, bool loggedIn, ProbeState ending)
     {
-        Assert.Equal(ending, GameRunner.Ending(lines, loaded, stillRunning, loggedIn));
+        Assert.Equal(ending, GameRunner.Ending(lines, loaded, started, stillRunning, loggedIn));
     }
 
     [Fact]
@@ -68,18 +69,18 @@ public sealed class GameRunnerTests : IDisposable
         var list = Path.Combine(_folder, "probe-replays.txt");
         var copy = Path.Combine(replays, "Saved by MirrorImaged", "LastReplay 2026-11-08 011715.w3g");
 
-        Assert.Equal([copy], GameRunner.SaveFiles([replay], list));
+        Assert.Equal([copy], Save(list, replay));
         Assert.Equal("Sven's game", File.ReadAllText(copy));
 
         // The same replay again is saved already.
-        Assert.Empty(GameRunner.SaveFiles([replay], list));
+        Assert.Empty(Save(list, replay));
 
         // Another replay with the same write time leaves the copy as it is and is saved under its hash's start too, once.
         File.WriteAllText(replay, "another game");
         File.SetLastWriteTime(replay, new DateTime(2026, 11, 8, 1, 17, 15));
         var other = Path.Combine(replays, "Saved by MirrorImaged", $"LastReplay 2026-11-08 011715 {Hash(replay)[..8]}.w3g");
-        Assert.Equal([other], GameRunner.SaveFiles([replay], list));
-        Assert.Empty(GameRunner.SaveFiles([replay], list));
+        Assert.Equal([other], Save(list, replay));
+        Assert.Empty(Save(list, replay));
         Assert.Equal("Sven's game", File.ReadAllText(copy));
         Assert.Equal("another game", File.ReadAllText(other));
     }
@@ -100,7 +101,7 @@ public sealed class GameRunnerTests : IDisposable
         GameRunner.NoteProbeFiles(before, list);
 
         Assert.Equal([Hash(probes)], File.ReadAllLines(list));
-        Assert.Empty(GameRunner.SaveFiles([probes, missing], list));
+        Assert.Empty(Save(list, probes, missing));
         Assert.False(Directory.Exists(Path.Combine(replays, "Saved by MirrorImaged")));
     }
 
@@ -109,26 +110,33 @@ public sealed class GameRunnerTests : IDisposable
     {
         var account = Path.Combine(_folder, "BattleNet", "1");
         var classic = Directory.CreateDirectory(Path.Combine(account, "Campaigns", "Classic")).FullName;
-        var other = Directory.CreateDirectory(Path.Combine(account, "Campaigns", "Other")).FullName;
+        var reforged = Directory.CreateDirectory(Path.Combine(account, "Campaigns", "Reforged")).FullName;
         File.WriteAllText(Path.Combine(classic, "Campaigns.w3v"), "caches");
         File.WriteAllText(Path.Combine(classic, "Classic.w3p"), "profile");
-        File.WriteAllText(Path.Combine(other, "Campaigns.w3v"), "other caches");
+        File.WriteAllText(Path.Combine(reforged, "Reforged.w3p"), "another profile");
         File.SetLastWriteTime(Path.Combine(classic, "Campaigns.w3v"), new DateTime(2026, 11, 8, 7, 24, 50));
-        var files = GameRunner.AccountFiles(_folder).Select(file => file.File).Order(StringComparer.Ordinal).ToList();
+        var files = GameRunner.AccountFiles(_folder).OrderBy(file => file.File, StringComparer.Ordinal).ToList();
 
         Assert.Equal([
             Path.Combine(classic, "Campaigns.w3v"), Path.Combine(classic, "Classic.w3p"),
-            Path.Combine(other, "Campaigns.w3v"), Path.Combine(other, "Classic.w3p"),
-            Path.Combine(account, "Replays", "LastReplay.w3g")], files);
+            Path.Combine(reforged, "Campaigns.w3v"), Path.Combine(reforged, "Reforged.w3p"),
+            Path.Combine(account, "Replays", "LastReplay.w3g")], files.Select(file => file.File));
+        Assert.Equal(Hash(Path.Combine(classic, "Classic.w3p")), files[1].Hash);
+        Assert.Null(files[2].Hash);
         var list = Path.Combine(_folder, "probe-replays.txt");
         Assert.Equal(3, GameRunner.SaveFiles(files, list).Count);
         Assert.Equal("caches", File.ReadAllText(Path.Combine(classic, "Saved by MirrorImaged", "Campaigns 2026-11-08 072450.w3v")));
+        Assert.Equal("another profile", File.ReadAllText(Directory.GetFiles(Path.Combine(reforged, "Saved by MirrorImaged"), "Reforged *.w3p").Single()));
 
-        // A game rewrites Classic.w3p with the same bytes: its copy is there, under another write time.
+        // A game rewrites the profiles with the same bytes: their copies are there, under another write time.
         File.WriteAllText(Path.Combine(classic, "Classic.w3p"), "profile");
         File.SetLastWriteTime(Path.Combine(classic, "Classic.w3p"), new DateTime(2026, 11, 9));
-        Assert.Empty(GameRunner.SaveFiles(files, list));
+        Assert.Empty(Save(list, Path.Combine(classic, "Classic.w3p")));
     }
+
+    // Saves the files as a run does, by their hashes as they are now.
+    static List<string> Save(string list, params string[] files) =>
+        GameRunner.SaveFiles(files.Select(file => (file, File.Exists(file) ? Hash(file) : null)), list);
 
     static string Hash(string file) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(file)));
 

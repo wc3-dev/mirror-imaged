@@ -45,7 +45,7 @@ public sealed class GameProbeTests
         var game = ProbeComparison.Compare(ProbeComparison.Expected(name), lines);
         Assert.True(game.Count == 0, $"""
             {name}: the game no longer gives probes/expected/{name}.txt's lines:
-            {string.Join('\n', game.Select(d => d.ToString().Replace("MirrorImaged", "this run")))}
+            {string.Join('\n', game.Select(d => d.Describe("this run")))}
             This run's lines:
             {string.Join('\n', lines)}
             {run.Detail}

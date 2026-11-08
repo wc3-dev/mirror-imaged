@@ -1,33 +1,32 @@
 # probes/players.lua on 3.0.1.24371, single player, 11-08: the game's lines. Two runs, W1-4's and W1-8's.
-# A line starting "~ " varies from run to run: each {w} in it stands for a word and each {t} for a number, the rest
-# must match exactly, and the run may give it anywhere (decisions D71, D124). Slots 0 to 23 have a random race each
-# run (D92): W1-4's run gave slots 0 to 23 UNDEAD HUMAN NIGHTELF NIGHTELF HUMAN NIGHTELF HUMAN HUMAN ORC UNDEAD HUMAN UNDEAD
+# In a line, each {w} stands for a word (ASCII letters, digits and underscores) and each {t} for a number, the rest
+# exact (decisions D71, D124). Slots 0 to 23 have a random race each run (D92): W1-4's run gave slots 0 to 23 UNDEAD HUMAN NIGHTELF NIGHTELF HUMAN NIGHTELF HUMAN HUMAN ORC UNDEAD HUMAN UNDEAD
 # HUMAN ORC ORC HUMAN ORC ORC ORC HUMAN HUMAN UNDEAD HUMAN NIGHTELF, and W1-8's HUMAN HUMAN UNDEAD HUMAN UNDEAD NIGHTELF NIGHTELF
 # NIGHTELF UNDEAD UNDEAD ORC HUMAN ORC NIGHTELF ORC NIGHTELF HUMAN NIGHTELF HUMAN UNDEAD HUMAN UNDEAD HUMAN NIGHTELF.
-~ slot 0 Local Player|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_USER {w} team 0 start 0 colour 0 observer false selectable true
-~ slot 1 Player 2|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 1 observer false selectable true
-~ slot 2 Player 3|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 2 observer false selectable true
-~ slot 3 Player 4|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 3 observer false selectable true
-~ slot 4 Player 5|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 4 observer false selectable true
-~ slot 5 Player 6|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 5 observer false selectable true
-~ slot 6 Player 7|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 6 observer false selectable true
-~ slot 7 Player 8|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 7 observer false selectable true
-~ slot 8 Player 9|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 8 observer false selectable true
-~ slot 9 Player 10|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 9 observer false selectable true
-~ slot 10 Player 11|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 10 observer false selectable true
-~ slot 11 Player 12|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 11 observer false selectable true
-~ slot 12 Player 13|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 12 observer false selectable true
-~ slot 13 Player 14|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 13 observer false selectable true
-~ slot 14 Player 15|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 14 observer false selectable true
-~ slot 15 Player 16|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 15 observer false selectable true
-~ slot 16 Player 17|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 16 observer false selectable true
-~ slot 17 Player 18|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 17 observer false selectable true
-~ slot 18 Player 19|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 18 observer false selectable true
-~ slot 19 Player 20|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 19 observer false selectable true
-~ slot 20 Player 21|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 20 observer false selectable true
-~ slot 21 Player 22|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 21 observer false selectable true
-~ slot 22 Player 23|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 22 observer false selectable true
-~ slot 23 Player 24|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE {w} team -1 start -1 colour 23 observer false selectable true
+slot 0 Local Player|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_USER RACE_{w} team 0 start 0 colour 0 observer false selectable true
+slot 1 Player 2|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 1 observer false selectable true
+slot 2 Player 3|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 2 observer false selectable true
+slot 3 Player 4|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 3 observer false selectable true
+slot 4 Player 5|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 4 observer false selectable true
+slot 5 Player 6|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 5 observer false selectable true
+slot 6 Player 7|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 6 observer false selectable true
+slot 7 Player 8|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 7 observer false selectable true
+slot 8 Player 9|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 8 observer false selectable true
+slot 9 Player 10|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 9 observer false selectable true
+slot 10 Player 11|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 10 observer false selectable true
+slot 11 Player 12|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 11 observer false selectable true
+slot 12 Player 13|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 12 observer false selectable true
+slot 13 Player 14|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 13 observer false selectable true
+slot 14 Player 15|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 14 observer false selectable true
+slot 15 Player 16|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 15 observer false selectable true
+slot 16 Player 17|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 16 observer false selectable true
+slot 17 Player 18|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 17 observer false selectable true
+slot 18 Player 19|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 18 observer false selectable true
+slot 19 Player 20|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 19 observer false selectable true
+slot 20 Player 21|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 20 observer false selectable true
+slot 21 Player 22|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 21 observer false selectable true
+slot 22 Player 23|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 22 observer false selectable true
+slot 23 Player 24|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_NONE RACE_{w} team -1 start -1 colour 23 observer false selectable true
 slot 24 Player 25|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_CREEP other 0 team 0 start -1 colour 24 observer false selectable true
 slot 25 Player 26|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_CREEP other 0 team 0 start -1 colour 25 observer false selectable true
 slot 26 Player 27|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_CREEP other 0 team 0 start -1 colour 26 observer false selectable true

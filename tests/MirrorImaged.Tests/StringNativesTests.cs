@@ -559,6 +559,8 @@ public sealed class StringNativesTests : IDisposable
         Assert.Throws<GameClosedException>(() => _natives.R2SW(-1.5f, 254, 2));
         Assert.Throws<GameClosedException>(() => _natives.R2SW(-1.5f, 1000, 2));
         Assert.Equal(255, _natives.R2SW(-1.5f, 253, 2)!.Length);
+        // Its length wrapped past a 32-bit integer, as width 2147483647 above 0 gives "" (not measured below 0, D122)
+        Assert.Equal("", _natives.R2SW(-1.5f, 2147483647, 2));
     }
 
     [Fact]

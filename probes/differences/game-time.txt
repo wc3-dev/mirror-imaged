@@ -4,17 +4,17 @@
 # TimerGetElapsed of a 100000 s timer at the first 7 ticks of a 1 s periodic timer reads a float step past the whole
 # second in the game (1.0078125 is 1.01), as if those ticks came a little late, and whole from the 8th; here timers run
 # exactly on time (D45, Close). The third number, real seconds in the game, is game seconds here (D44).
+- 1 1.01 {t}
 + 1 1.00 1
+- 2 2.01 {t}
 + 2 2.00 2
+- 3 3.01 {t}
 + 3 3.00 3
+- 4 4.01 {t}
 + 4 4.00 4
+- 5 5.01 {t}
 + 5 5.00 5
+- 6 6.01 {t}
 + 6 6.00 6
+- 7 7.01 {t}
 + 7 7.00 7
-- ~ 1 1.01 {t}
-- ~ 2 2.01 {t}
-- ~ 3 3.01 {t}
-- ~ 4 4.01 {t}
-- ~ 5 5.01 {t}
-- ~ 6 6.01 {t}
-- ~ 7 7.01 {t}

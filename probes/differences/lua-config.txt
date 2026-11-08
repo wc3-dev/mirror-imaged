@@ -10,7 +10,8 @@
 - math.log 1000 10 = f 403fffde 2.99999189
 + math.log 1000 10 = f 40400000 3
 
-# The game reads a binary chunk; here every load refuses one, as Lua never checks bytecode (D36, D126).
+# The game seems to read a binary chunk (inferred: it reached the bytecode reader); here every load refuses one, as
+# Lua never checks bytecode (D36, D126): an exception to A6, for Sven's review (docs/tasks/later.md).
 - load binary = error binary string: truncated precompiled chunk
 + load binary = error attempt to load a binary chunk (mode is 't')
 - load binary mode b = error binary: truncated precompiled chunk

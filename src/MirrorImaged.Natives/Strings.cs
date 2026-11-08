@@ -194,11 +194,12 @@ public sealed partial class GameNatives
     /// one), rounded half up in the game's arithmetic, and spaces after the sign until the integer part and decimals fill
     /// <paramref name="width"/>; precision 0 writes ".0". At most 255 bytes, the rest cut; "" when the length the width
     /// asks for is past a 32-bit integer. The game's own formatting: R2SW(1.5, 8, 2) is "     1.50", R2SW(-1.5, 4, 2)
-    /// "- 1.50", R2SW(1.25, 0, -1) "1.25". A number below 0 whose text passes 255 bytes closes the game. Close from 2^31
-    /// up, where the game writes about ten digits of its own and then zeros (R2S(1e20) is "100000057600000000000.000")
-    /// and this writes the float's digits, and for the largest floats, which the game writes "inf".
+    /// "- 1.50", R2SW(1.25, 0, -1) "1.25". A number below 0 whose text passes 255 bytes closes the game; one whose length
+    /// wraps past a 32-bit integer gives "", as above 0 (not measured below 0). Close from 2^31 up, where the game writes
+    /// about ten digits of its own and then zeros (R2S(1e20) is "100000057600000000000.000") and this writes the float's
+    /// digits, and for the largest floats, which the game writes "inf".
     /// </summary>
-    /// <exception cref="GameClosedException">The number is below 0 and its text passes 255 bytes.</exception>
+    /// <exception cref="GameClosedException">The number is below 0 and its text passes 255 bytes, its length not wrapped.</exception>
     [Native(Level.Close)]
     public string? R2SW(float r, int width, int precision)
     {

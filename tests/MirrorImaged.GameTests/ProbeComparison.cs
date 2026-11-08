@@ -17,10 +17,13 @@ public sealed record Difference(int Line, string? Game, string? Mirror, string? 
     public IEnumerable<string> Recorded =>
         Stop is not null ? ["! " + Stop] : new[] { Game is null ? null : "- " + Game, Mirror is null ? null : "+ " + Mirror }.OfType<string>();
 
-    public override string ToString() =>
-        Stop is not null ? $"MirrorImaged stopped without lines: {Stop}"
-        : Game is null ? $"after line {Line}: the game gave nothing, MirrorImaged \"{Mirror}\""
-        : $"line {Line}: the game gave \"{Game}\", MirrorImaged {(Mirror is null ? "nothing" : $"\"{Mirror}\"")}";
+    public override string ToString() => Describe("MirrorImaged");
+
+    /// <summary>The difference, with <paramref name="run"/> naming the run compared with the game's lines.</summary>
+    public string Describe(string run) =>
+        Stop is not null ? $"{run} stopped without lines: {Stop}"
+        : Game is null ? $"after line {Line}: the game gave nothing, {run} \"{Mirror}\""
+        : $"line {Line}: the game gave \"{Game}\", {run} {(Mirror is null ? "nothing" : $"\"{Mirror}\"")}";
 }
 
 /// <summary>
@@ -81,8 +84,12 @@ public static class ProbeComparison
             // The probe ends with EndGame, so a run stopped after its lines is as the game's.
             if (simulation.Documents.CustomMapData.TryGetValue(file, out var bytes) && Preload.Lines(Encoding.UTF8.GetString(bytes)) is { } lines)
                 return (lines, null);
-            return simulation.Stopped is { InnerException: GameClosedException } ? ([Closes], null)
-                : (null, simulation.Stopped?.Message.Split('\n')[0] ?? $"no lines in {Longest.TotalSeconds} simulated seconds");
+            if (simulation.Stopped is { InnerException: GameClosedException })
+                return ([Closes], null);
+            if (simulation.Stopped is not null)
+                return (null, simulation.Stopped.Message.Split('\n')[0]);
+            var error = simulation.Log.LastOrDefault(entry => entry.Contains(" error: "));
+            return (null, $"no lines in {Longest.TotalSeconds} simulated seconds{(error is null ? "" : $"; the last error: {error}")}");
         }
         finally
         {
@@ -91,43 +98,40 @@ public static class ProbeComparison
     }
 
     /// <summary>
-    /// How a run's lines differ from an expected file (decisions D71, D124): a line starting <c># </c> is a note; one
-    /// starting <c>~ </c> varies from run to run, each <c>{t}</c> in it standing for a number and each <c>{w}</c> for a
-    /// word (letters, digits and underscores), the rest exact, and the run gives it once, anywhere, as its time decides
-    /// its place; every other line comes in order, exactly. The lines that differ are paired in order where both sides
+    /// How a run's lines differ from an expected file (decisions D71, D124): a line starting <c># </c> is a note; in any
+    /// other, each <c>{t}</c> stands for a number and each <c>{w}</c> for a word (ASCII letters, digits and underscores),
+    /// the rest exact. A line starting <c>~ </c> moves from run to run, and the run gives it once, anywhere, as its time
+    /// decides its place; every other line comes in order. The lines that differ are paired in order where both sides
     /// give some between the same common lines.
     /// </summary>
-    /// <exception cref="InvalidDataException">A line starting <c>~ </c> has neither a <c>{t}</c> nor a <c>{w}</c>.</exception>
+    /// <exception cref="InvalidDataException">A line starting <c>~ </c> has no <c>{t}</c> or <c>{w}</c>, or nothing else.</exception>
     public static List<Difference> Compare(string expected, IReadOnlyList<string> lines)
     {
-        var file = File.ReadAllLines(expected).Select((line, i) => (Line: line, Number: i + 1)).Where(e => !e.Line.StartsWith("# ")).ToList();
-        var varying = file.Where(e => e.Line.StartsWith("~ ")).Select(e => (e.Line, e.Number, Pattern: e.Line.Contains("{t}") || e.Line.Contains("{w}")
-            ? new Regex("^" + Regex.Escape(e.Line[2..]).Replace(@"\{t}", @"-?[0-9]+(\.[0-9]+)?").Replace(@"\{w}", @"\w+") + "$")
-            : throw new InvalidDataException(
-                $"{expected}:{e.Number}: a line starting \"~ \" varies, and needs a {{t}} for each number or a {{w}} for each word that does"))).ToList();
-        var game = file.Where(e => !e.Line.StartsWith("~ ")).ToList();
+        var file = File.ReadAllLines(expected).Select((line, i) => Expect(expected, line, i + 1)).OfType<ExpectedLine>().ToList();
+        var moving = file.Where(e => e.Moves).ToList();
+        var game = file.Where(e => !e.Moves).ToList();
 
         var mirror = new List<string>();
         foreach (var line in lines)
         {
-            var match = varying.FindIndex(v => v.Pattern.IsMatch(line));
+            var match = moving.FindIndex(e => e.Matches(line));
             if (match < 0) mirror.Add(line);
-            else varying.RemoveAt(match);
+            else moving.RemoveAt(match);
         }
 
         // The longest common run of lines, from each pair of places to the ends.
         var common = new int[game.Count + 1, mirror.Count + 1];
         for (var i = game.Count - 1; i >= 0; i--)
             for (var j = mirror.Count - 1; j >= 0; j--)
-                common[i, j] = game[i].Line == mirror[j] ? common[i + 1, j + 1] + 1 : Math.Max(common[i + 1, j], common[i, j + 1]);
+                common[i, j] = game[i].Matches(mirror[j]) ? common[i + 1, j + 1] + 1 : Math.Max(common[i + 1, j], common[i, j + 1]);
 
         var differences = new List<Difference>();
-        var (gameOnly, mirrorOnly, after) = (new List<(string Line, int Number)>(), new List<string>(), 0);
+        var (gameOnly, mirrorOnly, after) = (new List<ExpectedLine>(), new List<string>(), 0);
         void Pair()
         {
             var last = gameOnly.Count > 0 ? gameOnly[^1].Number : after;
             for (var k = 0; k < Math.Max(gameOnly.Count, mirrorOnly.Count); k++)
-                differences.Add(new(k < gameOnly.Count ? gameOnly[k].Number : last, gameOnly.ElementAtOrDefault(k).Line, mirrorOnly.ElementAtOrDefault(k)));
+                differences.Add(new(k < gameOnly.Count ? gameOnly[k].Number : last, gameOnly.ElementAtOrDefault(k)?.Line, mirrorOnly.ElementAtOrDefault(k)));
             gameOnly.Clear();
             mirrorOnly.Clear();
         }
@@ -135,7 +139,7 @@ public static class ProbeComparison
         var (a, b) = (0, 0);
         while (a < game.Count || b < mirror.Count)
         {
-            if (a < game.Count && b < mirror.Count && game[a].Line == mirror[b])
+            if (a < game.Count && b < mirror.Count && game[a].Matches(mirror[b]))
             {
                 Pair();
                 after = game[a].Number;
@@ -148,8 +152,29 @@ public static class ProbeComparison
         }
 
         Pair();
-        differences.AddRange(varying.Select(v => new Difference(v.Number, v.Line, null)));
+        differences.AddRange(moving.Select(e => new Difference(e.Number, e.Line, null)));
         return differences;
+    }
+
+    // An expected file's line: as written, its number, whether it moves (~), and a pattern when it has a {t} or {w}.
+    sealed record ExpectedLine(string Line, int Number, bool Moves, Regex? Pattern)
+    {
+        public bool Matches(string line) => Pattern?.IsMatch(line) ?? (Moves ? Line[2..] : Line) == line;
+    }
+
+    static ExpectedLine? Expect(string file, string line, int number)
+    {
+        if (line.StartsWith("# "))
+            return null;
+        var moves = line.StartsWith("~ ");
+        var text = moves ? line[2..] : line;
+        var tokens = Regex.IsMatch(text, @"\{[tw]}");
+        if (moves && (!tokens || Regex.Replace(text, @"\{[tw]}", "").Trim().Length == 0))
+            throw new InvalidDataException(
+                $"{file}:{number}: a line starting \"~ \" moves, and needs a {{t}} or {{w}} for what varies and some text that doesn't");
+        return new(line, number, moves, tokens
+            ? new Regex("^" + Regex.Escape(text).Replace(@"\{t}", @"-?[0-9]+(\.[0-9]+)?").Replace(@"\{w}", "[A-Za-z0-9_]+") + "$")
+            : null);
     }
 
     /// <summary>Runs a probe in MirrorImaged and fails unless it differs from the game's lines as recorded.</summary>

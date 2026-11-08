@@ -43,21 +43,47 @@ public sealed class ProbeComparisonTests : IDisposable
         Assert.Equal([new(1, "a", null), new(2, "b", null), new(3, "c", null), new(4, "d", null), new(5, "e", null)], Compare(expected));
     }
 
-    [Fact]
-    public void A_varying_line_without_a_number_to_vary_is_refused()
+    [Theory]
+    [InlineData("~ w done")]
+    [InlineData("~ {t}")]
+    [InlineData("~ {w} {t}")]
+    public void A_moving_line_without_both_varying_and_fixed_text_is_refused(string line)
     {
-        var error = Assert.Throws<InvalidDataException>(() => Compare("a\n~ w done\n", "a", "w done"));
+        var error = Assert.Throws<InvalidDataException>(() => Compare($"a\n{line}\n", "a"));
 
-        Assert.Equal($"{_file}:2: a line starting \"~ \" varies, and needs a {{t}} for each number or a {{w}} for each word that does", error.Message);
+        Assert.Equal($"{_file}:2: a line starting \"~ \" moves, and needs a {{t}} or {{w}} for what varies and some text that doesn't", error.Message);
     }
 
     [Fact]
-    public void A_varying_word_matches_letters_digits_and_underscores()
+    public void A_varying_word_is_ascii_letters_digits_and_underscores()
     {
-        const string expected = "~ slot 0 {w} team 0\n";
+        const string expected = "slot 0 RACE_{w} team 0\n";
 
         Assert.Empty(Compare(expected, "slot 0 RACE_UNDEAD team 0"));
-        Assert.Equal([new(0, null, "slot 0 RACE UNDEAD team 0"), new(1, "~ slot 0 {w} team 0", null)], Compare(expected, "slot 0 RACE UNDEAD team 0"));
+        Assert.Empty(Compare(expected, "slot 0 RACE_night_elf2 team 0"));
+        Assert.Equal([new(1, "slot 0 RACE_{w} team 0", "slot 0 RACE_UNDEAD x team 0")], Compare(expected, "slot 0 RACE_UNDEAD x team 0"));
+        Assert.Equal([new(1, "slot 0 RACE_{w} team 0", "slot 0 RACE_é team 0")], Compare(expected, "slot 0 RACE_é team 0"));
+    }
+
+    [Fact]
+    public void A_line_with_a_varying_part_that_does_not_move_keeps_its_place()
+    {
+        const string expected = "a\nw {t} {w}\nb\n";
+
+        Assert.Empty(Compare(expected, "a", "w 1.5 true", "b"));
+        Assert.Equal([new(2, "w {t} {w}", null), new(3, null, "w 1.5 true")], Compare(expected, "a", "b", "w 1.5 true"));
+    }
+
+    // Every expected and differences file belongs to a probe in probes/.
+    [Fact]
+    public void Every_record_has_its_probe()
+    {
+        var names = ProbeComparison.Names.ToHashSet();
+        var records = new[] { "expected", "differences" }
+            .SelectMany(folder => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "probes", folder), "*.txt"))
+            .Select(Path.GetFileNameWithoutExtension);
+
+        Assert.All(records, name => Assert.Contains(name!, names));
     }
 
     [Fact]

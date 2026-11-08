@@ -139,7 +139,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   `GetRandomInt` (fact), which the world provides (W0-5). `os.clock`, `os.time` and `os.date` read the real clock, as the
   game's do, until the world replaces them (done in W0-5, D44). Binary chunks are refused by every `load`, whatever its mode: Lua 5.3 never
   checks bytecode, so a map could crash the process with one. Whether the game loads them isn't measured;
-  `string.dump` stays, harmless without them (both measured since, D126: the game reads them and has no `string.dump`).
+  `string.dump` stays, harmless without them (replaced by D126: the game has no `string.dump`, so it is dropped, and
+  seems to read binary chunks, which stay refused).
 - **D37. The native build** uses zig 0.17.0 (`native/build.ps1`) for win-x64 (MinGW), linux-x64 (glibc 2.17) and
   osx-arm64, with `-DLUA_USE_C89` (D33), `-ffp-contract=off` (arm64 would fuse multiply-adds and x64 not) and `-s`
   (without it the DLL holds a hash of the folder it was built in). The output is the same bytes from any folder and
@@ -295,7 +296,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   first zero-second timer, before the probe. While `loaded.pld` is there and `started.pld` isn't, the runner posts a
   space key to the game's window every 3 s (facts: the loading screen waits; a posted key passes it). These marks, not
   `War3Log.txt`, say the map loaded, because the game holds the log back while it runs and loses it when killed
-  (facts). A run with no lines is `NoOutput` when the map loaded; `AtLogin` when the game still ran but never logged in
+  (facts). A run with no lines is `NoOutput` when the map loaded (`Closed` when the game exited by itself after
+  `started.pld` came, D122); `AtLogin` when the game still ran but never logged in
   (it rewrites `War3Preferences.txt` once it has, facts), with its detail starting "needs Sven: ..." and saying what is
   known: it was seen every time the runner ran under Claude Code's Bash tool and never from PowerShell (facts); and
   `Queued` otherwise. What the game shows can't be captured on the hidden desktop (facts), so `AtLogin` is told from the
@@ -437,7 +439,9 @@ in `probes/expected`.
   `probes/expected/<probe>.txt` marks the lines they reach: a line starting `# ` is a note; one starting `~ ` varies
   from run to run, each `{t}` in it standing for a number and the rest exact, and a run gives it once, anywhere, as its
   time decides its place; every other line comes in order, exactly; a `~ ` line without a `{t}` is refused. W1-8's
-  comparison reads the same format (`docs/tasks/wave-1.md`); `ExpectedLines` in `GameProbeTests.cs` reads it now.
+  comparison reads the same format (`docs/tasks/wave-1.md`); `ExpectedLines` in `GameProbeTests.cs` reads it now
+  (updated by W1-8: `ProbeComparison.Compare` reads it, D120, and D124 adds `{w}` and lets both stand in a line that
+  keeps its place).
 - **D72. `==` holds for the same handle seen as two types:** each handle type's metatable has an `__eq` comparing the
   handles' keys (D63), so `GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED` and a widget equal to its unit, as the game
   measures; `rawequal` stays false (D41). Called straight from the metatable with anything but two handles, it answers
@@ -761,26 +765,33 @@ measured and say so where not.
   lua-config and timers), each where the native or the model is Close.
 - **D122. A game that closes is a line.** A probe whose game exits by itself after its map loaded, before the lines
   came, ends `Closed` in the runner (new), and gives the one line `! the game closes`; so does a MirrorImaged run that
-  stops with a `GameClosedException` before its lines, and an expected file holds it as any line. `R2SW` of a number
-  below 0 whose text passes 255 bytes now throws it, replacing D84's cut, as the game closed on -1.5 at widths 254 and
-  1000. W1-3's six one-call `R2SW` probes are committed as `probes/r2sw-*.lua`, and W1-5's `files-text` (`Preloader` of
+  stops with a `GameClosedException` before its lines, and an expected file holds it as any line. `Closed` needs the
+  probe's `started.pld`, written in the probe's first timer before the probe runs, so a game that exits as its map
+  loads isn't a probe closing it: the three closing probes run again (11-08) each wrote it before the game closed.
+  `R2SW` of a number below 0 whose text passes 255 bytes now throws it, replacing D84's cut, as the game closed on
+  -1.5 at widths 254 and 1000; the check sees the length as it wraps, so a width whose length passes a 32-bit integer
+  still gives `""` below 0, as above 0 (not measured below 0; a test pins it). W1-3's six one-call `R2SW` probes are committed as `probes/r2sw-*.lua`, and W1-5's `files-text` (`Preloader` of
   a file that isn't JASS) as `files-text.lua`; each was run again (11-08) and gave what the facts say, the two at -1.5
   and files-text closing the game.
 - **D123. The runner copies the account's campaign files too:** before a run, each account's
-  `Campaigns\*\Campaigns.w3v` and `Campaigns\*\Classic.w3p`, as D59 copies `LastReplay.w3g`, to `Saved by
+  `Campaigns\*\Campaigns.w3v` and each campaign's profile, named after its folder (`Classic\Classic.w3p`,
+  `Reforged\Reforged.w3p`, `ForsakenKingdom\ForsakenKingdom.w3p`), as D59 copies `LastReplay.w3g`, to `Saved by
   MirrorImaged\<name> <write time><extension>` beside it, never over a file, and not when its hash is one a probe run
   made; after the run the hashes of those that changed join the same list, still `probe-replays.txt`, so the hashes
-  noted before stay. Every game rewrites `Classic.w3p` with the same bytes, so its write time changes each run: a file
-  is not copied when a copy in its folder has its content, whatever the copy's name (before, only a copy of the same
+  noted before stay. Every game rewrites the profiles with the same bytes, so their write time changes each run: a
+  file is not copied when a copy in its folder has its content, whatever the copy's name (before, only a copy of the same
   name counted, and this task's first runs left 34 copies of one `Classic.w3p`, the 33 extra ones since deleted).
-- **D124. A varying line can vary in a word too:** in D71's format, `{w}` stands for a word (letters, digits and
-  underscores) as `{t}` stands for a number. The players probe run again gave other races for slots 0 to 23, as the
-  lobby draws them at random (D92), so those 24 lines are `~ ` lines with `{w}` for the race; the two runs' races are
-  in the file's notes. Nothing else in it changed.
+- **D124. A line can vary in a word too, and keep its place:** in D71's format, `{w}` stands for a word (ASCII
+  letters, digits and underscores) as `{t}` stands for a number, and either can stand in any line: a line without
+  `~ ` keeps its place and matches by its pattern, and `~ ` is only for a line that moves. A `~ ` line needs a token
+  and some fixed text, so it can't match any line at all. The players probe run again gave other races for slots 0
+  to 23, as the lobby draws them at random (D92), so those 24 lines have `RACE_{w}` for the race, in order; the two
+  runs' races are in the file's notes. `game-time`'s real seconds and `hashtables`' `SaveFogStateHandle` answer
+  (D125) are in-order lines with `{t}` and `{w}` too.
 - **D125. `SaveFogStateHandle` is Close:** its answer for `FOG_OF_WAR_MASKED`, a Convert native's value, was false in
   W1-3's run of the hashtables probe and true in W1-8's, every other line the same; the value was saved and loaded back
   both times. So the game's answer there isn't fixed (perhaps whatever its return register held; not known), and the
-  native still gives false (D85), with the line marked as varying.
+  native still gives false (D85), with the line given `{w}` there.
 - **D126. The Lua build as the game's, probe lua-config** (two runs, the same lines): D33's Windows configuration holds
   (`math.log(8, 2)` 3.00000024 and `math.log(1024, 2)` 10.000001 as here, `0x1.0000011p0` 1, `%a` of 0.1
   `0xc.ccccdp-7`, `os.date` refusing `%F`, `%e` and `%Ey` and taking `%#x`), and so does D35's build without
@@ -789,12 +800,14 @@ measured and say so where not.
   measured: `i + 0.0` and `i / 1` round to nearest, ties to even (16777217 to 16777216, 16777219 and 16777221 to
   16777220, 2147483647 to 2^31), and match here, where `I2R` cuts toward zero. Two differences are fixed or kept:
   the game has no `string.dump`, so the sandbox drops it now (`sandbox.c`; the arena's addresses moved, so
-  `LuaDeterminismTests`' pins were taken again); and the game's `load` reads a binary chunk (the start of one gave
-  "truncated precompiled chunk", with mode `bt` and `b`), which stays refused here, D36's reason holding: without
-  `string.dump` a map can still write bytecode by hand. Left as differences, recorded: `math.log(3, 2)` and the
-  base-10 logs (D32's log), and `pairs` over 20 string keys, which visits them in the same order in both of the game's
-  runs but not in this one's, so the game's string hash seed is fixed but isn't 0 (D35); finding it is the number
-  model's follow-up.
+  `LuaDeterminismTests`' pins were taken again); and the game's `load` seems to read a binary chunk (inferred: the
+  start of one gave "truncated precompiled chunk", with mode `bt` and `b`, so it reached the bytecode reader), which
+  stays refused here, D36's reason holding: without `string.dump` a map can still write bytecode by hand. That keeps
+  `lua-config` different from the game for good, an exception to A6 that `docs/tasks/later.md` lists for Sven's
+  review. Left as differences, recorded: `math.log(3, 2)` and the base-10 logs (D32's log), and `pairs` over 20 string
+  keys, which visits them in the same order in both of the game's runs but not in this one's; inferred from that, the
+  game's string hash seed is fixed and isn't 0 (D35), though another hash function or table growth would change the
+  order too. Finding it is W1-10's.
 - **D127. Timers due at the same moment, probe timers** (two runs, the same lines): six timers due at 1.0 ran in the
   game as resumed, first, periodic, second, late, restarted, which is neither the order they were made (late,
   restarted, periodic, resumed, second, first), nor started, nor D45's order of queueing (first, second, resumed, late,
@@ -804,3 +817,4 @@ measured and say so where not.
   0.5, perhaps summed timeouts); here the expiries run in the nearest 1/1024 s step, which the clock reads, so 0.00977,
   0.01953, ... Both are recorded as differences for the timers' follow-up: D45's step and order are Close until a
   model matches.
+- **D128. After W1-8:** 111 Exact, 277 Close, 11 Recorded, 1,436 Missing (`SaveFogStateHandle` went to Close, D125).

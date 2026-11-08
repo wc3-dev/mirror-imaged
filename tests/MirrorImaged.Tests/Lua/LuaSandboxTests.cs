@@ -48,8 +48,8 @@ public sealed class LuaSandboxTests : IDisposable
     public void OsTimeIsAnInteger() => Assert.Equal("integer", _lua.Run("return math.type(os.time())")[0]);
 
     /// <summary>
-    /// Bytecode is never checked by Lua 5.3, so it is refused, while the game reads it (probe lua-config: the start of a
-    /// binary chunk is "truncated precompiled chunk" there; decisions D126).
+    /// Bytecode is never checked by Lua 5.3, so it is refused, while the game seems to read it (inferred, probe
+    /// lua-config: the start of a binary chunk reached its reader, "truncated precompiled chunk"; decisions D126).
     /// </summary>
     [Theory]
     [InlineData(@"load('\27Lua\83\0')")]
