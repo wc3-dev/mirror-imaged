@@ -150,16 +150,22 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   so bytes that aren't UTF-8 come back as U+FFFD; reading a table or a function throws until a task needs them.
   Anything that can raise a Lua error runs in C under `lua_pcall` (`sandbox.c`): getting and setting globals, calling
   one, registering a function, and pushing a C# function's results, which a C trampoline does after C# returns them in
-  a buffer. So Lua's `longjmp` never crosses a managed frame, even when a `__gc` fails during an allocation or `_G` has a
-  strict metatable. Errors carry Lua's traceback, and a chunk's name is given with `@`, so messages read
-  `war3map.lua:3:`. The state is a `SafeHandle`, freed by `Dispose` or, if forgotten, by the finalizer.
+  a buffer. So Lua's `longjmp` never crosses a managed frame, even when a `__gc` fails or `_G` has a strict metatable.
+  The values C# writes are pushed with the collector stopped, before anything else runs: a finalizer calling C# would
+  otherwise write over them mid-push. Errors carry Lua's traceback, and a chunk's name is given with `@`, so messages
+  read `war3map.lua:3:`. The state is a `SafeHandle`, counted in use for the whole of every call, so neither `Dispose`
+  (even from inside a callback) nor the finalizer frees it under a running call.
 - **D39. Addresses are the same every run.** Each state allocates from its own arena of 64 GB of address space,
   aligned to its size and filled the same way every run (size classes, freed blocks reused last in first out), so an
-  object's offset in it is the same every run. Lua hashes an object by the low 32 bits of its address, which are the
-  offset's, so `pairs` visits table, function and coroutine keys in the same order, and `tostring` writes the offset
-  (16 hex digits, as Windows writes `%p`). A C function from the library is hashed and written by its place in the
-  library. The game's order isn't reproduced: the facts say it differs between machines. Only the address space is
-  reserved; memory is committed as it is used, and never given back to the system before the state is closed.
+  object's offset in it is the same every run and, as CI checks with a pinned workload, on every platform. Lua hashes
+  an object by the low 32 bits of its address, which are the offset's, so `pairs` visits table, function and coroutine
+  keys in the same order, and `tostring` writes the offset (16 hex digits, as Windows writes `%p`). The exception is a C
+  function from the library (`print`, `math.sqrt`): it is hashed and written by its place in the library, the same
+  every run but not between platforms or builds, so `tostring(print)` and `pairs` over such keys are left out of the
+  cross-platform check. The game's order isn't reproduced: the facts say it differs between machines. Memory: each state
+  reserves 64 GB of address space (128 GB for a moment while it is placed), commits memory as it is used and gives none
+  back until it is closed, so about 2,000 states fit at once (2,008 measured on Windows 11, whose processes have 128 TB
+  of address space).
 - **D40. Facts not tested here.** The "Lua runtime" facts that measure Moonwell's or CSharp.lua's own Lua code on top of
   these numbers (`Round(2.567, 2)`, `F2` and `F0` text, `Normalize`, `Wrap`, `Lerp`, vectors, rays, slides, bounces,
   circle and wall hits, straight lines, distances away from the origin, easing ends but `InSine(0)`, `-7 / 2` and

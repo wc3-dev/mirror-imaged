@@ -14,7 +14,7 @@ namespace MirrorImaged.Lua;
 public sealed unsafe class LuaState : IDisposable
 {
     static readonly string[] TypeNames = ["nil", "boolean", "light userdata", "number", "string", "table", "function", "userdata", "thread"];
-    static readonly Value* NoMessage = (Value*)NativeMemory.AllocZeroed((nuint)sizeof(Value));
+    static readonly Value* NoState = Message("The Lua state calling this C# function is gone.");
 
     static LuaState() => mirror_setcallback(&Dispatch);
 
@@ -31,35 +31,25 @@ public sealed unsafe class LuaState : IDisposable
     /// <summary>Runs a chunk and returns what it returns. Error messages name it: <c>war3map.lua:3: ...</c>.</summary>
     public object?[] Run(string code, string chunkName = "chunk")
     {
-        var l = L;
-        int top = lua_gettop(l), status;
         var bytes = Encoding.UTF8.GetBytes(code);
-        fixed (byte* p = bytes) status = luaL_loadbufferx(l, p, (nuint)bytes.Length, "@" + chunkName, "t");
-        if (status != 0) throw Error(l, top);
-        return Results(l, top, mirror_pcall(l, 0, MultipleResults));
+        return Use(l =>
+        {
+            int top = lua_gettop(l), status;
+            fixed (byte* p = bytes) status = luaL_loadbufferx(l, p, (nuint)bytes.Length, "@" + chunkName, "t");
+            if (status != 0) throw Error(l, top);
+            return Results(l, top, mirror_pcall(l, 0, MultipleResults));
+        });
     }
 
     /// <summary>Calls the global function <paramref name="name"/> and returns its results.</summary>
-    public object?[] Call(string name, params object?[] args)
-    {
-        var l = L;
-        int top = lua_gettop(l);
-        return Results(l, top, mirror_call(l, name, _handle.Write(args), args.Length));
-    }
+    public object?[] Call(string name, params object?[] args) =>
+        Use(l => Results(l, lua_gettop(l), mirror_call(l, name, _handle.Write(args), args.Length)));
 
     /// <summary>Reads or writes a global.</summary>
     public object? this[string name]
     {
-        get
-        {
-            var l = L;
-            return Results(l, lua_gettop(l), mirror_getglobal(l, name))[0];
-        }
-        set
-        {
-            var l = L;
-            Results(l, lua_gettop(l), mirror_setglobal(l, name, _handle.Write([value])));
-        }
+        get => Use(l => Results(l, lua_gettop(l), mirror_getglobal(l, name)))[0];
+        set => Use(l => Results(l, lua_gettop(l), mirror_setglobal(l, name, _handle.Write([value]))));
     }
 
     /// <summary>
@@ -68,14 +58,37 @@ public sealed unsafe class LuaState : IDisposable
     /// </summary>
     public void Register(string name, Func<object?[], object?[]> function)
     {
-        var l = L;
-        Results(l, lua_gettop(l), mirror_register(l, name, GCHandle.ToIntPtr(_handle.Self), _functions.Count));
+        Use(l => Results(l, lua_gettop(l), mirror_register(l, name, GCHandle.ToIntPtr(_handle.Self), _functions.Count)));
         _functions.Add(function);
     }
 
+    /// <summary>Frees the state; when called from inside one of its calls, once that call is over.</summary>
     public void Dispose() => _handle.Dispose();
 
-    nint L => !_handle.IsClosed ? _handle.DangerousGetHandle() : throw new ObjectDisposedException(nameof(LuaState));
+    // The handle is counted in use for the whole call, so neither Dispose nor the finalizer frees the state under it.
+    T Use<T>(Func<nint, T> action)
+    {
+        bool added = false;
+        try
+        {
+            _handle.DangerousAddRef(ref added);
+            return action(_handle.DangerousGetHandle());
+        }
+        finally
+        {
+            if (added) _handle.DangerousRelease();
+            GC.KeepAlive(this);
+        }
+    }
+
+    static Value* Message(string text)
+    {
+        var bytes = Encoding.UTF8.GetBytes(text);
+        var value = (Value*)NativeMemory.Alloc((nuint)(sizeof(Value) + bytes.Length));
+        bytes.CopyTo(new Span<byte>(value + 1, bytes.Length));
+        *value = new() { Type = Value.String, StringValue = (byte*)(value + 1), Length = (nuint)bytes.Length };
+        return value;
+    }
 
     static object?[] Results(nint l, int top, int status)
     {
@@ -113,7 +126,7 @@ public sealed unsafe class LuaState : IDisposable
         }
         catch (Exception e)
         {
-            *results = state is null ? NoMessage : state._handle.Write([e.Message]);
+            *results = state is null ? NoState : state._handle.Write([e.Message]);
             return -1;
         }
     }

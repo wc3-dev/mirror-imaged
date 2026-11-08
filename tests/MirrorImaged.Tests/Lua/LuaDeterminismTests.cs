@@ -60,16 +60,20 @@ public sealed class LuaDeterminismTests
 
     const int SortHash = 11734620;
 
-    /// <summary>Objects sit at the same place in their state's arena every run: pairs over them and tostring agree.</summary>
+    /// <summary>
+    /// Objects sit at the same place in their state's arena every run: pairs over them and tostring agree. The
+    /// library's own C functions are left out: they are known by their place in the library, which differs by
+    /// platform (decisions D39).
+    /// </summary>
     [Fact]
     public void AddressesAreTheSameEveryRun()
     {
         const string code = """
             local keys, order = {}, {}
             for i = 1, 200 do keys[{}] = i end
-            keys[print], keys[function() end], keys[coroutine.create(print)] = 201, 202, 203
+            keys[function() end], keys[coroutine.create(function() end)] = 201, 202
             for _, i in pairs(keys) do order[#order + 1] = i end
-            return table.concat(order, ' '), tostring({}), tostring(print), tostring(function() end), tostring(coroutine.create(print))
+            return table.concat(order, ' '), tostring({}), tostring(function() end), tostring(coroutine.create(function() end))
             """;
         using var first = new LuaState();
         using var second = new LuaState();
@@ -77,4 +81,38 @@ public sealed class LuaDeterminismTests
         Assert.Equal(a, second.Run(code));
         Assert.Matches("^table: [0-9A-F]{16}$", (string)a[1]!);
     }
+
+    /// <summary>
+    /// After tables, closures, coroutines, long strings, growing tables and collection cycles with finalizers and weak
+    /// tables, the order pairs visits objects in and the text of a new table: the same on every platform, as CI checks.
+    /// </summary>
+    [Fact]
+    public void AddressesAreTheSameOnEveryPlatform()
+    {
+        using var lua = new LuaState();
+        var result = lua.Run("""
+            local weak, keep, id, finalized = setmetatable({}, {__mode = 'k'}), {}, {}, 0
+            for i = 1, 3000 do
+              local t = setmetatable({i}, {__gc = function() finalized = finalized + 1 end})
+              local f = function() return i end
+              local co = coroutine.create(function(x) coroutine.yield(x) end)
+              coroutine.resume(co, i)
+              local s = string.rep('s', 40 + i % 100) .. i
+              weak[t] = s
+              local key = i % 3 == 0 and t or i % 3 == 1 and f or co
+              keep[key], id[key] = s, i
+              local grow = {}
+              for j = 1, i % 60 do grow[j], grow['k' .. j] = j, s end
+            end
+            for i = 1, 200000 do local junk = {i} end
+            local h = 0
+            for key in pairs(keep) do h = (h * 31 + id[key]) & 0xffffff end
+            for key in pairs(weak) do h = (h * 31 + key[1]) & 0xffffff end
+            return h, finalized, tostring({})
+            """);
+        Assert.Equal([PairsHash, Finalized, NewTable], result);
+    }
+
+    const int PairsHash = 2155006, Finalized = 2000;
+    const string NewTable = "table: 00000000006441B0";
 }

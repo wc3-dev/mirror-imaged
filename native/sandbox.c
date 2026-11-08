@@ -104,6 +104,26 @@ static void pushvalues (lua_State *L, const Value *v, int n) {
   }
 }
 
+static int pushall (lua_State *L) {
+  const Value *v = (const Value *)lua_touserdata(L, 1);
+  int n = (int)lua_tointeger(L, 2);
+  lua_settop(L, 0);
+  pushvalues(L, v, n);
+  return n;
+}
+
+/* Pushes values C# wrote, with the collector stopped: a __gc calling back into C# would write over them midway */
+static void pushcsharp (lua_State *L, const Value *v, int n) {
+  int running = lua_gc(L, LUA_GCISRUNNING, 0), status;
+  lua_gc(L, LUA_GCSTOP, 0);
+  lua_pushcfunction(L, pushall);
+  lua_pushlightuserdata(L, (void *)v);
+  lua_pushinteger(L, n);
+  status = lua_pcall(L, 2, LUA_MULTRET, 0);
+  if (running) lua_gc(L, LUA_GCRESTART, 0);
+  if (status != LUA_OK) lua_error(L);
+}
+
 static int (*callback) (lua_State *L, const Value **results);
 
 LUALIB_API void mirror_setcallback (int (*f) (lua_State *L, const Value **results)) {
@@ -111,16 +131,17 @@ LUALIB_API void mirror_setcallback (int (*f) (lua_State *L, const Value **result
 }
 
 /* Calls back into C#, which only reads the arguments and returns its results (or its error message, as a
-   negative count) for this to push. */
+   negative count) for this to push, before anything else can call C#. */
 static int trampoline (lua_State *L) {
   const Value *results;
   int n = callback(L, &results);
   if (n >= 0) {
-    pushvalues(L, results, n);
+    pushcsharp(L, results, n);
     return n;
   }
+  pushcsharp(L, results, 1);
   luaL_where(L, 1);
-  pushvalues(L, results, 1);
+  lua_insert(L, -2);
   lua_concat(L, 2);
   return lua_error(L);
 }
@@ -152,8 +173,9 @@ typedef struct Request {
 static int docall (lua_State *L) {
   const Request *r = (const Request *)lua_touserdata(L, 1);
   lua_settop(L, 0);
+  pushcsharp(L, r->values, r->n);  /* before anything that can run Lua, and so C# */
   lua_getglobal(L, r->name);
-  pushvalues(L, r->values, r->n);
+  lua_insert(L, 1);
   lua_call(L, r->n, LUA_MULTRET);
   return lua_gettop(L);
 }
@@ -165,7 +187,7 @@ static int doget (lua_State *L) {
 
 static int doset (lua_State *L) {
   const Request *r = (const Request *)lua_touserdata(L, 1);
-  pushvalues(L, r->values, 1);
+  pushcsharp(L, r->values, 1);
   lua_setglobal(L, r->name);
   return 0;
 }

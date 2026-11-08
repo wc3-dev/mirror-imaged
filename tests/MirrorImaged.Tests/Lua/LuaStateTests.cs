@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using MirrorImaged.Lua;
 
 namespace MirrorImaged.Tests.Lua;
@@ -88,24 +89,85 @@ public sealed class LuaStateTests : IDisposable
         Assert.Equal([2], _lua.Run("return 1 + 1"));
     }
 
+    // No finalizer runs while C#'s values are pushed (the collector is stopped); a failing one later is a Lua error.
     [Fact]
-    public void AFailingGcWhileACallbacksResultsArePushedIsALuaError()
+    public void AFailingGcBreaksNeitherAPushNorTheState()
     {
-        var called = false;
-        _lua.Register("many", _ =>
-        {
-            called = true;
-            return Enumerable.Range(0, 100000).Select(_ => (object?)new string('x', 64)).ToArray();
-        });
-        var e = Assert.Throws<LuaException>(() => _lua.Run("""
+        _lua.Register("many", _ => Enumerable.Range(0, 100000).Select(_ => (object?)new string('x', 64)).ToArray());
+        Assert.Equal([100000], _lua.Run("""
             local function junk() setmetatable({}, {__gc = function() error('gc failed') end}) end
             junk()
             return select('#', many())
             """));
-        Assert.True(called);
+        var e = Assert.Throws<LuaException>(() => _lua.Run("for i = 1, 1000000 do local t = {i} end"));
         Assert.Contains("gc failed", e.Message);
         Assert.Equal([2], _lua.Run("return 1 + 1"));
     }
+    [Fact]
+    public void FinalizersCallingCSharpDuringALargePushDontChangeIt()
+    {
+        var values = Enumerable.Range(0, 300000).Select(i => (object?)$"v{i}{new string('x', 50)}").ToArray();
+        _lua.Register("many", _ => values);
+        var more = Enumerable.Range(0, 200000).Select(i => (object?)$"w{i}").ToArray();  // writes over most of the buffer
+        _lua.Register("more", _ => more);
+        _lua.Run("""
+            function junk()
+              for i = 1, 10 do setmetatable({}, {__gc = function() more() end}) end
+            end
+            function check(...)
+              local t = table.pack(...)
+              if t.n ~= 300000 then return t.n end
+              for i = 1, t.n do
+                if t[i] ~= 'v' .. (i - 1) .. string.rep('x', 50) then return i end
+              end
+              return 0
+            end
+            """);
+        Assert.Equal([0], _lua.Run("junk() return check(many())"));
+        _lua.Run("junk()");
+        Assert.Equal([0], _lua.Call("check", values));
+    }
+
+    [Fact]
+    public void ADisposeDuringACallFreesTheStateOnlyAfterIt()
+    {
+        var lua = new LuaState();
+        lua.Register("dispose", _ =>
+        {
+            lua.Dispose();
+            return [];
+        });
+        Assert.Equal([100000], lua.Run("dispose() local t = {} for i = 1, 100000 do t[i] = {i} end return #t"));
+        Assert.Throws<ObjectDisposedException>(() => lua.Run("return 1"));
+    }
+
+    // Shows only in an optimised build (Release, no tiered compilation), where nothing holds the state during Run;
+    // the test above checks the same guard in any build.
+    [Fact]
+    public async Task AStateNothingHoldsIsNotFreedWhileItRuns()
+    {
+        using var stop = new CancellationTokenSource();
+        var collector = Task.Run(() =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+        });
+        try
+        {
+            for (int i = 0; i < 20; i++) Assert.Equal([200000], RunUnheld());
+        }
+        finally
+        {
+            stop.Cancel();
+            await collector;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static object?[] RunUnheld() => new LuaState().Run("local t = {} for i = 1, 200000 do t[i] = {i} end return #t");
 
     [Fact]
     public void AValueThatCantBePassedLeavesTheStateAsItWas()
