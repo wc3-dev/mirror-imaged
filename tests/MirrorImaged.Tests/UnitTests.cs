@@ -226,11 +226,11 @@ public sealed class UnitTests : IDisposable
         Assert.Equal(["death\tFootman\t0.0", "set", "death\tPaladin\t0.0", "state", "death\tKnight\t0.0", "max"], Printed(simulation));
     }
 
-    // probe units-decay: a footman decays its death time after it died (3.04), firing the player-unit then the unit
-    // decay event, and the body goes BoneDecayTime and DecayTime later (game-facts: about 90 s); a building is gone its
+    // probes units-decay and units-bones: a footman decays its death time after it died (3.04), firing the player-unit
+    // then the unit decay event, and the body goes DecayTime and BoneDecayTime later (90 s); a building is gone its
     // death time plus StructureDecayTime later and a unit that doesn't decay (the gryphon rider) its death time later,
-    // neither with a decay event; a hero, a corpse and a unit whose decay is suspended stay; an exploded or removed one
-    // is gone after the step
+    // neither with a decay event; a hero stays; a body whose decay is suspended goes as any other, and a corpse 90 s
+    // after it was made; an exploded or removed one is gone after the step
     [Fact]
     public void A_body_decays_and_goes_as_its_death_type_says()
     {
@@ -282,28 +282,10 @@ public sealed class UnitTests : IDisposable
             "decay\tFootman\t21\t3.04",
             "own decay\tsuspended\ttrue",
             "gone\tbarracks\t32.50",
-            "gone\tfootman\t93.25", // inferred from DecayTime and BoneDecayTime (D228; W2-10 to probe)
+            "gone\tcorpse\t90.25",
+            "gone\tsuspended\t93.25",
+            "gone\tfootman\t93.25",
         ], Printed(simulation));
-    }
-
-    // D228, not measured: a body whose time came while its decay was suspended goes once the decay is let go
-    [Fact]
-    public void A_body_let_decay_late_goes_then()
-    {
-        using var simulation = Run("""
-            local u = make("hgry")
-            KillUnit(u)
-            UnitSuspendDecay(u, true)
-            TimerStart(CreateTimer(), 5, false, function()
-              print("held", GetUnitTypeId(u) == FourCC("hgry"))
-              UnitSuspendDecay(u, false)
-              print("let go", GetUnitTypeId(u) == FourCC("hgry"))
-              TimerStart(CreateTimer(), 0, false, function() print("after", GetUnitTypeId(u)) end)
-            end)
-            """);
-        simulation.Advance(TimeSpan.FromSeconds(6));
-
-        Assert.Equal(["held\ttrue", "let go\ttrue", "after\t0"], Printed(simulation));
     }
 
     // probe units: RemoveUnit leaves the unit as it was for the rest of the step, alive or dead, and gone after it; a

@@ -99,6 +99,9 @@ public sealed partial class StandardData
             [.. Races.Select(race => $"units/{race}upgradestrings.txt"), "units/upgradeskinstrings.txt"]),
     ];
 
+    // Where a unit's own name (unitui.slk's name) is kept in its rows, apart from the text files' Name
+    const string UnitNameColumn = "unitui name";
+
     // The string lists GetLocalizedString reads (probe data): FrameDef.toc's first four.
     static readonly string[] StringFiles =
         ["ui/framedef/globalstrings.fdf", "ui/framedef/infopanelstrings.fdf", "ui/framedef/networkstrings.fdf", "ui/framedef/datestrings.fdf"];
@@ -147,6 +150,7 @@ public sealed partial class StandardData
             if (!metadata.TryGetValue(meta, out var fields))
                 metadata[meta] = fields = File(meta) is { } bytes ? ReadFields(bytes) : [];
             data.Fields[kind] = fields;
+            if (kind == ObjectKind.Unit) fields.TryAdd(Ids.Of("name"), new Field(UnitNameColumn, PerLevel.None, -1));
 
             var rows = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
             for (var table = 0; table < tables.Length; table++)
@@ -157,6 +161,8 @@ public sealed partial class StandardData
                         if (table == 0) rows[id] = merged = new(StringComparer.OrdinalIgnoreCase);
                         else continue;
                     foreach (var (column, value) in cells) merged[column] = value;
+                    // A unit's own name (footman, UnitId's), which the text files' Name would replace: the field 'name'
+                    if (kind == ObjectKind.Unit && cells.TryGetValue("name", out var name)) merged[UnitNameColumn] = name;
                 }
 
             // An object the set leaves out doesn't exist, but its text is still read: GetObjectName names it (probe data-sets-melee).

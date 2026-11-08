@@ -1,0 +1,38 @@
+# probes/units-bones.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines, one run; each gone time is the first 0.25 s poll after it. The first line is the CreateCorpse corpse's undefend, before its label.
+player order ? 852056 0.00
+player order hfoo 852056 0.00
+hfoo order 852056 0.00 true
+hfoo death 0.00 true
+hrif death 0.00 true
+player order suspended 852056 0.00
+suspended order 852056 0.00 true
+suspended death 0.00 true
+player order late 852056 0.00
+late order 852056 0.00 true
+late death 0.00 true
+start 0.00
+player order timed 852056 1.00
+timed order 852056 1.00 true
+timed death 1.00 true
+hrif decay 1.70 true
+hfoo decay 3.04 true
+suspended decay 3.04 true
+late decay 3.04 true
+timed decay 4.04 true
+player order corpse 852056 90.00
+corpse order 852056 90.00 true
+corpse gone 90.25
+hrif gone 91.75
+player order hfoo 852056 93.04
+hfoo order 852056 93.04 true
+player order suspended 852056 93.04
+suspended order 852056 93.04 true
+player order late 852056 93.04
+late order 852056 93.04 true
+late gone 93.25
+suspended gone 93.25
+hfoo gone 93.25
+late let go 93.25
+player order timed 852056 94.04
+timed order 852056 94.04 true
+timed gone 94.25

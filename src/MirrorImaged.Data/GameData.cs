@@ -61,6 +61,9 @@ public sealed class GameData
     /// <summary>The object of <paramref name="kind"/> with <paramref name="id"/>; null when the game has none.</summary>
     public GameObject? Object(ObjectKind kind, int id) => _objects.GetValueOrDefault((kind, id));
 
+    /// <summary>The objects of <paramref name="kind"/> in the order the data has them: the tables' rows, then the map's new ones.</summary>
+    public IEnumerable<GameObject> Objects(ObjectKind kind) => _objects.Values.Where(o => o.Kind == kind);
+
     /// <summary>
     /// The name of the unit, item, ability or upgrade (its first level's) with <paramref name="id"/>, in that order, also
     /// of one the balance set leaves out (probes units and data-sets-melee); null for any other id, a buff's and a

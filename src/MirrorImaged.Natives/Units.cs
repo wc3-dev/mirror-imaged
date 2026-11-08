@@ -8,7 +8,8 @@ public partial class unit
     internal GameObject Type = null!;
     internal player Owner = null!;
     internal float X, Y, Life, MaxLife, Mana, MaxMana;
-    internal bool Dead, Removed, Hidden, Invulnerable, Exploded, DecaySuspended, Overdue, Paused;
+    internal bool Dead, Removed, Hidden, Invulnerable, Exploded, Paused, GivenWhilePaused, UsesFood = true;
+    internal Action? Unpausing; // the order a frame after PauseUnit(false) gives back, until it comes
     internal int UserData, Skin, HeroLevel, Color, Pauses;
     internal float Scale = 1, FlyHeight;
     internal int[] Tint = [255, 255, 255, 255];
@@ -46,6 +47,7 @@ struct Change(float to)
 public sealed partial class GameNatives
 {
     const string DecayProbe = "facts.md, Units: probe units-decay (11-08)";
+    const string BonesProbe = "facts.md, Units: probe units-bones (11-08)";
     const float Dying = 0.405f; // a unit whose life is set below it dies (facts, Units)
 
     static int Code(string id) => id.Aggregate(0, (value, letter) => value << 8 | (byte)letter);
@@ -71,6 +73,14 @@ public sealed partial class GameNatives
         u.Life = corpse ? 0 : u.MaxLife;
         u.Mana = Math.Min(type.Integer(ManaInitial) + (hero ? Data.Constant("IntManaBonus", 15) * type.Integer(Intelligence) : 0), u.MaxMana);
         u.Dead = corpse;
+        FallAsleep(u);
+        // A corpse counts its food and gives it back (two food events), and gets its undefend, with no death event
+        // (probes units-more and units-bones)
+        Counting(u, 1);
+        if (!corpse) return u;
+        Counting(u, -1);
+        Undefend(u, Defends(u));
+        if (!hero) Rot(u, Seconds + Bones);
         return u;
     }
 
@@ -90,17 +100,22 @@ public sealed partial class GameNatives
     [Native(Level.Close)]
     public unit? BlzCreateUnitWithSkin(player? id, int unitid, float x, float y, float face, int skinId) => Create(id, unitid, x, y, face, skinId);
 
-    /// <summary>A dead unit of the type, life 0, which neither decays nor goes (the units-decay probe, for 45 s).</summary>
-    [Native(Level.Close)]
+    /// <summary>
+    /// A dead unit of the type, life 0, with no death or decay event: its food counts and goes back, and a footman's
+    /// Defend gives it undefend (852056), inside the call; it is gone DecayTime plus BoneDecayTime later, as a body at
+    /// its decay is, with undefend again (probes units-decay, units-more, units-bones: 90 s). A hero's stays (inferred).
+    /// </summary>
+    [Native(Level.Exact, Fact = BonesProbe + "; " + MoreProbe + "; " + DecayProbe)]
     public unit? CreateCorpse(player? whichPlayer, int unitid, float x, float y, float face) =>
         Create(whichPlayer, unitid, x, y, face, unitid, corpse: true);
 
     /// <summary>
     /// The unit reads as it was for the rest of the step, alive or dead, and is gone after it: every getter then reads
-    /// 0 or nil (facts, Units). Killed in that step, it dies and stays as a body (probe units). Close: a unit with Defend
-    /// fires its <c>undefend</c> order twice here in the game (game-facts), which comes with abilities (W2-7, W2-10).
+    /// 0 or nil (facts, Units). Killed in that step, it dies and stays as a body (probe units). As it goes it reads
+    /// dead, life 0 and unpaused, gives its food back and gets undefend (852056) twice for each Defend if it lived, once
+    /// if dead (probe units-more).
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = MoreProbe + "; " + UnitsProbe)]
     public void RemoveUnit(unit? whichUnit)
     {
         if (whichUnit is null || whichUnit.Removed) return;
@@ -113,32 +128,52 @@ public sealed partial class GameNatives
     void Gone(unit u)
     {
         if (!u.Removed) return;
+        var undefends = Defends(u) * (u.Dead ? 1 : 2);
+        if (!u.Dead)
+        {
+            Die(u);
+            Counting(u, -1);
+        }
+        Undefend(u, undefends);
         _game.Remove(u.Key);
         _widgetEvents.Remove(u);
     }
 
+    // Dead: life 0, its pause and timed life over (probe units-more-2: a paused unit's death events read it unpaused)
+    static void Die(unit u)
+    {
+        u.Dead = true;
+        u.Life = 0;
+        u.Paused = false;
+        u.Unpausing = null;
+        u.TimedEnd = u.TimedLeft = null;
+    }
+
     /// <summary>
-    /// The death events fire inside the call, the killer nil; on a dead unit nothing happens (facts, Units). Close: a
-    /// unit with Defend first fires its <c>undefend</c> order (game-facts), which comes with abilities (W2-7, W2-10).
+    /// The death fires inside the call, the killer nil; on a dead unit nothing happens (facts, Units). First the unit
+    /// reads dead with life 0 and gives its food back, then a unit with Defend gets undefend (852056) on its owner's and
+    /// its own order events, then the death events (probes units-more and units-more-2).
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = MoreProbe + "; " + UnitsProbe)]
     public void KillUnit(unit? whichUnit)
     {
         if (whichUnit is not null) Kill(whichUnit);
     }
 
-    // Death, then the body (probe units-decay), its death time after the death: an exploded unit is gone after the
-    // step and a hero stays; a building is gone StructureDecayTime after its death time, a unit that doesn't decay at
-    // its death time, neither with a decay event; any other unit decays then (the decay event, also with its decay
-    // suspended) and is gone DecayTime plus BoneDecayTime after that unless its decay is suspended (game-facts: about
-    // 90 s after the decay; inferred from the constants). A unit removed and then killed in one step stays (probe units).
-    // The killer comes with damage (W2-5): no death this wave makes has one.
+    // Death, then the body (probes units-decay, units-bones), its death time after the death: an exploded unit is gone
+    // after the step and a hero stays; a building is gone StructureDecayTime after its death time, a unit that doesn't
+    // decay at its death time, neither with a decay event; any other unit decays then (the decay event) and is gone
+    // DecayTime plus BoneDecayTime after that. A unit removed and then killed in one step stays (probe units). The killer
+    // comes with damage (W2-5): no death this wave makes has one.
     void Kill(unit u)
     {
         if (u.Dead) return;
-        u.Dead = true;
-        u.Life = 0;
+        var life = u.Life;
+        Die(u);
         u.Removed = false;
+        StateChanged(u, LifeState, life, 0);
+        Counting(u, -1);
+        Undefend(u, Defends(u));
         FireUnit(new(u), UnitDeath, PlayerUnitDeath);
         if (u.Exploded)
         {
@@ -155,16 +190,18 @@ public sealed partial class GameNatives
             {
                 if (!u.Dead || _game.Handle(u.Key) is null) return;
                 FireUnit(new(u), UnitDecay, PlayerUnitDecay);
-                Rot(u, decay + Data.Constant("DecayTime", 2) + Data.Constant("BoneDecayTime", 88));
+                Rot(u, decay + Bones);
             });
     }
 
-    // A body whose time comes while its decay is suspended goes once the decay is let go (UnitSuspendDecay)
-    void Rot(unit u, double at) => _game.At(Game.Steps(at), () =>
+    // How long a body's bones last after its decay: 90 s (probe units-bones, footman, rifleman and corpse)
+    double Bones => Data.Constant("DecayTime", 2) + Data.Constant("BoneDecayTime", 88);
+
+    // A step after its time, as the game's timers due then run first (probe units-bones: a corpse whose time was 90.00
+    // read there in a 90.00 timer)
+    void Rot(unit u, double at) => _game.At(Game.Steps(at) + 1, () =>
     {
         if (!u.Dead || _game.Handle(u.Key) is null) return;
-        u.Overdue = u.DecaySuspended;
-        if (u.Overdue) return;
         u.Removed = true;
         Gone(u);
     });
@@ -179,16 +216,13 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// Keeps the body: its decay event still comes (probe units-decay), but it doesn't go. Close: when a body whose decay
-    /// is suspended and then let go goes isn't measured; here at the time it would have, or after the step it is let go
-    /// in, when that time has passed.
+    /// Changes nothing a native reads: a body suspended right after its death still decays and goes when another does,
+    /// also when it is let go later (probes units-decay and units-bones). Close: suspended later, in its decay or bones,
+    /// isn't measured.
     /// </summary>
     [Native(Level.Close)]
     public void UnitSuspendDecay(unit? whichUnit, bool suspend)
     {
-        if (whichUnit is null) return;
-        whichUnit.DecaySuspended = suspend;
-        if (!suspend && whichUnit.Overdue) Rot(whichUnit, Seconds);
     }
 
     /// <summary>The unit's type id; 0 for nil and once the unit is gone.</summary>

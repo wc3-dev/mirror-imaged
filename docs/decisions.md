@@ -1533,3 +1533,88 @@ is in W2-3, W2-5, W2-6 and W2-7 (`docs/tasks/wave-2.md`) and `docs/tasks/later.m
   state and filter events, unit counts, `CreateUnitByName` and `UnitId`, and the rest of the unit natives (W2-10);
   orders, the pathing and moving units off each other (wave 3); animation, time scale and the other natives that only
   show (wave 5).
+
+### The rest of the units (W2-10)
+
+The probes `units-more`, `units-more-2`, `units-types`, `units-bones` and `units-gold` (`docs/facts.md`, "Units", "The
+rest of the units") measured what the facts left open; the choices below follow them where they measured and say so
+where not.
+
+- **D310. The order events the unit natives give without orders** (wave 3's): undefend (852056) once for each Defend
+  the unit has (an ability made from `Adef`, a map's copy too), on its owner's and its own order events: at a death,
+  after it reads dead with life 0 and gives its food back and before the death events; as a removed unit goes after its
+  step, twice if it lived (it then reads dead, life 0, unpaused) and once if dead; as an exploded unit or a body goes;
+  inside `CreateCorpse`; after a pause's stunned order. `PauseUnit(true)` on a living unpaused unit fires the stunned
+  order (851973) as a point order (`EVENT_*_ISSUED_POINT_ORDER`, which `GetOrderedUnit` and `GetIssuedOrderId` now read);
+  `PauseUnit(false)` gives back, 0.01 s later (`Frame`, measured twice), undefend for each Defend, or a stop if the unit
+  changed hands while paused; paused again before that, the given-back order fires at once and no stunned order. A
+  paused unit given away gets no stop or undefend; a death unpauses. A dead unit given away gets nothing: the undefend
+  W2-2 read as its give-away's was its death's (the probe killed it after the player's registration), so D226's
+  sentence on it is replaced and `docs/facts.md` corrected. Which abilities a unit has is its type's `uabi` (shortcut,
+  `Abilities` in `UnitOrders.cs`) until W2-7 gives units their own. `KillUnit`, `RemoveUnit`, `SetUnitOwner`, `CreateCorpse`
+  and `GetOrderedUnit`/`GetIssuedOrderId` are Exact; `PauseUnit` stays Close: the game also gives back the order the
+  unit had (game-facts: the move 0.016 s later), which needs orders.
+- **D311. Bodies** (probe units-bones): a body goes `DecayTime` plus `BoneDecayTime` (2 + 88) after its decay, as D228
+  inferred (footman 93.04, rifleman 91.7), and a `CreateCorpse` corpse that long after it is made, with no decay event
+  (a hero's corpse stays, inferred from a dead hero); D228's "a corpse never decays" was the 45 s probe's horizon.
+  `UnitSuspendDecay` right after the death changed nothing, also let go after the body's time, so it does nothing here,
+  replacing D228's suspension (Close: suspending in the decay or the bones isn't measured). A body goes, and a timed
+  life ends, a step after its time, as the game ran a timer due at the same time first (a corpse whose time was 90.00
+  still read in a 90.00 timer; a 1.40 timer ran before the 1.40 deaths).
+- **D312. Timed life** (probes units-more, units-more-2): `UnitApplyTimedLife` on a living unit adds summoned to its
+  classification (as `UnitAddType`, also with a duration of 0 or less, which never kills) and kills it the duration
+  later, the sooner end holding when applied again; a dead unit gets nothing; any buff id. `UnitPauseTimedLife` stops
+  and resumes its clock, `BlzUnitCancelTimedLife` kills at once; both Exact. `UnitApplyTimedLife` is Close: with the
+  Water Elemental's buff `BHwe` the game gave the body no decay event and took it at its decay time, which isn't
+  modelled (`probes/differences/units-more.txt`). Summon events and `GetSummonedUnit` come with the abilities that
+  summon (wave 4).
+- **D313. Sleep is settled when it changes, and when read after the day turned** (probes units-more, units-more-2): a
+  unit keeps whether it can sleep (its type's `usle`, `UnitAddSleep`) and whether it sleeps; made, it sleeps when it is
+  neutral hostile's, can sleep and it is night, dead too; `UnitWakeUp` wakes it until more than 2 s later; `UnitAddSleep`
+  wakes it or puts it to sleep at once. Read in another half of the day than it was settled in, it is settled again:
+  at night it sleeps if it could fall asleep; by day the living unpaused ones wake. So nothing runs for creeps between
+  reads, and `IsUnitType(UNIT_TYPE_SLEEPING)` reads the same. `PLAYER_STATE_NO_CREEP_SLEEP` wakes no one (measured)
+  and keeps them from falling asleep (inferred from its name and `EnableCreepSleepBJ`). `UnitIsSleeping` is Close: the
+  game sleeps and wakes them 0.2 to 0.25 s after dusk and dawn, here at the hour; also, a read after a whole day reads
+  as one after none, and an owner change at night doesn't put a creep to sleep (neither measured). `UnitCanSleepPerm` is
+  false and `UnitAddSleepPerm` does nothing, as measured.
+- **D314. Rescue and what waits for later waves:** `SetUnitRescuable` and `SetUnitRescueRange` keep their values on the
+  unit and `GetRescuer` is nil, all Close: the game rescued a unit 0.5 s after a rescuer stood 100 away, firing the
+  rescue events on its owner's and its own registrations without giving it away, and that needs the units in range
+  (W2-6, with `GroupEnumUnitsInRange`'s collision rule; `docs/tasks/wave-2.md`). `SetUnitCreepGuard` is kept for the
+  creep camps' AI (wave 7), Close. `UnitSetUsesAltIcon` and `BlzShowUnitTeamGlow` only show (Recorded).
+  `SetPlayerUnitsOwner` gave nothing away and fired nothing, and what the game keeps it for isn't known: Recorded.
+  `IsUnitIllusion` is false until abilities make illusions (wave 4); `BlzIsUnitSelectable` is alive, shown and not
+  removed, Locust (W2-7) to come.
+- **D315. Unit state events** fire inside the set or death that brings the life or mana from failing the comparison to
+  passing it, kept in the unit's event list with their comparison (`UnitLimit`), so `DestroyTrigger` lets go of them as
+  of any unit event. `EQUAL`, `NOT_EQUAL` and the most life and mana never fire, nor a registration that passes when
+  made. Mana is looked at again a frame later: a registration whose comparison passes and didn't at the last look
+  fires once more (the game's at 0.0049 s, here the next step), which fits every mana case measured. Close: the frame's
+  time, and regeneration, which can bring a value across a limit, comes with combat (wave 3). `GetEventUnitState` is
+  the event's state, and outside one the state with id 0, Exact. `TriggerRegisterFilterUnitEvent` registers as
+  `TriggerRegisterUnitEvent` with its filter run first, as a trigger's condition is (in the firing, so `GetTriggerUnit`
+  reads the unit; `GetFilterUnit` stays W2-6's); a death registered so never fires, as measured; Exact.
+- **D316. Counts, food and names.** Each player keeps its living units' count by type, from creation to death or, for a
+  removed unit, until it is gone; an owner change moves it. The counts read it (structures by the type's `ubdg`, the
+  upgrades by `uupt`, followed to the end), and `GetPlayerTechCount` of a unit type reads it too, so it is Exact. A
+  living unit's food used and made go to its owner's `PLAYER_STATE_RESOURCE_FOOD_USED` and `FOOD_CAP` through
+  `SetPlayerState`, firing the state events inside the call, at the same moments (a corpse adds and takes back), and
+  `SetUnitUseFood` moves only the food used. `UnitId` reads `unitui.slk`'s `name`, which the text files' `Name` would
+  replace in the data's rows: `StandardData` keeps it as the unit field `name` (a test gives it so too), and
+  `GameData.Objects` lists a kind's objects in the tables' order (the order its dictionary was filled in), so a name two
+  types share is the first's (paladin is `Hpal`; archmage `Hamg`, inferred). Not measured: a map's own unit type reads
+  its base's name (the game may name it otherwise), and `UnitId2String` gives null in a JASS map, as `LoadStr` does.
+  `IsUnitIdType` reads a type as `IsUnitType` reads a unit, never ground or dead; `UnitAddType` and `UnitRemoveType`
+  change the classification field of the unit for its nine kinds and refuse the rest, as measured.
+- **D317. A gold mine's gold** (probe units-gold, asked of W2-10 by the coordinator, as 173 melee maps call
+  `SetResourceAmount`): `GetResourceAmount` is what was set, else the Max Gold (`Gld1`, level 1) of the unit's ability
+  made from `Agld`, else 0; `SetResourceAmount` keeps any amount, 0 and below with no death, on a unit with an ability
+  made from `Agld`, `Abgm` or `Aegm` (a haunted and an entangled mine keep one though they start at 0), and nothing on
+  any other; `AddResourceAmount` adds in 32 bits that wrap. All Exact; the type's abilities stand for the unit's until
+  W2-7 (D310). Harvesting is wave 3's.
+- **D318. The probes** keep players 0 to 15 passive to each other where units of several players stand near each other,
+  as footmen given to Player 1 fought and died in `units-more-2`'s first runs; they print times to hundredths, as the
+  game's frames don't fall on the clock's steps (D45). `units-bones` ends 1 s after the footman's bones go, at about 94
+  s, within the runner's 2 minutes from the launch.
+- **D319. After W2-10,** with W2-4 merged first: (counts in the pull request) Exact, Close, Recorded, Missing.

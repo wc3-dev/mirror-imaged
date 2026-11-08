@@ -1,0 +1,238 @@
+# probes/units-more.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines. Five runs: the last two the same; the two before them, before the players were made passive to each other, the same in what they share; the first also had a sheep, which wandered, since taken out.
+names
+unitid footman=hfoo Footman=hfoo FOOTMAN=hfoo hfoo=0 paladin=Hpal townhall=htow keep=hkee farm=hhou murloctiderunner=nmrl =0 nothing=0
+unitid2string hfoo=footman Hpal=paladin htow=townhall hkee=keep nmrl=murloctiderunner phea= AHhb= zzzz= 0=
+byname footman hfoo Footman 0 0.0 45.0
+byname Footman hfoo Footman 0 0.0 45.0
+byname hfoo nil
+byname nothing nil
+byname  nil
+is
+isunit tffft
+illusion ffff
+selectable tt dead f corpse f hidden f paused t removed f nil f building t
+alarm f ff ff ff nil ff
+shown tf
+food
+food start 0 0 0 0
+food event 5 2
+food footman 2 0 0 0
+food event 5 7
+food paladin 7 0 0 0
+food event 4 6
+food farm 7 6 0 0
+food event 4 18
+food townhall 7 18 0 0
+food event 5 5
+food unused 5 18 0 0
+food unused again 5 18 0 0
+food event 5 7
+food used 7 18 0 0
+food farm unused 7 18 0 0
+food farm used 7 18 0 0
+food event 5 9
+food event 5 7
+food killed 7 18 0 0
+food event 5 9
+food removed 9 18 0 0
+food event 5 11
+food event 5 9
+food corpse 9 18 0 0
+food event 5 11
+food event 5 9
+food given 9 18 2 0
+food event 4 24
+food event 4 18
+food farm killed 9 18 2 0
+food event 5 50
+food set 50 50 18 2 0
+food event 5 52
+food after set 52 18 2 0
+food event 5 54
+food event 5 52
+food unused killed 52 18 2 0
+foodof 2 6 5 12 0
+food event 5 50
+food after step 50 18 2 0
+counts
+count start 0 0 0 0 footman 0 0 0 0 townhall 0 0 keep 0 tech 0 0 0 0 other 0
+count footmen 2 2 0 0 footman 2 2 2 0 townhall 0 0 keep 0 tech 2 2 0 0 other 0
+count buildings 3 3 4 4 footman 2 2 2 0 townhall 1 3 keep 2 tech 2 2 1 3 other 0
+count killed 2 2 4 4 footman 1 1 1 0 townhall 1 3 keep 2 tech 1 1 1 3 other 0
+count removed 2 2 4 4 footman 1 1 1 0 townhall 1 3 keep 2 tech 1 1 1 3 other 0
+count corpse 2 2 4 4 footman 1 1 1 0 townhall 1 3 keep 2 tech 1 1 1 3 other 0
+count hidden 3 3 4 4 footman 2 2 2 0 townhall 1 3 keep 2 tech 2 2 1 3 other 0
+count paused 4 4 4 4 footman 3 3 3 0 townhall 1 3 keep 2 tech 3 3 1 3 other 0
+count given 3 3 4 4 footman 2 2 2 0 townhall 1 3 keep 2 tech 2 2 1 3 other 1
+count after step 2 2 4 4 footman 1 1 1 0 townhall 1 3 keep 2 tech 1 1 1 3 other 1
+timed
+timed summoned tf
+timed dead death 0.40 killer nil life 0.0
+timed made 0.40 tt
+state
+state life 300
+state event 59 0 u 0 150.0 0.0 0.60
+state life 150
+state life 100
+state life 250
+state event 59 0 u 0 150.0 0.0 0.60
+state life 150
+state event 59 0 u 0 350.0 0.0 0.60
+state life 350
+state life 400
+state life 420
+state event 59 0 u 0 199.5 0.0 0.60
+state life 199.5
+state mana 200
+state event 59 2 h 0 650.0 100.0 0.60
+state mana 100
+state mana 50
+state mana 150
+state event 59 2 h 0 650.0 100.0 0.60
+state mana 100
+state hero 500
+state hero 500 again
+state hero max 800
+state registered below 0.60
+state event 59 2 h 0 500.0 100.0 0.60
+filter
+filter event 287 w 1
+filter done
+timed cancelled death 0.90 killer nil life 0.0
+timed paused 0.90
+orders
+pause f
+> f 39 851973 0 dead f 420.0 t paused t 1.00
+> f 76 851973 0 dead f 420.0 t paused t 1.00
+> f 38 852056 0 dead f 420.0 t paused t 1.00
+> f 75 852056 0 dead f 420.0 t paused t 1.00
+pause f again
+unpause f
+unpause f again
+pause r
+> r 39 851973 0 dead f 520.0 t paused t 1.00
+> r 76 851973 0 dead f 520.0 t paused t 1.00
+unpause r
+kill f2
+> f2 38 852056 0 dead t 0.0 t paused f 1.00
+> f2 75 852056 0 dead t 0.0 t paused f 1.00
+> f2 20 0 0 dead t 0.0 t paused f 1.00
+> f2 53 0 0 dead t 0.0 t paused f 1.00
+kill f2 again
+pause dead f2
+remove f3
+remove f3 again
+kill f4
+> f4 38 852056 0 dead t 0.0 t paused f 1.00
+> f4 75 852056 0 dead t 0.0 t paused f 1.00
+> f4 20 0 0 dead t 0.0 t paused f 1.00
+> f4 53 0 0 dead t 0.0 t paused f 1.00
+remove dead f4
+explode f5
+> f5 38 852056 0 dead t 0.0 t paused f 1.00
+> f5 75 852056 0 dead t 0.0 t paused f 1.00
+> f5 20 0 0 dead t 0.0 t paused f 1.00
+> f5 53 0 0 dead t 0.0 t paused f 1.00
+pause and remove f6
+> f6 39 851973 0 dead f 420.0 t paused t 1.00
+> f6 76 851973 0 dead f 420.0 t paused t 1.00
+> f6 38 852056 0 dead f 420.0 t paused t 1.00
+> f6 75 852056 0 dead f 420.0 t paused t 1.00
+life 0 f7
+> f7 38 852056 0 dead t 0.0 t paused f 1.00
+> f7 75 852056 0 dead t 0.0 t paused f 1.00
+> f7 20 0 0 dead t 0.0 t paused f 1.00
+> f7 53 0 0 dead t 0.0 t paused f 1.00
+kill r2
+> r2 20 0 0 dead t 0.0 t paused f 1.00
+> r2 53 0 0 dead t 0.0 t paused f 1.00
+> f8 39 851973 0 dead f 420.0 t paused t 1.00
+> f8 76 851973 0 dead f 420.0 t paused t 1.00
+> f8 38 852056 0 dead f 420.0 t paused t 1.00
+> f8 75 852056 0 dead f 420.0 t paused t 1.00
+give paused f8
+pause h
+> h 39 851973 0 dead f 650.0 t paused t 1.00
+> h 76 851973 0 dead f 650.0 t paused t 1.00
+corpse
+> ? 38 852056 0 dead t 0.0 t paused f 1.00
+orders step end 1.00
+> f3 38 852056 0 dead t 0.0 t paused f 1.00
+> f3 75 852056 0 dead t 0.0 t paused f 1.00
+> f3 38 852056 0 dead t 0.0 t paused f 1.00
+> f3 75 852056 0 dead t 0.0 t paused f 1.00
+> f4 38 852056 0 dead t 0.0 t paused f 1.00
+> f4 75 852056 0 dead t 0.0 t paused f 1.00
+> f5 38 852056 0 dead t 0.0 t paused f 1.00
+> f5 75 852056 0 dead t 0.0 t paused f 1.00
+> f6 38 852056 0 dead t 0.0 t paused f 1.00
+> f6 75 852056 0 dead t 0.0 t paused f 1.00
+> f6 38 852056 0 dead t 0.0 t paused f 1.00
+> f6 75 852056 0 dead t 0.0 t paused f 1.00
+> f 38 852056 0 dead f 420.0 t paused f 1.01
+> f 75 852056 0 dead f 420.0 t paused f 1.01
+state later 1.10
+state life 100 later
+> ? 38 852056 0 dead t 0.0 t paused f 1.10
+> ? 20 0 0 dead t 0.0 t paused f 1.10
+state killed 0
+playerowner
+playerowner 13 13 13 1.20
+orders later 1.30
+rescue
+rescue made 1.40 nil
+playerowner later 13 13 13
+> ? 38 852056 0 dead t 0.0 t paused f 1.40
+> ? 20 0 0 dead t 0.0 t paused f 1.40
+timed a death 1.40 killer nil life 0.0
+> ? 38 852056 0 dead t 0.0 t paused f 1.40
+> ? 20 0 0 dead t 0.0 t paused f 1.40
+timed shorter death 1.40 killer nil life 0.0
+> ? 38 852056 0 dead t 0.0 t paused f 1.40
+> ? 20 0 0 dead t 0.0 t paused f 1.40
+timed longer death 1.40 killer nil life 0.0
+> ? 20 0 0 dead t 0.0 t paused f 1.40
+timed hero death 1.40 killer nil life 0.0
+> ? 38 852056 0 dead t 0.0 t paused f 1.40
+> ? 20 0 0 dead t 0.0 t paused f 1.40
+timed buff death 1.40 killer nil life 0.0
+> ? 38 852056 0 dead t 0.0 t paused f 1.40
+> ? 20 0 0 dead t 0.0 t paused f 1.40
+timed nobuff death 1.40 killer nil life 0.0
+> ? 38 852056 0 dead t 0.0 t paused f 1.40
+> ? 20 0 0 dead t 0.0 t paused f 1.40
+timed unpaused death 1.40 killer nil life 0.0
+rescued 19 v by 0 owner 27 player 27 1.90
+rescued 63 v by 0 owner 27 player 27 1.90
+sleep
+sleep creep state 0
+sleep made 0.10 m tttf fo ffff mine fftf woken tttf nosleep ffff perm tttf
+sleep 0s 0.10 m tttf fo ffff mine fftf woken tttf nosleep ffff perm tttf
+rescue 1s 27 27 27
+timed resumed 2.40 tf
+sleep 0.5s 0.12 m tttf fo ffff mine fftf woken tttf nosleep ffff perm tttf
+> ? 38 852056 0 dead t 0.0 t paused f 2.90
+> ? 20 0 0 dead t 0.0 t paused f 2.90
+timed paused death 2.90 killer nil life 0.0
+timed dead decay 3.44 killer nil life 0.0
+timed cancelled decay 3.94 killer nil life 0.0
+sleep 2s 0.20 m tttf fo ffff mine fftf woken tttf nosleep ffff perm tttf
+sleep woken 0.20 m tttf fo ffff mine fftf woken fftf nosleep ffff perm tttf
+timed a decay 4.44 killer nil life 0.0
+timed shorter decay 4.44 killer nil life 0.0
+timed longer decay 4.44 killer nil life 0.0
+> ? 38 852056 0 dead t 0.0 t paused f 4.44
+timed nobuff decay 4.44 killer nil life 0.0
+timed unpaused decay 4.44 killer nil life 0.0
+sleep 3s 0.25 m tttf fo ffff mine fftf woken fftf nosleep ffff perm tttf
+sleep changed 0.25 m tttf fo ffff mine fftf woken fftf nosleep tttf perm tttf
+timed end ffff
+timed paused decay 5.94 killer nil life 0.0
+sleep 4.5s 0.32 m tttf fo ffff mine fftf woken tttf nosleep tttf perm tttf
+sleep noon 12.00 m fftf fo ffff mine fftf woken fftf nosleep fftf perm fftf
+sleep noon 0.5s 12.02 m fftf fo ffff mine fftf woken fftf nosleep fftf perm fftf
+sleep noon 2.5s 12.12 m fftf fo ffff mine fftf woken fftf nosleep fftf perm fftf
+sleep late made 12.12 m fftf fo ffff mine fftf woken fftf nosleep fftf perm fftf late fftf
+sleep night 23.00 m tttf fo ffff mine fftf woken tttf nosleep tttf perm tttf late tttf
+sleep night 0.5s 23.02 m tttf fo ffff mine fftf woken tttf nosleep tttf perm tttf late tttf
+sleep night 2.5s 23.12 m tttf fo ffff mine fftf woken tttf nosleep tttf perm tttf late tttf

@@ -345,12 +345,13 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// The level set, as the facts and the players probe read it. Close: a unit type's count of the player's units
-    /// comes with the units (W2-2), and <paramref name="specificonly"/>, which then counts only that type and not the
-    /// ones it upgrades to, is ignored.
+    /// The level set, as the facts and the players probe read it; for a unit type, the player's living units of it, as
+    /// GetPlayerTypedUnitCount counts them, with the types it upgrades to unless <paramref name="specificonly"/> (probe
+    /// units-more: a town hall 1 and 3 with a keep and a castle).
     /// </summary>
-    [Native(Level.Close)]
-    public int GetPlayerTechCount(player? whichPlayer, int techid, bool specificonly) => whichPlayer?.TechLevels.GetValueOrDefault(techid) ?? 0;
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: probe players; " + MoreProbe)]
+    public int GetPlayerTechCount(player? whichPlayer, int techid, bool specificonly) =>
+        Data.Object(ObjectKind.Unit, techid) is not null ? Typed(whichPlayer, techid, !specificonly) : whichPlayer?.TechLevels.GetValueOrDefault(techid) ?? 0;
 
     [Native(Level.Close)]
     public bool GetPlayerTechResearched(player? whichPlayer, int techid, bool specificonly) => GetPlayerTechCount(whichPlayer, techid, specificonly) > 0;
