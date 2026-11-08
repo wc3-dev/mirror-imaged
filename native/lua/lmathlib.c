@@ -202,12 +202,14 @@ static int math_exp (lua_State *L) {
 }
 
 static int math_deg (lua_State *L) {
-  lua_pushnumber(L, luai_nummul(L, luaL_checknumber(L, 1), (l_mathop(180.0) / PI)));
+  /* MirrorImaged: as the game's, x * 180 / pi in its arithmetic, so math.deg(1) is 42652ee3 */
+  lua_pushnumber(L, luai_numdiv(L, luai_nummul(L, luaL_checknumber(L, 1), l_mathop(180.0)), PI));
   return 1;
 }
 
 static int math_rad (lua_State *L) {
-  lua_pushnumber(L, luai_nummul(L, luaL_checknumber(L, 1), (PI / l_mathop(180.0))));
+  /* MirrorImaged: as the game's, x * pi / 180 in its arithmetic, so math.rad(180) is 40490fd9 */
+  lua_pushnumber(L, luai_numdiv(L, luai_nummul(L, luaL_checknumber(L, 1), PI), l_mathop(180.0)));
   return 1;
 }
 

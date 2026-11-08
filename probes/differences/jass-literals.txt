@@ -1,15 +1,6 @@
 # Where MirrorImaged differs from the game's lines in expected/jass-literals.txt, in order, with why (decisions D121): a line
 # starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
 
-# S2R (the last number) is a float step off on these, as D83's model is Close; the literals, read through it, match.
-- 1.0000001 3f800000 3f800002
-+ 1.0000001 3f800000 3f800001
+# S2R (the last number) is a float step off on this one, as D83's model is Close; the literal, read through it, matches.
 - 1000000.0625 49742400 49742401
 + 1000000.0625 49742400 49742400
-- 3.14159 40490fcf 40490fd1
-+ 3.14159 40490fcf 40490fd0
-
-# 1 - 0.001 and 1000 - 0.001 are a float step higher here (D27's guard bit, where the game cuts the exact difference;
-# D134, W1-10).
-- minus 3f7fbe76 4479ffef 3f800000 3f800000 3f800000 4b800000
-+ minus 3f7fbe77 4479fff0 3f800000 3f800000 3f800000 4b800000

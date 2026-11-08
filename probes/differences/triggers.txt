@@ -1,10 +1,10 @@
 # Where MirrorImaged differs from the game's lines in expected/triggers.txt, in order, with why (decisions D121): a line
 # starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
 
-# Ids: the game had made 84 more handles by then, InitBlizzard's among them, which the comparison runs without
-# (D110, D120; W1-10).
+# Ids: the players' ids start where the game's don't, and InitBlizzard's sounds, rects and units aren't made (D110,
+# D150).
 - handles false 1048736 1048736 1048737 1048738
-+ handles false 1048652 1048652 1048653 1048654
++ handles false 1048660 1048660 1048661 1048662
 
 # Times: here the clock reads the 1/1024 s step, where the game reads the hundredth or a hair past it (D45, D127;
 # W1-10).
@@ -54,6 +54,3 @@
 + enable 3.0000
 - periodic 3.5001 4 true nil 5 3
 + periodic 3.5000 4 true nil 5 3
-
-# PolledWait is blizzard.j's, which the comparison runs without (D120; W1-10).
-- ~ w polled {t}

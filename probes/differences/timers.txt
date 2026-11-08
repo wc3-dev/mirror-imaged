@@ -1,13 +1,13 @@
 # Where MirrorImaged differs from the game's lines in expected/timers.txt, in order, with why (decisions D121): a line
 # starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
 
-# Timers due at the same moment: the game's order is neither the order made, started nor queued, which is D45's
-# here (D127, Close).
+# Timers due at the same moment: the game ran the one paused and resumed at 0.25 first, perhaps its end a hair before
+# 1.0 (D153, Close).
 - due at 1.0: resumed,first,periodic,second,late,restarted
-+ due at 1.0: first,second,resumed,late,restarted,periodic
++ due at 1.0: first,periodic,second,resumed,late,restarted
 
 # A periodic timer's expiries: the game's clock reads them at the hundredths (a hair past at 0.25 and 0.5), while
-# here they run in the nearest 1/1024 s step, which the clock reads (D45, D127, Close).
+# here they run in the nearest 1/1024 s step, which the clock reads (D45, D127, D153, Close).
 - 3600 s timer elapsed 0.01001 0.02002 0.03003 0.04004 0.05005 0.06006 0.07007 0.08008 0.09009 0.10010
 + 3600 s timer elapsed 0.00977 0.01953 0.03027 0.04004 0.04980 0.05957 0.07031 0.08008 0.08984 0.09961
 - 3600 s timer elapsed 0.11011 0.12012 0.13013 0.14014 0.15015 0.16016 0.17017 0.18018 0.19019 0.20020
