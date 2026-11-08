@@ -32,22 +32,42 @@ public sealed class NativesTests
     [Fact]
     public void Every_recorded_native_names_why_and_every_exact_one_names_what_measures_it()
     {
-        foreach (var method in All)
-        {
-            var native = method.GetCustomAttribute<NativeAttribute>()!;
-            if (native.Level == Level.Recorded)
-                Assert.False(string.IsNullOrWhiteSpace(native.Reason), $"{method.Name} is Recorded with no reason");
-            if (native.Level == Level.Exact)
-                Assert.False(string.IsNullOrWhiteSpace(native.Fact), $"{method.Name} is Exact with no fact or probe");
-        }
+        Assert.Empty(Unexplained(typeof(GameNatives)));
     }
+
+    [Fact]
+    public void The_check_finds_a_recorded_native_with_no_reason_and_an_exact_one_with_no_fact()
+    {
+        Assert.Equal(["ExactWithNoFact", "RecordedWithBlankReason", "RecordedWithNoReason"], Unexplained(typeof(SomeNatives)));
+    }
+
+    sealed class SomeNatives
+    {
+        [Native(Level.Recorded, Reason = "Plays a sound")] public void Recorded() { }
+        [Native(Level.Recorded)] public void RecordedWithNoReason() { }
+        [Native(Level.Recorded, Reason = " ")] public void RecordedWithBlankReason() { }
+        [Native(Level.Exact, Fact = "game-facts.md, Timers")] public void Exact() { }
+        [Native(Level.Exact, Reason = "Not a fact")] public void ExactWithNoFact() { }
+        [Native(Level.Close)] public void Close() { }
+        [Native(Level.Missing)] public void Missing() { }
+    }
+
+    // The Recorded natives with no reason and the Exact ones with no fact or probe, sorted.
+    static string[] Unexplained(Type natives) =>
+        natives.GetMethods()
+            .Where(method => method.GetCustomAttribute<NativeAttribute>() is { } native
+                             && ((native.Level == Level.Recorded && string.IsNullOrWhiteSpace(native.Reason))
+                                 || (native.Level == Level.Exact && string.IsNullOrWhiteSpace(native.Fact))))
+            .Select(method => method.Name)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
 
     [InstallFact]
     [Trait("Needs", "Game")]
     public void The_natives_and_handle_types_match_the_installed_common_j_and_common_ai_one_to_one()
     {
         using var storage = CascStorage.Open(GameInstall.Require());
-        var scripts = Generator.Scripts.Select(script => Generator.Read(Generator.Text(storage.Read, script.Path))).ToList();
+        var scripts = Generator.ReadScripts(storage.Read);
 
         Assert.Equal(
             scripts.SelectMany(script => script.Natives).Select(Signature).Order(StringComparer.Ordinal),
@@ -63,7 +83,7 @@ public sealed class NativesTests
         using var storage = CascStorage.Open(GameInstall.Require());
         var folder = Path.Combine(RepoRoot(), "src", "MirrorImaged.Natives");
 
-        var files = Generator.Generate(storage.Read, storage.Build.Version, Generator.HandWritten(folder));
+        var files = Generator.Generate(Generator.ReadScripts(storage.Read), storage.Build.Version, Generator.HandWritten(folder));
 
         var generated = Path.Combine(folder, "Generated");
         Assert.Equal(files.Keys, Directory.GetFiles(generated).Select(Path.GetFileName).Order(StringComparer.Ordinal));

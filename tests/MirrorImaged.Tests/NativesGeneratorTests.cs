@@ -64,7 +64,7 @@ public sealed class NativesGeneratorTests : IDisposable
     }
 
     [Fact]
-    public void Writes_a_class_per_handle_type_sorted_with_handle_first()
+    public void Writes_a_partial_class_per_handle_type_sorted_with_handle_first()
     {
         var types = Generate()["Types.g.cs"];
 
@@ -75,10 +75,10 @@ public sealed class NativesGeneratorTests : IDisposable
 
             namespace MirrorImaged.Natives;
 
-            public class handle;
-            public class agent : handle;
-            public class @event : agent;
-            public class unit : agent;
+            public partial class handle;
+            public partial class agent : handle;
+            public partial class @event : agent;
+            public partial class unit : agent;
 
             """.ReplaceLineEndings("\n"), types);
     }
@@ -146,44 +146,60 @@ public sealed class NativesGeneratorTests : IDisposable
     public void A_script_missing_from_the_install_is_an_error_that_names_it()
     {
         var error = Assert.Throws<FileNotFoundException>(() =>
-            Generator.Generate(path => path.EndsWith("common.j") ? Encoding.UTF8.GetBytes(CommonJ) : null, "1.2.3", new HashSet<string>()));
+            Generator.ReadScripts(path => path.EndsWith("common.j") ? Encoding.UTF8.GetBytes(CommonJ) : null));
 
         Assert.Contains("common.ai", error.Message);
     }
 
     [Fact]
-    public void The_natives_written_by_hand_are_the_methods_outside_generated_bin_and_obj()
+    public void The_natives_written_by_hand_are_the_methods_marked_native_outside_generated_bin_and_obj()
     {
-        Write("Timers.cs", """
+        Write("Timers.cs", """"
             partial class GameNatives
             {
-                [Native(Level.Exact, Fact = "Timers")]
+                [Native(Level.Exact, Fact = "Timers (https://example.org/a)]")]
                 public void TimerStart(timer? whichTimer, float timeout, bool periodic, Action? handlerFunc) { }
 
-                public   int  GetPlayerId (player? whichPlayer) => 0;
+                [Native(Level.Close)]   public   int  GetPlayerId (player? whichPlayer) => 0;
 
+                [Native(Level.Recorded, Reason = nameof(TriggerRegisterTimerEvent))]
                 public @event? TriggerRegisterTimerEvent(trigger? whichTrigger, float timeout, bool periodic) => null;
 
+                [Native(Level.Exact, Fact = @"a ""quoted"" fact")]
                 public static Func<bool>? Condition(Func<bool>? func) => func;
 
-                public GameNatives(World world) { }
+                public int GetPlayerTeam(player? whichPlayer) => 0;
 
-                void Helper() { }
+                // [Native(Level.Close)] public void InALineComment() { }
+
+                /* [Native(Level.Close)]
+                   public void InABlockComment() { } */
+
+                const string Text = "[Native(Level.Close)] public void InAString(";
+
+                const string Verbatim = @"[Native(Level.Close)] public void InAVerbatimString(";
+
+                const char Quote = '"';
+
+                [Native(Level.Close)]
+                public void AfterACharQuote() { }
+
+                public GameNatives(World world) { }
             }
-            """);
-        Write("Units/Positions.cs", "public float GetUnitX(unit? whichUnit) => 0;");
-        Write("Generated/CommonJNatives.g.cs", "public void Generated() => throw null;");
-        Write("obj/Debug/Some.cs", "public void Built() { }");
-        Write("bin/Some.cs", "public void Copied() { }");
+            """");
+        Write("Units/Positions.cs", "[Native(Level.Close)] public float GetUnitX(unit? whichUnit) => 0;");
+        Write("Generated/CommonJNatives.g.cs", "[Native(Level.Missing)] public void Generated() => throw null;");
+        Write("obj/Debug/Some.cs", "[Native(Level.Close)] public void Built() { }");
+        Write("bin/Some.cs", "[Native(Level.Close)] public void Copied() { }");
 
         Assert.Equal(
-            ["Condition", "GetPlayerId", "GetUnitX", "TimerStart", "TriggerRegisterTimerEvent"],
+            ["AfterACharQuote", "Condition", "GetPlayerId", "GetUnitX", "TimerStart", "TriggerRegisterTimerEvent"],
             Generator.HandWritten(_folder).Order(StringComparer.Ordinal));
     }
 
     static IReadOnlyDictionary<string, string> Generate(IReadOnlySet<string>? handWritten = null) =>
         Generator.Generate(
-            path => Encoding.UTF8.GetBytes(path.EndsWith("common.j") ? CommonJ : CommonAi),
+            Generator.ReadScripts(path => Encoding.UTF8.GetBytes(path.EndsWith("common.j") ? CommonJ : CommonAi)),
             "1.2.3",
             handWritten ?? new HashSet<string>());
 

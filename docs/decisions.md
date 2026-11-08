@@ -38,22 +38,32 @@ his, the rest the agents' and open to his review.
   called `Natives`, which would clash with its namespace `MirrorImaged.Natives`. (W0-2)
 - **D19.** The handle classes keep `common.j`'s names (`unit`, `@event`, `equipmentType`), so a signature reads as
   `common.j` declares it and the Lua layer and the checks match by name. Their file turns off CS8981, the warning for
-  lower-case type names. (W0-2)
+  lower-case type names. They are `partial`, so later tasks add members (ids, the world) in their own files. (W0-2)
 - **D20.** JASS types in C#: `integer` is `int`, `real` is `float` (the game's single floats), `boolean` is `bool`, and
   `string`, the handles and `code` are nullable, since JASS and Lua pass null for any of them. `code` is `Action?`,
   except where the game reads what the function returns: `Func<bool>?` for `Condition` and `Filter`, and `Func<int>?`
-  for `common.ai`'s `SetHeroLevels`, whose function gives a hero skill per level in the melee AI scripts (known from
-  older versions; those scripts are not in 3.0.1's storage under `scripts/`). (W0-2)
+  for `common.ai`'s `SetHeroLevels`. In 3.0.1.24371's storage, `War3.w3mod:Scripts/human.ai`, `orc.ai`, `undead.ai`
+  and `elf.ai` each call `StandardAI(function SkillArrays, ...)`; `common.ai` declares `SkillArrays takes nothing
+  returns integer` and `StandardAI` passes that `code` to `SetHeroLevels`, as `CampaignAI` passes its own. (W0-2)
 - **D21.** The generator writes `Types.g.cs`, `CommonJNatives.g.cs` and `CommonAiNatives.g.cs`, each sorted by name
-  (ordinal), with `\n` line endings and a header naming the game version, so a re-run on the same install gives the
-  same files. A `Needs=Game` test checks the committed files are what the generator writes. (W0-2)
+  (ordinal), with `\n` line endings whatever the generator's own checkout has, and a header naming the game version,
+  so a re-run on the same install gives the same files. `.gitattributes` keeps `*.g.cs` at LF in every checkout. A
+  `Needs=Game` test checks the committed files are what the generator writes. `* text=auto` was left out: it changes
+  nothing where `core.autocrlf` is set, and it would reach every other task's files. (W0-2)
 - **D22.** A native is filled in by writing it by hand in `MirrorImaged.Natives`, outside `Generated`, in the partial
-  `GameNatives`, and re-running the generator: it leaves out every native named by a public method in the project's
-  other files. The one-to-one test reads all of them by reflection, so it holds as natives move out of the stubs. (W0-2)
+  `GameNatives`, and re-running the generator: it leaves out every method marked `[Native(...)]` right before its
+  `public` in the project's other files, passing over comments and strings. The one-to-one test reads all the natives
+  by reflection, so it holds as they move out of the stubs. (W0-2)
 - **D23.** The Exact native's probe or fact is the attribute's `Fact`. That a Recorded native names a `Reason` and an
   Exact one a `Fact` is a test over every native, since an attribute can't require a named argument. (W0-2)
 - **D24.** The CASC reader is Moonwell's, reading a file by its root path (`War3.w3mod:scripts/common.j`), without
-  Moonwell's graphics tiers and locales, which the scripts don't need. The install is the folder given, else
-  `MIRROR_GAME`, else `C:\Program Files (x86)\Warcraft III`. (W0-2)
+  Moonwell's graphics tiers and locales, which the scripts don't need, and without its lock: nothing here reads from
+  several threads. A failed open closes what it opened; an I/O error comes out as it is, anything else wrapped in an
+  `IOException` naming the folder. The install is the folder given, else `MIRROR_GAME`, else
+  `C:\Program Files (x86)\Warcraft III`. (W0-2)
 - **D25.** `mirror coverage` prints the count at each level and in all, then every Missing native, one a line, sorted.
   (W0-2)
+- **D26.** The melee AI scripts are stored three times in 3.0.1.24371: `War3.w3mod:Scripts/` (`human.ai` 22,453 bytes),
+  `War3.w3mod:_Balance/Melee_V0.w3mod:Scripts/` (17,331) and `War3.w3mod:_Balance/Custom_V0.w3mod:Scripts/` (17,267),
+  each with `orc.ai`, `undead.ai` and `elf.ai`; `common.ai` and `common.j` are only in `War3.w3mod:Scripts/`. Which
+  copy a melee game loads is not known: wave 7 (the AI) must find out, by a probe, before it runs one. (W0-2)

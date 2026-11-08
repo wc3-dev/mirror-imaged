@@ -7,7 +7,8 @@ namespace MirrorImaged.Data;
 /// <summary>
 /// The game's files in a Warcraft III install's CASC storage (<c>Data\data</c>), read in place: the active build config
 /// named in <c>.build.info</c>, the newest <c>.idx</c> file of each bucket, the encoding table and the text root, whose
-/// lines are <c>War3.w3mod:path|content key|...</c>. Only files stored locally can be read.
+/// lines are <c>War3.w3mod:path|content key|...</c>. Only files stored locally can be read. Not for use from several
+/// threads at once.
 /// </summary>
 public sealed class CascStorage : IDisposable
 {
@@ -16,7 +17,6 @@ public sealed class CascStorage : IDisposable
     readonly Dictionary<UInt128, byte[]> _encodingKeys = [];
     readonly Dictionary<string, UInt128> _root = new(StringComparer.OrdinalIgnoreCase);
     readonly Dictionary<int, FileStream> _archives = [];
-    readonly Lock _lock = new();
 
     CascStorage(string folder, GameBuild build)
     {
@@ -31,29 +31,21 @@ public sealed class CascStorage : IDisposable
     /// <exception cref="IOException">The folder holds no install, or its storage cannot be read.</exception>
     public static CascStorage Open(string gameFolder)
     {
-        GameBuild build;
+        CascStorage? storage = null;
         try
         {
-            build = GameInstall.Build(gameFolder);
-        }
-        catch (Exception exception) when (exception is InvalidDataException or IndexOutOfRangeException)
-        {
-            throw new IOException($"The game's storage in {gameFolder} cannot be read: {exception.Message}", exception);
-        }
-
-        var storage = new CascStorage(gameFolder, build);
-        try
-        {
-            var config = BuildConfig(storage._data, build.Key);
+            storage = new CascStorage(gameFolder, GameInstall.Build(gameFolder));
+            var config = BuildConfig(storage._data, storage.Build.Key);
             storage.ReadIndexes();
             storage.ReadEncoding(Convert.FromHexString(config["encoding"][1]));
             storage.ReadRoot(Convert.FromHexString(config["root"][0]));
             return storage;
         }
-        catch (Exception exception) when (exception is KeyNotFoundException or FormatException or InvalidDataException
-                                              or IndexOutOfRangeException or ArgumentException)
+        catch (Exception exception)
         {
-            storage.Dispose();
+            storage?.Dispose();
+            if (exception is IOException)
+                throw;
             throw new IOException($"The game's storage in {gameFolder} cannot be read: {exception.Message}", exception);
         }
     }
@@ -69,12 +61,9 @@ public sealed class CascStorage : IDisposable
 
     public void Dispose()
     {
-        lock (_lock)
-        {
-            foreach (var archive in _archives.Values)
-                archive.Dispose();
-            _archives.Clear();
-        }
+        foreach (var archive in _archives.Values)
+            archive.Dispose();
+        _archives.Clear();
     }
 
     // The active build's config: key = values, from Data\config\ab\cd\abcd....
@@ -169,18 +158,15 @@ public sealed class CascStorage : IDisposable
         if (!_index.TryGetValue(key, out var place))
             return null;
 
-        var raw = new byte[place.Size];
-        lock (_lock)
+        if (!_archives.TryGetValue(place.Archive, out var archive))
         {
-            if (!_archives.TryGetValue(place.Archive, out var archive))
-            {
-                var path = Path.Combine(_data, "data", $"data.{place.Archive:D3}");
-                _archives[place.Archive] = archive = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            }
-
-            archive.Position = place.Offset;
-            archive.ReadExactly(raw);
+            var path = Path.Combine(_data, "data", $"data.{place.Archive:D3}");
+            _archives[place.Archive] = archive = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         }
+
+        var raw = new byte[place.Size];
+        archive.Position = place.Offset;
+        archive.ReadExactly(raw);
 
         return Blte(raw.AsSpan(30));
     }

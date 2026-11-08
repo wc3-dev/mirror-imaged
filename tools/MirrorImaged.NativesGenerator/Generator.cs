@@ -63,46 +63,51 @@ public static partial class Generator
                 .ToList());
     }
 
-    /// <summary>A script's text, read with <paramref name="read"/> from its storage path.</summary>
-    /// <exception cref="FileNotFoundException">The install does not store it.</exception>
-    public static string Text(Func<string, byte[]?> read, string path) =>
-        Encoding.UTF8.GetString(read(path) ?? throw new FileNotFoundException($"{path} is not stored in the install", path));
+    /// <summary>
+    /// The installed scripts, read with <paramref name="read"/> from their storage paths, in the order of
+    /// <see cref="Scripts"/>.
+    /// </summary>
+    /// <exception cref="FileNotFoundException">The install does not store one of them.</exception>
+    public static IReadOnlyList<JassScript> ReadScripts(Func<string, byte[]?> read) =>
+        Scripts.Select(script => Read(Encoding.UTF8.GetString(
+                read(script.Path) ?? throw new FileNotFoundException($"{script.Path} is not stored in the install", script.Path))))
+            .ToList();
 
     /// <summary>
-    /// The generated files by name: the types, then each script's natives but those in <paramref name="handWritten"/>.
+    /// The generated files by name, from <paramref name="scripts"/> in the order of <see cref="Scripts"/>: the types,
+    /// then each script's natives but those in <paramref name="handWritten"/>.
     /// </summary>
-    public static SortedDictionary<string, string> Generate(Func<string, byte[]?> read, string gameVersion, IReadOnlySet<string> handWritten)
+    public static SortedDictionary<string, string> Generate(IReadOnlyList<JassScript> scripts, string gameVersion, IReadOnlySet<string> handWritten)
     {
         var files = new SortedDictionary<string, string>(StringComparer.Ordinal);
-        var types = new List<JassType>();
-        foreach (var (name, file, path) in Scripts)
-        {
-            var script = Read(Text(read, path));
-            types.AddRange(script.Types);
+        foreach (var ((name, file, _), script) in Scripts.Zip(scripts))
             files[file] = WriteNatives(script.Natives.Where(native => !handWritten.Contains(native.Name)), $"{name}, game {gameVersion}");
-        }
 
-        files["Types.g.cs"] = WriteTypes(types, $"{string.Join(" and ", Scripts.Select(script => script.Name))}, game {gameVersion}");
+        var source = $"{string.Join(" and ", Scripts.Select(script => script.Name))}, game {gameVersion}";
+        files["Types.g.cs"] = WriteTypes(scripts.SelectMany(script => script.Types), source);
         return files;
     }
 
     /// <summary>
-    /// The natives written by hand in the natives project's folder: the names of the public methods declared in its
-    /// C# files outside <c>Generated</c>, <c>bin</c> and <c>obj</c>.
+    /// The natives written by hand in the natives project's folder: the methods marked <c>[Native(...)]</c> right
+    /// before <c>public</c>, in its C# files outside <c>Generated</c>, <c>bin</c> and <c>obj</c>, comments and strings
+    /// left out.
     /// </summary>
     public static IReadOnlySet<string> HandWritten(string nativesFolder) =>
         Directory.EnumerateFiles(nativesFolder, "*.cs", SearchOption.AllDirectories)
             .Where(path => Path.GetRelativePath(nativesFolder, path).Split(Path.DirectorySeparatorChar)[0] is not ("Generated" or "bin" or "obj"))
-            .SelectMany(path => PublicMethod().Matches(File.ReadAllText(path)).Select(match => match.Groups["name"].Value))
+            .SelectMany(path => NativeMethod().Matches(File.ReadAllText(path)))
+            .Where(match => match.Groups["name"].Success)
+            .Select(match => match.Groups["name"].Value)
             .ToHashSet(StringComparer.Ordinal);
 
     static string WriteTypes(IEnumerable<JassType> types, string source)
     {
         var text = new StringBuilder(Header(source));
         text.Append("\n#pragma warning disable CS8981 // The types keep common.j's names, which are lower case.\n");
-        text.Append("\nnamespace MirrorImaged.Natives;\n\npublic class handle;\n");
+        text.Append("\nnamespace MirrorImaged.Natives;\n\npublic partial class handle;\n");
         foreach (var type in types.OrderBy(type => type.Name, StringComparer.Ordinal))
-            text.Append($"public class {Identifier(type.Name)} : {Identifier(type.Parent)};\n");
+            text.Append($"public partial class {Identifier(type.Name)} : {Identifier(type.Parent)};\n");
         return text.ToString();
     }
 
@@ -117,7 +122,10 @@ public static partial class Generator
 
                 """;
         });
-        return $"{Header(source)}\n#nullable enable\n\nnamespace MirrorImaged.Natives;\n\npublic sealed partial class GameNatives\n{{\n{string.Join("\n", stubs)}}}\n";
+
+        // The raw string above takes this file's line endings, which depend on how git checked it out.
+        return $"{Header(source)}\n#nullable enable\n\nnamespace MirrorImaged.Natives;\n\npublic sealed partial class GameNatives\n{{\n{string.Join("\n", stubs)}}}\n"
+            .ReplaceLineEndings("\n");
     }
 
     static string Header(string source) => $"// Generated by MirrorImaged.NativesGenerator from {source}. Do not edit.\n";
@@ -136,6 +144,14 @@ public static partial class Generator
 
     static string Identifier(string name) => Keywords.Contains(name) ? "@" + name : name;
 
-    [GeneratedRegex(@"\bpublic\s+(?:static\s+)?[@\w<>?,]+\s+(?<name>\w+)\s*\(")]
-    private static partial Regex PublicMethod();
+    // Comments and strings are matched first, so a native named inside one is passed over.
+    [GeneratedRegex("""
+        //[^\n]*
+        | /\*.*?\*/
+        | @"(?:[^"]|"")*"
+        | "(?:[^"\\\n]|\\.)*"
+        | '(?:[^'\\\n]|\\.)*'
+        | \[Native\((?:[^()"]|"(?:[^"\\\n]|\\.)*"|\([^()]*\))*\)\]\s*public\s+(?:static\s+)?[@\w<>?,]+\s+@?(?<name>\w+)\s*\(
+        """, RegexOptions.IgnorePatternWhitespace | RegexOptions.Singleline)]
+    private static partial Regex NativeMethod();
 }

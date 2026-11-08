@@ -12,30 +12,29 @@ if (args is not ([_] or [_, "--game", _]))
     return 2;
 }
 
-string folder;
+CascStorage storage;
 try
 {
-    folder = GameInstall.Require(args.Length == 3 ? args[2] : null);
+    storage = CascStorage.Open(GameInstall.Require(args.Length == 3 ? args[2] : null));
 }
-catch (DirectoryNotFoundException missing)
+catch (IOException error)
 {
-    Console.Error.WriteLine(missing.Message);
+    Console.Error.WriteLine(error.Message);
     return 1;
 }
 
-using var storage = CascStorage.Open(folder);
-var natives = Path.Combine(args[0], "src", "MirrorImaged.Natives");
-var handWritten = Generator.HandWritten(natives);
-var files = Generator.Generate(storage.Read, storage.Build.Version, handWritten);
-
-var generated = Directory.CreateDirectory(Path.Combine(natives, "Generated")).FullName;
-foreach (var (name, text) in files)
-    File.WriteAllText(Path.Combine(generated, name), text);
-
-foreach (var (name, _, path) in Generator.Scripts)
+using (storage)
 {
-    var script = Generator.Read(Generator.Text(storage.Read, path));
-    Console.WriteLine($"{name}: {script.Types.Count} types, {script.Natives.Count} natives, {script.Natives.Count(native => handWritten.Contains(native.Name))} of them written by hand");
+    var natives = Path.Combine(args[0], "src", "MirrorImaged.Natives");
+    var handWritten = Generator.HandWritten(natives);
+    var scripts = Generator.ReadScripts(storage.Read);
+
+    var generated = Directory.CreateDirectory(Path.Combine(natives, "Generated")).FullName;
+    foreach (var (name, text) in Generator.Generate(scripts, storage.Build.Version, handWritten))
+        File.WriteAllText(Path.Combine(generated, name), text);
+
+    foreach (var ((name, _, _), script) in Generator.Scripts.Zip(scripts))
+        Console.WriteLine($"{name}: {script.Types.Count} types, {script.Natives.Count} natives, {script.Natives.Count(native => handWritten.Contains(native.Name))} of them written by hand");
 }
 
 return 0;
