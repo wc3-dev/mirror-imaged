@@ -315,7 +315,7 @@ public sealed class StringNativesTests : IDisposable
     [InlineData("-400000000000000000000000000000000000000", 0xff967697u, 0xff96768eu)]
     [InlineData("340282346638528859811704183484516925440", 0x7f7ffffau, 0x7f7fffecu)]
     [InlineData("340282356779733661637539395458142568448", 0x7f7ffffau, 0x7f7fffecu)]
-    public void S2R_is_a_float_step_off_the_game_on_these(string s, uint game, uint model)
+    public void S2R_is_off_the_game_on_these(string s, uint game, uint model)
     {
         Assert.NotEqual(game, model);
         Assert.Equal(model, Bits(_natives.S2R(s)));
@@ -551,13 +551,16 @@ public sealed class StringNativesTests : IDisposable
         Assert.Equal(r >> 31 == 1, text.StartsWith('-'));
     }
 
-    // -1.5 at width 254 and at 1000, each alone in a probe, closed the game (0xC0000409): the text with its sign passed
-    // the 255 bytes. Here it is cut there, as a number's text above 0 is.
+    // probes r2sw-negative-254 and r2sw-negative-1000: the text with its sign passed the 255 bytes and the game closed
+    // (0xC0000409); at width 253 it gave 255 bytes (strings-6).
     [Fact]
-    public void A_number_below_0_past_255_bytes_is_cut_where_the_game_closes()
+    public void A_number_below_0_past_255_bytes_closes_the_game()
     {
-        Assert.Equal("-" + new string(' ', 251) + "1.5", _natives.R2SW(-1.5f, 254, 2));
-        Assert.Equal(255, _natives.R2SW(-1.5f, 1000, 2)!.Length);
+        Assert.Throws<GameClosedException>(() => _natives.R2SW(-1.5f, 254, 2));
+        Assert.Throws<GameClosedException>(() => _natives.R2SW(-1.5f, 1000, 2));
+        Assert.Equal(255, _natives.R2SW(-1.5f, 253, 2)!.Length);
+        // Its length wrapped past a 32-bit integer, as width 2147483647 above 0 gives "" (not measured below 0, D122)
+        Assert.Equal("", _natives.R2SW(-1.5f, 2147483647, 2));
     }
 
     [Fact]

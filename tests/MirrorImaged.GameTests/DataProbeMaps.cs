@@ -1,4 +1,3 @@
-using MirrorImaged.Probes;
 using War3Net.Build;
 using War3Net.Build.Common;
 using War3Net.Build.Info;
@@ -8,27 +7,14 @@ using War3Net.Common.Extensions;
 
 namespace MirrorImaged.GameTests;
 
-// docs/facts.md, "The game's data": the probes of W2-1, each on a map changed as below.
-[Trait("Needs", "Game")]
-public sealed class DataProbeTests
+// The maps of W2-1's probes (docs/facts.md, "The game's data"), each the probe map changed (ProbeComparison.Change).
+public static class DataProbeMaps
 {
-    [GameFact]
-    public void The_data_probe_gives_the_lines_measured() => Measured("data", "data", DataMap);
-
-    [GameFact]
-    public void The_tags_probe_gives_the_lines_measured() => Measured("data-tags", "data-tags", DataMap);
-
-    [GameFact]
-    public void A_melee_map_reads_the_balance_set_measured() => Measured("data-sets-melee", "data-sets", Melee);
-
-    [GameFact]
-    public void A_frozen_throne_melee_map_reads_the_balance_set_measured() => Measured("data-sets-tft", "data-sets", FrozenThroneMelee);
-
     /// <summary>The probe map (info format 28, which has no data version, and the Default data set) with the melee flag.</summary>
-    internal static void Melee(Map map) => map.Info!.MapFlags |= MapFlags.MeleeMap;
+    public static void Melee(Map map) => map.Info!.MapFlags |= MapFlags.MeleeMap;
 
     /// <summary>The probe map with the melee flag in info format 31, as World Editor 2.0 writes it, The Frozen Throne's data.</summary>
-    internal static void FrozenThroneMelee(Map map)
+    public static void FrozenThroneMelee(Map map)
     {
         Melee(map);
         var info = map.Info!;
@@ -39,13 +25,13 @@ public sealed class DataProbeTests
     }
 
     /// <summary>
-    /// The data probe's map: slot 0 named <c>TRIGSTR_001</c> and a computer slot 2 named <c>TRIGSTR_002</c> in
-    /// <c>war3map.w3i</c>, the computer seated in <c>config</c>, four strings in <c>war3map.wts</c>, hfoo renamed <c>TRIGSTR_003</c>, hkni renamed in the
-    /// object data and again in the skin file, h000 made from hfoo, Holy Light's level 1 healing 250, Rhme given 5
-    /// levels and R000 made from Rhme. Each
-    /// object has one set flag, 0, as World Editor writes it; without it the game crashed as the map loaded.
+    /// The data and tags probes' map: slot 0 named <c>TRIGSTR_001</c> and a computer slot 2 named <c>TRIGSTR_002</c> in
+    /// <c>war3map.w3i</c>, the computer seated in <c>config</c>, four strings in <c>war3map.wts</c>, hfoo renamed
+    /// <c>TRIGSTR_003</c>, hkni renamed in the object data and again in the skin file, h000 made from hfoo, Holy Light's
+    /// level 1 healing 250, Rhme given 5 levels and R000 made from Rhme. Each object has one set flag, 0, as World
+    /// Editor writes it (the facts: a run without, whose ids were also reversed, closed the game).
     /// </summary>
-    internal static void DataMap(Map map)
+    public static void Data(Map map)
     {
         var info = map.Info!;
         info.Players[0].Name = "TRIGSTR_001";
@@ -101,14 +87,6 @@ public sealed class DataProbeTests
             },
             NewUpgrades = { new LevelObjectModification { OldId = Id("Rhme"), NewId = Id("R000"), Unk = { 0 } } },
         };
-    }
-
-    static void Measured(string name, string probe, Action<Map> change)
-    {
-        var run = GameRunner.Default.Run(name, ProbeMap.Source(probe), TimeSpan.FromMinutes(2), change: change);
-
-        Assert.True(run.State == ProbeState.Done, $"{run.State}: {run.Detail}");
-        ExpectedLines.Assert(Path.Combine(AppContext.BaseDirectory, "probes", "expected", name + ".txt"), run.Lines);
     }
 
     static TriggerString String(uint key, string value) => new() { Key = key, Value = value };

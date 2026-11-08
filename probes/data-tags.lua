@@ -1,4 +1,4 @@
--- ParseTags on the data probe's map (DataProbeTests.DataMap, where Holy Light heals 250 at level 1), apart from the
+-- ParseTags on the data probe's map (DataProbeMaps.Data, where Holy Light heals 250 at level 1), apart from the
 -- data probe in case a text closes the game.
 local function show(value)
     return value == nil and "nil" or tostring(value)

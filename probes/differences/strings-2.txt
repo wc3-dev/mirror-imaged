@@ -1,0 +1,5 @@
+# Where MirrorImaged differs from the game's lines in expected/strings-2.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# Location is Missing until wave 2 (W2-6): the probe saves one in a hashtable, which stops it here.
+! war3map.lua:126: The native Location is Missing: MirrorImaged does not simulate it yet.

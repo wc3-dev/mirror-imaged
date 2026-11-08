@@ -110,7 +110,7 @@ static int coresume (lua_State *L) {
   return lua_gettop(L);
 }
 
-/* No io, debug or package; no dofile, loadfile or collectgarbage; os with only clock, date, difftime and
+/* No io, debug or package; no dofile, loadfile, collectgarbage or string.dump; os with only clock, date, difftime and
    time. math.random and math.randomseed are the game's generator, which the world provides. */
 static int openlibs (lua_State *L) {
   static const char *const os_kept[] = {"clock", "date", "difftime", "time", NULL};
@@ -127,6 +127,9 @@ static int openlibs (lua_State *L) {
   lua_getfield(L, -1, LUA_MATHLIBNAME);
   drop(L, "random");
   drop(L, "randomseed");
+  lua_pop(L, 1);
+  lua_getfield(L, -1, LUA_STRLIBNAME);
+  drop(L, "dump");
   lua_pop(L, 1);
   lua_getfield(L, -1, LUA_COLIBNAME);
   lua_getfield(L, -1, "resume");

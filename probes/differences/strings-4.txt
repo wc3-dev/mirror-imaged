@@ -1,0 +1,41 @@
+# Where MirrorImaged differs from the game's lines in expected/strings-4.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# R2SW from 2^31: the game writes about ten digits of its own, then zeros (D84, Close).
+- R2SW 60ad78ec 100 2 = s 24 "100000057600000000000.00"
++ R2SW 60ad78ec 100 2 = s 24 "100000002004087734272.00"
+
+# S2R past the float range, where the model is extrapolated (D83, Close).
+- S2R 40 123456 7890 = f 80683245 -9.56892491e-39
++ S2R 40 123456 7890 = f 80683237 -9.56890529e-39
+- S2R 42 0.1234 7890 = f 3dfcd6ea 0.123456791
++ S2R 42 0.1234 7890 = f bfe83237 -1.81403244
+- S2R 39 100000 0000 = f 7e967697 9.99999765e+37
++ S2R 39 100000 0000 = f 7e96768e 9.99998852e+37
+- S2R 39 300000 0000 = f 7f61b1e2 2.99999919e+38
++ S2R 39 300000 0000 = f 7f61b1d7 2.99999696e+38
+- S2R 39 400000 0000 = f 7f967697 nan
++ S2R 39 400000 0000 = f 7f96768e nan
+- S2R 40 100000 0000 = f 803c143d -5.5173899e-39
++ S2R 40 100000 0000 = f 803c1431 -5.51737308e-39
+- S2R 40 999999 9999 = f 00000000 0
++ S2R 40 999999 9999 = f 42c60000 99
+- S2R 40 -40000 0000 = f ff967697 -nan
++ S2R 40 -40000 0000 = f ff96768e -nan
+- S2R 39 340282 5440 = f 7f7ffffa 3.40282245e+38
++ S2R 39 340282 5440 = f 7f7fffec 3.40281961e+38
+- S2R 39 340282 8448 = f 7f7ffffa 3.40282245e+38
++ S2R 39 340282 8448 = f 7f7fffec 3.40281961e+38
+
+# The random generator is SplitMix64, not the game's (D46, D86, Close); and the game's GetRandomReal(3e38, -3e38)
+# gives tiny numbers below 0 that the model doesn't.
+- GetRandomInt max 0 over 1000 = i -2146973498 i -50177 1000 negative
++ GetRandomInt max 0 over 1000 = i -2143314705 i -99107 1000 negative
+- GetRandomInt 0 max over 1000 = i 3970624 i 2146773448 0 negative
++ GetRandomInt 0 max over 1000 = i 5337175 i 2147013214 0 negative
+- GetRandomReal -3e38 3e38 over 1000 = f ff61ac91 -2.99972315e+38 f 7f60e26a 2.9892268e+38 522 negative
++ GetRandomReal -3e38 3e38 over 1000 = f ff602c86 -2.9797825e+38 f 7f5ef4d8 2.96359916e+38 513 negative
+- GetRandomReal 3e38 -3e38 over 1000 = f 80293898 -3.78555735e-39 f 7f7ff181 3.40207099e+38 355 negative
++ GetRandomReal 3e38 -3e38 over 1000 = f 7f61de8f 3.00231889e+38 f 7f7fffff 3.40282347e+38 0 negative
+- GetRandomReal 0 3e38 over 1000 = f 7ab5090a 4.69994533e+35 f 7f61aa44 2.99960369e+38 0 negative
++ GetRandomReal 0 3e38 over 1000 = f 79a878e3 1.09344718e+35 f 7f619bdf 2.99885628e+38 0 negative

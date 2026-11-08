@@ -1,4 +1,4 @@
--- The map's own data as the game reads it (W2-1). The map (DataProbeTests.DataMap) names slot 0 "TRIGSTR_001" and
+-- The map's own data as the game reads it (W2-1). The map (DataProbeMaps.Data) names slot 0 "TRIGSTR_001" and
 -- adds a computer slot 2 named "TRIGSTR_002" in war3map.w3i, which config seats; war3map.wts has strings 1 to 4; war3map.w3u renames
 -- hfoo to "TRIGSTR_003", hkni to "Main Knight" (and war3mapSkin.w3u to "Skin Knight"), and makes h000 from hfoo;
 -- war3map.w3q gives Rhme 5 levels and makes R000 from Rhme.
