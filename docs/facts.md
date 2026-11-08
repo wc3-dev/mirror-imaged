@@ -673,7 +673,8 @@ Two new probes, each run twice with the same lines:
   ±2^31; `16777219 == 16777220.0` is false and `16777219 < 16777220.0` true. `pairs` over the 20 string keys `a` to `h`, `one` to `five`, `alpha`, `beta`, `gamma`,
   `x1`, `x2`, `x10` and `Footman`, set in that order, visits them as `three four one f e d c b a five x10 two Footman
   x2 x1 beta gamma h g alpha` in both runs; Lua 5.3 with string hash seed 0 visits them otherwise. Inferred: the
-  game's seed is fixed and isn't 0 (another hash function or table growth would change the order too).
+  game's seed is fixed and isn't 0 (another hash function or table growth would change the order too); W1-10's
+  `string-order` found it, `0x1c46318e` (below).
 - The three closing probes (`r2sw-negative-254`, `r2sw-negative-1000`, `files-text`), run again: each wrote its
   `started.pld` before the game closed (on disk after two of the runs; the runner's check after the third).
 - `timers`: six timers due at 1.0 ran as resumed (started at 0 for 1 s, paused and resumed at 0.25), first (started
@@ -682,3 +683,71 @@ Two new probes, each run twice with the same lines:
   periodic, resumed, second, first. A 3600 s timer read every 0.01 s from a 0.01 s periodic timer started with it gave
   elapsed times 0.01001, 0.02002, ..., 0.24023, 0.25024, 0.26001, ..., 0.50024, ..., 0.75000, ..., 1.00000 (with
   `%.5f`), and its remaining time after 100 reads 3599.00000.
+
+## The number model's probes
+
+Eleven probes run once each by the game runner from the PowerShell tool, 3.0.1.24371, single player, 11-08 (W1-10),
+their lines in `probes/expected`. Floats are given by their bits.
+
+- Subtraction (`numbers-ops`): a - b for a in [1, 2) and b 1 to 22 octaves smaller, both with every mantissa bit
+  varied, 72 cases: always the exact difference cut toward zero. With b 23 to 25 octaves smaller, a. a - b for b 1, 2,
+  3, 5, 100 and 2^23 - 1 float steps under a: exact. Additions of the same 96 pairs: the exact sum cut toward zero.
+- Signed zeros (`numbers-fine`): `0 - 0`, `-0 - 0`, `0 + -0` and `-0 + -0` are -0. `0/0` and `-0/-0` are 1, `-0/0` and
+  `0/-0` are +0, as are `0/1`, `-0/1`, `0/-1`, `-0/-1` and every product with a zero. `1/-0` and `-1/0` are -2^127.
+  2^-149 / 0 and a subnormal (`00400000`) / 1 are 0; 1 / `00400000` is `7eaaaaab` (the subnormal read as 1.5 * 2^-127).
+- The range's ends (`numbers-ops`): `MaxValue + MaxValue` is `7fffffff`, `2^127 + 2^127` `7f800000`, `2^-126 -
+  (2^-126 + 2^-149)` `f5000000` and its negative the same, `2^-125 - (2^-126 + 2^-149)` `007ffffe`, `inf + 1` inf,
+  `inf + -inf` 0, `inf + inf` -0. Products: `2^127 * 2` `7f800000`, `* 4` `80000000`, `* 8` and up 0; `1.5 * 2^127 *
+  6` `80900000`, `* 12` 0; `-2^127 * 4` `80000000`; `2^-126 * 0.99999994` 0, `* 1.0000001` `00800001`; `2^-125 * 0.5`
+  `00800000`. Quotients: `2^127 / 0.5` `7f800000`, `/ 0.25` `80000000`, `/ 0.125` 0; `MaxValue / 0.99999994`
+  `7f800000`; `2 / 0` `7f800000`, `4 / 0` `80000000`, `8 / 0` 0, `0.5 / 0` `7e800000`.
+- Division (`numbers-div`, `numbers-fine`): 1/d for the 1024 divisors 1 + k/1024 is `floor(2^47 / (m - 1))` of the
+  divisor's mantissa m, each one (1/1 is 1). Between them, by the 312 random divisors and the runs of 1 + j * 2^-16
+  and 1 + j * 2^-23: close to a straight line to the next, a step up from below, at most 5 steps above the exact
+  reciprocal near 1 and 0.5 near 2. n/d is n times that reciprocal: 240 of the 244 grid quotients equal n times the
+  game's 1/d.
+- `math.sqrt` (`numbers-sqrt`, `numbers-fine`), over 1 + k/512, 2 + k/128, 4 + k/64 and 260 random mantissas, and every
+  float from 1 to 1 + 263 steps: the root is the same over runs of inputs (1 for inputs up to 1 + 18 steps, then
+  `3f8000b5` up to 1 + 263 steps and beyond) and steps by 2.16e-5, and the error depends on the mantissa only, the
+  same in [1, 2), [2, 4) and [4, 8). Every value is one more than the integer root of the mantissa times 2^8, mapped to
+  1 + 46341 (r - 46341) / 2^31, times `3fb504f3` for an odd exponent.
+- `math.sin` and `math.cos` (`numbers-trig`, `numbers-fine-2`), over k/64 for k -64 to 447, 2^-1 to 2^-40, k * 2^-14,
+  40 large inputs, and runs of j * 2^-20, 1 + j * 2^-20 and 0.5 + j * 2^-21: the sine of j * 2^-20 stays the same over
+  runs of six or seven inputs (0, then 12918, 25836, 38755, ... in 2^-31), a step of 2^-20 turns. The angle is x times
+  `3e22f983` in the game's arithmetic, cut toward zero to 2^-20 turns; the sine is a table of sin(pi k / 2048) in 2^-31
+  (cut), each 256 steps of the turn between two values on a straight line divided into 255, negated past half a turn,
+  the cosine a quarter turn on. sin(pi) is 2^-31 and sin(2 pi) -2^-31 (the table's last is 1); cos(0) is 1 - 2^-24.
+  `sin(-x)` isn't `-sin(x)`, as the angle is cut toward zero. 1e6 is 0.921875 turns past whole ones, so its sine is
+  -0.4714. `math.tan` is the sine over the cosine in the game's division.
+- `math.rad(x)` is `x * pi / 180` and `math.deg(x)` `x * 180 / pi` in the game's arithmetic, all 130 measured
+  (`numbers-functions`): `math.deg(pi)` is 180 and `math.deg(1)` `42652ee3`.
+- `math.asin` of 1.0000001, 2, 5e9 and MaxValue is pi/2 (`3fc90fdb`), of their negatives -pi/2; `math.acos` of them 0
+  and pi. `math.atan(0, 0)` is pi/2, `math.atan(0, x)` pi for x below 0 and 0 above, `math.atan(y, 0)` +-pi/2.
+  `math.atan` near 0 is x (1 - 2^-20) (`377ffff0` for 2^-16).
+- `math.exp` (`numbers-functions`, `numbers-fine-2`): exp(-x) is 1 over exp(x) in the game's division (k/16, k 1 to
+  160: 135 of 160 to the bit, the rest a step off as the division model is); `exp(-103)`, `-104` and `-110` are 2^127,
+  `exp(88)` `7ef881f1`, `exp(88.7228)` `7f7fff35`, `exp(89)` `7fa8e0dd` (packed past the range), `exp(100)` 0. Over
+  1 + j * 2^-20, exp steps by 11 float steps but every 8th by 10 (a slope of 87/8), and is 1.4 to 2.4 steps low.
+- `math.log`: right near 1 (`log(1 + 2^-16)` is `377fff80`), but off from 1.5 up: `log(1.5 + j * 2^-20)` about 5e-7
+  low, `log(3)` 5, `log(100)` 3, `log(1000)` 41 (6.9077358), `log(1e6)` 16, `log(MaxValue)` 4. `log(0)` and `log(-0)`
+  are -88.0296860 (`c2b00f33`, 2^-127's), `log(-1)` 0. `math.log(x, 10)` is `log10`, so `math.log(1000, 10)` 2.99999189.
+- `^` (`numbers-functions`, 13 bases by 11 powers): a whole power from 1 up is exact as far as squaring as it goes in the
+  game's arithmetic gives (`1000^10` `7149f2c9`, `(-8)^3` -512, `(-2)^3` -8, `25^10` `56ad78ea`); any other goes through
+  exp and log, the sign dropped (`(-8)^-1` 0.125000045, `(-8)^0.5` 2.82842636, `(-8)^(1/3)` 1.99999964, `2^-1`
+  0.500000119, `0.25^-2` 15.9999933); 0 to any power but 0 is 0, `x^0` 1.
+- `pairs` (`string-order`): 24 keys of 8, 14, 22, 30, 38 and 60 letters, set in order, came in an order that, with
+  `lua-config`'s 20 keys, only Lua 5.3.6's string hash and table code with the seed `0x1c46318e` give, of all 2^32.
+- Timers (`timers-2`): read in the instant they were started, a 2 s timer's elapsed time is 2^-23 and its remaining
+  time 2 - 2^-23, a 3600 s timer's elapsed 2^-12 and a 100000 s timer's 2^-7: each one float step of its timeout. At
+  each of 96 expiries of a 0.01 s periodic timer started with them, the 2 s timer's elapsed and remaining time add up
+  to 2, and the elapsed time is 0.01 times the count but for a drift of up to 2.2e-7 (exactly 0.25 at the 25th);
+  the 3600 s timer reads a step past 0.25 at the 25th. At each whole second up to 6 the 3600 and 100000 s timers read a
+  float step past it. Due at 2.0: a1 (started at 0), a2 (every 1 s from 0, its second), a3 (at 0, after a2), a4 (at
+  1.0 for 1 s) and a5 (at 1.5 for 0.5 s) ran in that order; due at 4.0: b1 (at 0), b4 (at 0, after b3), b2 (at 0,
+  paused and resumed at 1.0), b3 (at 0 for 3 s, paused at 1.0 and resumed at 2.0), b5 (at 3.0); due at 6.0: c2, c3 (at
+  0), c1 (at 0, started again at 3.0 for 3 s).
+- A condition's place taken twice (`condition-places`): c1 destroyed and taken by c2, c2 destroyed and taken by c3:
+  the triggers holding c1, c2 and c3 each ran c3; destroying the stale c1 freed the place (all three ran nothing and
+  failed), the next condition c4 took it (all three ran c4), destroying the stale c2 freed it again and c5 took it.
+  `And(nil, nil)`, `Or(nil, nil)`, `Not(nil)`, `Condition(nil)` and `Filter(nil)` made after a destroy took no place;
+  the next `Condition` did.
