@@ -2,7 +2,7 @@ namespace MirrorImaged.Natives;
 
 // A Convert native gives the handle standing for a value of its type: made once per type and value, so the same value
 // gives the same handle and Lua's == holds, as the facts measure for player colours, races and the damage natives'
-// types. Its id is the value, and it takes none of the game's ids (decisions D51). Not measured: the others, and a
+// types. Its id is the value, and it takes none of the game's ids (decisions D63). Not measured: the others, and a
 // value common.j doesn't name.
 public sealed partial class GameNatives
 {

@@ -7,7 +7,7 @@ using War3Net.CodeAnalysis.Transpilers;
 
 namespace MirrorImaged;
 
-// The installed game's blizzard.j, turned into Lua by War3Net's transpiler and cached (decisions D52, D53).
+// The installed game's blizzard.j, turned into Lua by War3Net's transpiler and cached (decisions D64, D65).
 static class Blizzard
 {
     const string CommonJ = "War3.w3mod:scripts/common.j", BlizzardJ = "War3.w3mod:scripts/blizzard.j";

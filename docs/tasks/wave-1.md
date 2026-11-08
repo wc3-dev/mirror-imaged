@@ -4,7 +4,7 @@ Plan sections: 4 (A1, A2, A6), 5 (script path, time and randomness), 6 (script h
 Needs wave 0. The facts' sections named below are in `C:\Users\mdlsvensson\Repo\wc3-cs\docs\game-facts.md`; every
 measured case there becomes a test, and a native it measures is Exact.
 
-Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-7 last.
+Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-8 after W1-5; W1-7 last.
 
 ## W1-1 The game's globals and `blizzard.j`
 
@@ -50,6 +50,21 @@ Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-7 last.
 
 - Handle ids and `GetHandleId`, `tostring` of a handle naming the declared type, argument type errors on a handle of
   another declared type (facts, "Handles and identity"); a Lua error's message starting `war3map.lua:N: `.
+
+## W1-8 Probes compared with the game
+
+Needs W1-5 (the probes write through Preload) and W0-4's runner.
+
+- One command or test that runs a probe in the game (W0-4's runner, from the PowerShell tool) and in MirrorImaged,
+  and compares their lines; a difference names the probe, the line and both values.
+- Turn the measured cases of the facts' "Lua runtime" section that W0-3 left Close into probes and settle them: the
+  C89 question (`math.log(8, 2)`, `math.log(3, 2)`, `0x1.0000011p0`, `%a`, `os.date('%F')`), division (`1/d` over many
+  divisor mantissas, an `n/d` grid), `sqrt` over [1, 4), `sin`/`cos`/`tan` in radians, `exp`, `log`, `atan`, `pow`,
+  subtractions that cancel bits, products near the range's ends, integer-to-float conversion, `pairs` order over a
+  fixed set of string keys, which Lua 5.2 compatibility functions exist, and whether `load` accepts bytecode. Update
+  the model where the probes show it wrong, and the levels.
+- Also probe the order of timers due in the same step, and `TimerGetElapsed` at 3600 s (D45).
+- This closes wave 0's "one probe matches the game".
 
 ## W1-7 JASS maps
 

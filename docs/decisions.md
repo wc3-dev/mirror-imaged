@@ -267,10 +267,71 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   metatable's `__index`, storing nothing. `FourCC` and `__jarray` are Lua, so `FourCC` reads the bytes, which a Lua
   string read in C# loses when it isn't UTF-8. The four maps in `Maps\lua-reference` load their scripts and stop in
   `config` at `SetMapName`. After W0-5: 1 Exact (`GetLocalPlayer`), 14 Close, 2 Recorded, 1,818 Missing.
+- **D50.** Probe maps are built with the upstream `War3Net.Build.Core` 6.1.2 from nuget.org, the package of
+  `War3Net.Build` that holds `Map`, `MapBuilder` and `MapFactory`, all the builder uses. `War3Net.Build` itself adds
+  only the JASS script builder and the transpiler, and their packages. No fork is needed. (W0-4)
+- **D51.** A probe map is War3Net's `MapFactory` map at 32 by 32 (info format 28 as World Editor 1.31 wrote it, flat
+  ground, the melee flag cleared, one force holding player 1), with `config` and `main` as World Editor writes them for
+  one user player, and a black 256x256 `war3mapMap.tga` made in code, since the game closes a map with no minimap image
+  (facts) and no game file may be in git. No pathing, shadow or doodad file: the game loads it without. (W0-4)
+- **D52.** A probe is plain Lua that calls `out(text)` per line and `done()` at the end. It runs in the first
+  zero-second timer, through `guard(f)`, which runs `f` in `pcall` and on an error adds the line
+  `error: <message>` (line breaks made spaces, cut to fit as below) and calls `done()`; a probe passes its own timer
+  functions through `guard` too. These rules are tested by running a probe map's script in MirrorImaged's Lua with stand-ins for the natives.
+  `out` refuses, with a Lua error, a line over 253 bytes or with a line break, the most one `Preload` call keeps whole
+  as one line of the file (facts "Files and Preload"); a backslash counts two, as the game writes it doubled (whether
+  the game's cut counts it once or twice is not measured, so this is the safe side). `done()` writes the lines to
+  `CustomMapData\MirrorImaged\<name>.pld`, each as `")\n` + line + `\n//` (as `docs/tools/gate.ps1` reads them), then
+  ends the game. A name is letters, digits and dashes, as it is a file name and a Lua string. (W0-4)
+- **D53.** The runner is in `tests/MirrorImaged.GameTests`, with its tests, since what uses it is tests that compare
+  with the game; the builder and the probes are in `probes/`. (W0-4)
+- **D54.** The runner always puts the game on a hidden desktop: there it runs at full speed and shows nothing (facts).
+  Minimised is ruled out (game time stops), and a normal window, which also runs, is not needed, so there is no choice
+  to make. The desktop is asked for `DESKTOP_READOBJECTS`, to list its windows, and `DESKTOP_CREATEWINDOW`, without
+  which `CreateDesktop` fails with error 8 (seen 11-08). (W0-4)
+- **D55.** Every probe map writes `CustomMapData\MirrorImaged\loaded.pld` at the end of `main` and `started.pld` in its
+  first zero-second timer, before the probe. While `loaded.pld` is there and `started.pld` isn't, the runner posts a
+  space key to the game's window every 3 s (facts: the loading screen waits; a posted key passes it). These marks, not
+  `War3Log.txt`, say the map loaded, because the game holds the log back while it runs and loses it when killed
+  (facts). A run with no lines is `NoOutput` when the map loaded; `AtLogin` when the game still ran but never logged in
+  (it rewrites `War3Preferences.txt` once it has, facts), with its detail starting "needs Sven: ..." and saying what is
+  known: it was seen every time the runner ran under Claude Code's Bash tool and never from PowerShell (facts); and
+  `Queued` otherwise. What the game shows can't be captured on the hidden desktop (facts), so `AtLogin` is told from the
+  preferences file, not from a picture. (W0-4)
+- **D56.** The game starts suspended in a job object of its own with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, and is
+  resumed once in it, so everything it starts is in the job (measured: no breakaway). The runner ends the job, never
+  closing the game's window, which opens the quit dialog; when the test host ends, however it ends, Windows closes the
+  job and the game goes with it. It stops nothing outside the job. (W0-4)
+- **D57.** Runs are one at a time on a computer: a run holds the named mutex `MirrorImaged.GameRunner` for its whole
+  length, a second waits for it up to 5 minutes (well inside the 10 after which the test host's blame collector ends a
+  run) and then fails saying so, and a run refuses to start while any Warcraft III is running, as it couldn't tell that
+  game's files from its own. Two runs at once made one fail (facts).
+  A test that starts a fake `Warcraft III.exe` holds the mutex while it runs. The run's detail names the installed
+  build and warns when it isn't 3.0.1.24371, the version the facts were measured on. (W0-4)
+- **D58.** Built maps go to `%LOCALAPPDATA%\MirrorImaged\maps`, as `<name>-<8 random hex digits>.w3x`, new each run and
+  deleted after it, since the game loads no map whose path is longer than 173 characters (facts) and the test assembly's
+  folder is long already; a longer path is refused before the run. (W0-4)
+- **D59.** The runner never writes over any of Sven's files and puts nothing back. The one file of his whose content a
+  run changes is the account's `LastReplay.w3g`, which the probe's game replaces (facts). Every launch also rewrites
+  `Documents\Warcraft III\Logs\War3Log.txt` (the game does it), which the workspace's `docs/tools/gate.ps1` reads to
+  confirm Sven's own test-map runs, so a run between his test map and that read loses it. Before a run each account's
+  `LastReplay.w3g` whose SHA-256 isn't one a probe run made is copied to `Replays\Saved by MirrorImaged\LastReplay
+  <its write time, yyyy-MM-dd HHmmss>.w3g`, or with the first 8 digits of its hash added when another replay holds that
+  name; never over a file, and not again when a copy with its content is there. After the run the hash of each
+  `LastReplay.w3g` that changed is added to `%LOCALAPPDATA%\MirrorImaged\probe-replays.txt` (hexadecimal, one a line),
+  unless a Warcraft III outside the run's job was seen during it (Sven's own game, or World Editor's Test Map), in which
+  case the replay may be his and the next run saves it. This replaced a keep-and-restore of five files, which could put
+  a stale copy over a newer file. (W0-4)
+- **D60.** A `Needs=Game` test whose probe gives no lines fails with the run's detail, rather than passing or being
+  skipped: xUnit 2 can't skip once a test runs, and a pass would hide that nothing was checked. (W0-4)
+- **D61.** The hub (one game kept open, handed each probe through a Preload request and `ChangeLevel`, each probe going
+  back to a hub built for the next request) was built, tried and measured not to work: the hub read its request, but
+  `ChangeLevel` from a `-loadfile` game does nothing or crashes the game (facts). It is removed; with no login needed, a
+  launch per probe costs about 15 s. (W0-4)
 
 ### The game's globals and blizzard.j (W1-1)
 
-- **D50. common.j's globals are generated with the natives,** as `GameNatives.Globals()` in `Generated/Globals.g.cs`:
+- **D62. common.j's globals are generated with the natives,** as `GameNatives.Globals()` in `Generated/Globals.g.cs`:
   each global's name and its value as C#, sorted by name. A value is an integer (any of JASS's forms, and the products
   such as `MAP_LOCK_SPEED`'s `8192*2`, written out), a boolean, or the call of the native common.j calls, with integer
   arguments (`ConvertPlayerColor(0)`, `GetPlayerNeutralPassive()`), so each handle is made by its native as the game
@@ -278,7 +339,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   1,872 globals, all constants: 1,858 made by the 88 `Convert*` natives, 10 integers, 2 booleans and the two neutral
   players. A run sets them as Lua globals in that order, after the natives and before the game's Lua functions and
   blizzard.j. Not measured: whether the game's are plain globals a script can change, as they are here.
-- **D51. A Convert native gives the handle standing for its value:** one object per type and value, made the first time
+- **D63. A Convert native gives the handle standing for its value:** one object per type and value, made the first time
   and kept, whose id is the value. So the same value gives the same userdata (D41) and `==` holds, the same value as
   another type is another handle (`ConvertRace(0) ~= ConvertPlayerColor(0)`), and no game id is taken, so the agents'
   ids are as before (D47). A handle Lua passes back is found by its declared type and id (`GameNatives.Handle`): a
@@ -287,7 +348,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   `ConvertWeaponType` (the Moonwell.Damage gate's types, made once and compared with `==`); the other 83 Close. Not
   measured: `GetHandleId` of one (said to be the value; W1-6), and a value common.j doesn't name, which gives a handle
   like any other.
-- **D52. blizzard.j is transpiled at run time** from the install's `War3.w3mod:scripts/blizzard.j` (the root spells it
+- **D64. blizzard.j is transpiled at run time** from the install's `War3.w3mod:scripts/blizzard.j` (the root spells it
   `Scripts/Blizzard.j`; its lookup ignores case, D24), with `common.j` registered first for the natives' return types,
   by the upstream `War3Net.CodeAnalysis.Transpilers` 6.1.1 from nuget.org, rendered by its CSharp.lua with the default
   settings. 6.1.1, not 6.0.2: 6.0.2 brings `War3Net.CSharpLua` 2.0.3, whose `NuGet.Packaging` 5.11.6 and
@@ -296,24 +357,24 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   one (`SubStringBJ`'s parameter `end`) gets `_lua` after it, since War3Net writes it as it is and Lua can't load it
   (`docs/upstream.md`), and JASS refuses `end_`. The Lua runs as the chunk `blizzard.lua`, after common.j's globals and
   the game's Lua functions (its globals use `FourCC` and `__jarray`), before `war3map.lua`; an error in a BJ function
-  reads `blizzard.lua:N:`, N the line in the cached file (D53); the game's name for it isn't measured. Its globals make
-  4 timers and 3 groups, the handles after the 28 players, and call the slot natives (D54); none of its functions runs
+  reads `blizzard.lua:N:`, N the line in the cached file (D65); the game's name for it isn't measured. Its globals make
+  4 timers and 3 groups, the handles after the 28 players, and call the slot natives (D66); none of its functions runs
   until a map calls one. They call the natives as globals, looked up at each call, so a native a script replaces is
   what they call (facts). Without an install, `Simulation.Load` throws a `DirectoryNotFoundException` ("A run needs
   blizzard.j from an installed Warcraft III, and there is none in ..."), after reading the map, so a missing map is
   still reported as such. Every test that runs a map is therefore `Needs=Game`, and CI runs none.
-- **D53. The transpiled Lua is cached:** a transpile takes about 1.6 s in a new process (0.35 s opening the storage, the
+- **D65. The transpiled Lua is cached:** a transpile takes about 1.6 s in a new process (0.35 s opening the storage, the
   rest parsing and transpiling; Release build). It is kept once a process, and between processes in
   `%LOCALAPPDATA%\MirrorImaged\cache\blizzard-<the game's build key>-<MirrorImaged.dll's module version id>.lua`. A
   deterministic build's module version id changes with its code and its references, so a change to the transpiling
   makes a new file; any other change to MirrorImaged.dll transpiles once more. A file is written whole under another
   name and moved in place, so no process reads half of one; writing one removes the other `blizzard-*` files there, and
   a cache that can't be read or written is passed over. A `mirror run` of a small map then takes about 0.2 s.
-- **D54. The slot natives:** `GetBJMaxPlayers` and `GetPlayerNeutralAggressive` 24, `GetBJPlayerNeutralVictim` 25,
+- **D66. The slot natives:** `GetBJMaxPlayers` and `GetPlayerNeutralAggressive` 24, `GetBJPlayerNeutralVictim` 25,
   `GetBJPlayerNeutralExtra` 26, `GetPlayerNeutralPassive` 27 (Exact: facts, a new item belongs to neutral passive, slot
   27) and `GetBJMaxPlayerSlots` 28; the rest Close, the values the game has given since it had 24 players, not
   measured here. `CreateGroup` makes a group with the next id, Close; what groups hold comes with the units (wave 2).
-- **D55. Left for W1-7,** whose JASS rules reach blizzard.j too, as it goes through the same transpiler: a whole number
+- **D67. Left for W1-7,** whose JASS rules reach blizzard.j too, as it goes through the same transpiler: a whole number
   given to a real stays a Lua integer (`bj_MELEE_MINE_SEARCH_RADIUS` is the integer 2000; `docs/upstream.md`), and
   JASS's integer division is Lua's `//`, which floors where JASS cuts toward zero. What the game's own Lua gives for
   these is not measured. After W1-1: 7 Exact, 103 Close, 2 Recorded, 1,723 Missing.
