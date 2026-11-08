@@ -109,23 +109,28 @@ public sealed class GameTests
         Assert.Equal(Draw(1), Enumerable.Range(0, 20).Select(_ => _game.RandomInt(0, 1000000)));
     }
 
+    // docs/facts.md, "Strings, numbers and hashtables": over 1,000 draws GetRandomInt(5, 1) gave 5 to 9 and
+    // GetRandomReal(2, 1) 2.0016 to 2.9992
     [Fact]
-    public void Random_integers_take_in_both_bounds_given_in_either_order()
+    public void Random_integers_go_from_the_first_bound_up_by_the_bounds_distance()
     {
-        var seen = Enumerable.Range(0, 1000).Select(i => i % 2 == 0 ? _game.RandomInt(1, 3) : _game.RandomInt(3, 1)).ToHashSet();
+        var up = Enumerable.Range(0, 1000).Select(_ => _game.RandomInt(1, 3)).ToHashSet();
+        var down = Enumerable.Range(0, 1000).Select(_ => _game.RandomInt(3, 1)).ToHashSet();
 
-        Assert.Equal([1, 2, 3], seen.Order());
+        Assert.Equal([1, 2, 3], up.Order());
+        Assert.Equal([3, 4, 5], down.Order());
         Assert.Equal(5, _game.RandomInt(5, 5));
         _ = _game.RandomInt(int.MinValue, int.MaxValue);
     }
 
     [Fact]
-    public void Random_reals_stay_between_the_bounds()
+    public void Random_reals_go_from_the_first_bound_up_by_the_bounds_distance()
     {
         for (int i = 0; i < 1000; i++)
         {
             Assert.InRange(_game.RandomReal(0, 1), 0f, 0.99999994f);
             Assert.InRange(_game.RandomReal(-5, 5), -5f, 5f);
+            Assert.InRange(_game.RandomReal(2, 1), 2f, 3f);
         }
     }
 

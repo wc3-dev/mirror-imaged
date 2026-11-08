@@ -13,9 +13,6 @@ public sealed partial class GameNatives
     public string? AbilityId2String(int abilityId) => throw new MissingNativeException("AbilityId2String");
 
     [Native(Level.Missing)]
-    public float Acos(float x) => throw new MissingNativeException("Acos");
-
-    [Native(Level.Missing)]
     public void AddCameraBlocker(rect? where) => throw new MissingNativeException("AddCameraBlocker");
 
     [Native(Level.Missing)]
@@ -88,15 +85,6 @@ public sealed partial class GameNatives
     public boolexpr? And(boolexpr? operandA, boolexpr? operandB) => throw new MissingNativeException("And");
 
     [Native(Level.Missing)]
-    public float Asin(float y) => throw new MissingNativeException("Asin");
-
-    [Native(Level.Missing)]
-    public float Atan(float x) => throw new MissingNativeException("Atan");
-
-    [Native(Level.Missing)]
-    public float Atan2(float y, float x) => throw new MissingNativeException("Atan2");
-
-    [Native(Level.Missing)]
     public void AttachSoundToUnit(sound? soundHandle, unit? whichUnit) => throw new MissingNativeException("AttachSoundToUnit");
 
     [Native(Level.Missing)]
@@ -128,15 +116,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void BlzAdjustUnitAbilityCooldownRemaining(unit? whichUnit, int abilId, float duration) => throw new MissingNativeException("BlzAdjustUnitAbilityCooldownRemaining");
-
-    [Native(Level.Missing)]
-    public int BlzBitAnd(int x, int y) => throw new MissingNativeException("BlzBitAnd");
-
-    [Native(Level.Missing)]
-    public int BlzBitOr(int x, int y) => throw new MissingNativeException("BlzBitOr");
-
-    [Native(Level.Missing)]
-    public int BlzBitXor(int x, int y) => throw new MissingNativeException("BlzBitXor");
 
     [Native(Level.Missing)]
     public int BlzCameraGetCameraType() => throw new MissingNativeException("BlzCameraGetCameraType");
@@ -1474,9 +1453,6 @@ public sealed partial class GameNatives
     public bool CopySaveGame(string? sourceSaveName, string? destSaveName) => throw new MissingNativeException("CopySaveGame");
 
     [Native(Level.Missing)]
-    public float Cos(float radians) => throw new MissingNativeException("Cos");
-
-    [Native(Level.Missing)]
     public unit? CreateBlightedGoldmine(player? id, float x, float y, float face) => throw new MissingNativeException("CreateBlightedGoldmine");
 
     [Native(Level.Missing)]
@@ -1601,9 +1577,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void DefineStartLocationLoc(int whichStartLoc, location? whichLocation) => throw new MissingNativeException("DefineStartLocationLoc");
-
-    [Native(Level.Missing)]
-    public float Deg2Rad(float degrees) => throw new MissingNativeException("Deg2Rad");
 
     [Native(Level.Missing)]
     public void DestroyBoolExpr(boolexpr? e) => throw new MissingNativeException("DestroyBoolExpr");
@@ -1774,13 +1747,7 @@ public sealed partial class GameNatives
     public void FlashQuestDialogButton() => throw new MissingNativeException("FlashQuestDialogButton");
 
     [Native(Level.Missing)]
-    public void FlushChildHashtable(hashtable? table, int parentKey) => throw new MissingNativeException("FlushChildHashtable");
-
-    [Native(Level.Missing)]
     public void FlushGameCache(gamecache? cache) => throw new MissingNativeException("FlushGameCache");
-
-    [Native(Level.Missing)]
-    public void FlushParentHashtable(hashtable? table) => throw new MissingNativeException("FlushParentHashtable");
 
     [Native(Level.Missing)]
     public void FlushStoredBoolean(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("FlushStoredBoolean");
@@ -2527,21 +2494,6 @@ public sealed partial class GameNatives
     public bool GroupTargetOrderById(group? whichGroup, int order, widget? targetWidget) => throw new MissingNativeException("GroupTargetOrderById");
 
     [Native(Level.Missing)]
-    public bool HaveSavedBoolean(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("HaveSavedBoolean");
-
-    [Native(Level.Missing)]
-    public bool HaveSavedHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("HaveSavedHandle");
-
-    [Native(Level.Missing)]
-    public bool HaveSavedInteger(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("HaveSavedInteger");
-
-    [Native(Level.Missing)]
-    public bool HaveSavedReal(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("HaveSavedReal");
-
-    [Native(Level.Missing)]
-    public bool HaveSavedString(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("HaveSavedString");
-
-    [Native(Level.Missing)]
     public bool HaveStoredBoolean(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("HaveStoredBoolean");
 
     [Native(Level.Missing)]
@@ -2560,19 +2512,10 @@ public sealed partial class GameNatives
     public bool HeroGlowIsAllowedOnUnit(unit? whichUnit) => throw new MissingNativeException("HeroGlowIsAllowedOnUnit");
 
     [Native(Level.Missing)]
-    public float I2R(int i) => throw new MissingNativeException("I2R");
-
-    [Native(Level.Missing)]
-    public string? I2S(int i) => throw new MissingNativeException("I2S");
-
-    [Native(Level.Missing)]
     public int IncUnitAbilityLevel(unit? whichUnit, int abilcode) => throw new MissingNativeException("IncUnitAbilityLevel");
 
     [Native(Level.Missing)]
     public gamecache? InitGameCache(string? campaignFile) => throw new MissingNativeException("InitGameCache");
-
-    [Native(Level.Missing)]
-    public hashtable? InitHashtable() => throw new MissingNativeException("InitHashtable");
 
     [Native(Level.Missing)]
     public bool IsCineFilterDisplayed() => throw new MissingNativeException("IsCineFilterDisplayed");
@@ -2908,142 +2851,10 @@ public sealed partial class GameNatives
     public void LeaderboardSortItemsByValue(leaderboard? lb, bool ascending) => throw new MissingNativeException("LeaderboardSortItemsByValue");
 
     [Native(Level.Missing)]
-    public ability? LoadAbilityHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadAbilityHandle");
-
-    [Native(Level.Missing)]
-    public bool LoadBoolean(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadBoolean");
-
-    [Native(Level.Missing)]
-    public boolexpr? LoadBooleanExprHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadBooleanExprHandle");
-
-    [Native(Level.Missing)]
-    public button? LoadButtonHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadButtonHandle");
-
-    [Native(Level.Missing)]
-    public defeatcondition? LoadDefeatConditionHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadDefeatConditionHandle");
-
-    [Native(Level.Missing)]
-    public destructable? LoadDestructableHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadDestructableHandle");
-
-    [Native(Level.Missing)]
-    public dialog? LoadDialogHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadDialogHandle");
-
-    [Native(Level.Missing)]
-    public effect? LoadEffectHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadEffectHandle");
-
-    [Native(Level.Missing)]
-    public fogmodifier? LoadFogModifierHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadFogModifierHandle");
-
-    [Native(Level.Missing)]
-    public fogstate? LoadFogStateHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadFogStateHandle");
-
-    [Native(Level.Missing)]
-    public force? LoadForceHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadForceHandle");
-
-    [Native(Level.Missing)]
-    public framehandle? LoadFrameHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadFrameHandle");
-
-    [Native(Level.Missing)]
     public void LoadGame(string? saveFileName, bool doScoreScreen) => throw new MissingNativeException("LoadGame");
 
     [Native(Level.Missing)]
-    public group? LoadGroupHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadGroupHandle");
-
-    [Native(Level.Missing)]
-    public hashtable? LoadHashtableHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadHashtableHandle");
-
-    [Native(Level.Missing)]
-    public image? LoadImageHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadImageHandle");
-
-    [Native(Level.Missing)]
-    public int LoadInteger(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadInteger");
-
-    [Native(Level.Missing)]
-    public item? LoadItemHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadItemHandle");
-
-    [Native(Level.Missing)]
-    public itempool? LoadItemPoolHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadItemPoolHandle");
-
-    [Native(Level.Missing)]
-    public leaderboard? LoadLeaderboardHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadLeaderboardHandle");
-
-    [Native(Level.Missing)]
-    public lightning? LoadLightningHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadLightningHandle");
-
-    [Native(Level.Missing)]
-    public location? LoadLocationHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadLocationHandle");
-
-    [Native(Level.Missing)]
-    public multiboard? LoadMultiboardHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadMultiboardHandle");
-
-    [Native(Level.Missing)]
-    public multiboarditem? LoadMultiboardItemHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadMultiboardItemHandle");
-
-    [Native(Level.Missing)]
-    public player? LoadPlayerHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadPlayerHandle");
-
-    [Native(Level.Missing)]
-    public quest? LoadQuestHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadQuestHandle");
-
-    [Native(Level.Missing)]
-    public questitem? LoadQuestItemHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadQuestItemHandle");
-
-    [Native(Level.Missing)]
-    public float LoadReal(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadReal");
-
-    [Native(Level.Missing)]
-    public rect? LoadRectHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadRectHandle");
-
-    [Native(Level.Missing)]
-    public region? LoadRegionHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadRegionHandle");
-
-    [Native(Level.Missing)]
-    public sound? LoadSoundHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadSoundHandle");
-
-    [Native(Level.Missing)]
-    public string? LoadStr(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadStr");
-
-    [Native(Level.Missing)]
-    public texttag? LoadTextTagHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadTextTagHandle");
-
-    [Native(Level.Missing)]
-    public timerdialog? LoadTimerDialogHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadTimerDialogHandle");
-
-    [Native(Level.Missing)]
-    public timer? LoadTimerHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadTimerHandle");
-
-    [Native(Level.Missing)]
-    public trackable? LoadTrackableHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadTrackableHandle");
-
-    [Native(Level.Missing)]
-    public triggeraction? LoadTriggerActionHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadTriggerActionHandle");
-
-    [Native(Level.Missing)]
-    public triggercondition? LoadTriggerConditionHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadTriggerConditionHandle");
-
-    [Native(Level.Missing)]
-    public @event? LoadTriggerEventHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadTriggerEventHandle");
-
-    [Native(Level.Missing)]
-    public trigger? LoadTriggerHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadTriggerHandle");
-
-    [Native(Level.Missing)]
-    public ubersplat? LoadUbersplatHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadUbersplatHandle");
-
-    [Native(Level.Missing)]
-    public unit? LoadUnitHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadUnitHandle");
-
-    [Native(Level.Missing)]
-    public unitpool? LoadUnitPoolHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadUnitPoolHandle");
-
-    [Native(Level.Missing)]
-    public widget? LoadWidgetHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("LoadWidgetHandle");
-
-    [Native(Level.Missing)]
     public location? Location(float x, float y) => throw new MissingNativeException("Location");
-
-    [Native(Level.Missing)]
-    public int MathRound(float r) => throw new MissingNativeException("MathRound");
 
     [Native(Level.Missing)]
     public bool MoveLightning(lightning? whichBolt, bool checkVisibility, float x1, float y1, float x2, float y2) => throw new MissingNativeException("MoveLightning");
@@ -3202,9 +3013,6 @@ public sealed partial class GameNatives
     public void PlayerSetLeaderboard(player? toPlayer, leaderboard? lb) => throw new MissingNativeException("PlayerSetLeaderboard");
 
     [Native(Level.Missing)]
-    public float Pow(float x, float power) => throw new MissingNativeException("Pow");
-
-    [Native(Level.Missing)]
     public void Preload(string? filename) => throw new MissingNativeException("Preload");
 
     [Native(Level.Missing)]
@@ -3269,18 +3077,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void QueueUnitAnimation(unit? whichUnit, string? whichAnimation) => throw new MissingNativeException("QueueUnitAnimation");
-
-    [Native(Level.Missing)]
-    public int R2I(float r) => throw new MissingNativeException("R2I");
-
-    [Native(Level.Missing)]
-    public string? R2S(float r) => throw new MissingNativeException("R2S");
-
-    [Native(Level.Missing)]
-    public string? R2SW(float r, int width, int precision) => throw new MissingNativeException("R2SW");
-
-    [Native(Level.Missing)]
-    public float Rad2Deg(float radians) => throw new MissingNativeException("Rad2Deg");
 
     [Native(Level.Missing)]
     public rect? Rect(float minx, float miny, float maxx, float maxy) => throw new MissingNativeException("Rect");
@@ -3349,21 +3145,6 @@ public sealed partial class GameNatives
     public bool RemoveSaveDirectory(string? sourceDirName) => throw new MissingNativeException("RemoveSaveDirectory");
 
     [Native(Level.Missing)]
-    public void RemoveSavedBoolean(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("RemoveSavedBoolean");
-
-    [Native(Level.Missing)]
-    public void RemoveSavedHandle(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("RemoveSavedHandle");
-
-    [Native(Level.Missing)]
-    public void RemoveSavedInteger(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("RemoveSavedInteger");
-
-    [Native(Level.Missing)]
-    public void RemoveSavedReal(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("RemoveSavedReal");
-
-    [Native(Level.Missing)]
-    public void RemoveSavedString(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("RemoveSavedString");
-
-    [Native(Level.Missing)]
     public void RemoveUnit(unit? whichUnit) => throw new MissingNativeException("RemoveUnit");
 
     [Native(Level.Missing)]
@@ -3409,51 +3190,6 @@ public sealed partial class GameNatives
     public bool ReviveHeroLoc(unit? whichHero, location? loc, bool doEyecandy) => throw new MissingNativeException("ReviveHeroLoc");
 
     [Native(Level.Missing)]
-    public int S2I(string? s) => throw new MissingNativeException("S2I");
-
-    [Native(Level.Missing)]
-    public float S2R(string? s) => throw new MissingNativeException("S2R");
-
-    [Native(Level.Missing)]
-    public bool SaveAbilityHandle(hashtable? table, int parentKey, int childKey, ability? whichAbility) => throw new MissingNativeException("SaveAbilityHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveAgentHandle(hashtable? table, int parentKey, int childKey, agent? whichAgent) => throw new MissingNativeException("SaveAgentHandle");
-
-    [Native(Level.Missing)]
-    public void SaveBoolean(hashtable? table, int parentKey, int childKey, bool value) => throw new MissingNativeException("SaveBoolean");
-
-    [Native(Level.Missing)]
-    public bool SaveBooleanExprHandle(hashtable? table, int parentKey, int childKey, boolexpr? whichBoolexpr) => throw new MissingNativeException("SaveBooleanExprHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveButtonHandle(hashtable? table, int parentKey, int childKey, button? whichButton) => throw new MissingNativeException("SaveButtonHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveDefeatConditionHandle(hashtable? table, int parentKey, int childKey, defeatcondition? whichDefeatcondition) => throw new MissingNativeException("SaveDefeatConditionHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveDestructableHandle(hashtable? table, int parentKey, int childKey, destructable? whichDestructable) => throw new MissingNativeException("SaveDestructableHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveDialogHandle(hashtable? table, int parentKey, int childKey, dialog? whichDialog) => throw new MissingNativeException("SaveDialogHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveEffectHandle(hashtable? table, int parentKey, int childKey, effect? whichEffect) => throw new MissingNativeException("SaveEffectHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveFogModifierHandle(hashtable? table, int parentKey, int childKey, fogmodifier? whichFogModifier) => throw new MissingNativeException("SaveFogModifierHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveFogStateHandle(hashtable? table, int parentKey, int childKey, fogstate? whichFogState) => throw new MissingNativeException("SaveFogStateHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveForceHandle(hashtable? table, int parentKey, int childKey, force? whichForce) => throw new MissingNativeException("SaveForceHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveFrameHandle(hashtable? table, int parentKey, int childKey, framehandle? whichFrameHandle) => throw new MissingNativeException("SaveFrameHandle");
-
-    [Native(Level.Missing)]
     public void SaveGame(string? saveFileName) => throw new MissingNativeException("SaveGame");
 
     [Native(Level.Missing)]
@@ -3464,99 +3200,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public bool SaveGameExists(string? saveName) => throw new MissingNativeException("SaveGameExists");
-
-    [Native(Level.Missing)]
-    public bool SaveGroupHandle(hashtable? table, int parentKey, int childKey, group? whichGroup) => throw new MissingNativeException("SaveGroupHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveHashtableHandle(hashtable? table, int parentKey, int childKey, hashtable? whichHashtable) => throw new MissingNativeException("SaveHashtableHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveImageHandle(hashtable? table, int parentKey, int childKey, image? whichImage) => throw new MissingNativeException("SaveImageHandle");
-
-    [Native(Level.Missing)]
-    public void SaveInteger(hashtable? table, int parentKey, int childKey, int value) => throw new MissingNativeException("SaveInteger");
-
-    [Native(Level.Missing)]
-    public bool SaveItemHandle(hashtable? table, int parentKey, int childKey, item? whichItem) => throw new MissingNativeException("SaveItemHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveItemPoolHandle(hashtable? table, int parentKey, int childKey, itempool? whichItempool) => throw new MissingNativeException("SaveItemPoolHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveLeaderboardHandle(hashtable? table, int parentKey, int childKey, leaderboard? whichLeaderboard) => throw new MissingNativeException("SaveLeaderboardHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveLightningHandle(hashtable? table, int parentKey, int childKey, lightning? whichLightning) => throw new MissingNativeException("SaveLightningHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveLocationHandle(hashtable? table, int parentKey, int childKey, location? whichLocation) => throw new MissingNativeException("SaveLocationHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveMultiboardHandle(hashtable? table, int parentKey, int childKey, multiboard? whichMultiboard) => throw new MissingNativeException("SaveMultiboardHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveMultiboardItemHandle(hashtable? table, int parentKey, int childKey, multiboarditem? whichMultiboarditem) => throw new MissingNativeException("SaveMultiboardItemHandle");
-
-    [Native(Level.Missing)]
-    public bool SavePlayerHandle(hashtable? table, int parentKey, int childKey, player? whichPlayer) => throw new MissingNativeException("SavePlayerHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveQuestHandle(hashtable? table, int parentKey, int childKey, quest? whichQuest) => throw new MissingNativeException("SaveQuestHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveQuestItemHandle(hashtable? table, int parentKey, int childKey, questitem? whichQuestitem) => throw new MissingNativeException("SaveQuestItemHandle");
-
-    [Native(Level.Missing)]
-    public void SaveReal(hashtable? table, int parentKey, int childKey, float value) => throw new MissingNativeException("SaveReal");
-
-    [Native(Level.Missing)]
-    public bool SaveRectHandle(hashtable? table, int parentKey, int childKey, rect? whichRect) => throw new MissingNativeException("SaveRectHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveRegionHandle(hashtable? table, int parentKey, int childKey, region? whichRegion) => throw new MissingNativeException("SaveRegionHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveSoundHandle(hashtable? table, int parentKey, int childKey, sound? whichSound) => throw new MissingNativeException("SaveSoundHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveStr(hashtable? table, int parentKey, int childKey, string? value) => throw new MissingNativeException("SaveStr");
-
-    [Native(Level.Missing)]
-    public bool SaveTextTagHandle(hashtable? table, int parentKey, int childKey, texttag? whichTexttag) => throw new MissingNativeException("SaveTextTagHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveTimerDialogHandle(hashtable? table, int parentKey, int childKey, timerdialog? whichTimerdialog) => throw new MissingNativeException("SaveTimerDialogHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveTimerHandle(hashtable? table, int parentKey, int childKey, timer? whichTimer) => throw new MissingNativeException("SaveTimerHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveTrackableHandle(hashtable? table, int parentKey, int childKey, trackable? whichTrackable) => throw new MissingNativeException("SaveTrackableHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveTriggerActionHandle(hashtable? table, int parentKey, int childKey, triggeraction? whichTriggeraction) => throw new MissingNativeException("SaveTriggerActionHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveTriggerConditionHandle(hashtable? table, int parentKey, int childKey, triggercondition? whichTriggercondition) => throw new MissingNativeException("SaveTriggerConditionHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveTriggerEventHandle(hashtable? table, int parentKey, int childKey, @event? whichEvent) => throw new MissingNativeException("SaveTriggerEventHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveTriggerHandle(hashtable? table, int parentKey, int childKey, trigger? whichTrigger) => throw new MissingNativeException("SaveTriggerHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveUbersplatHandle(hashtable? table, int parentKey, int childKey, ubersplat? whichUbersplat) => throw new MissingNativeException("SaveUbersplatHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveUnitHandle(hashtable? table, int parentKey, int childKey, unit? whichUnit) => throw new MissingNativeException("SaveUnitHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveUnitPoolHandle(hashtable? table, int parentKey, int childKey, unitpool? whichUnitpool) => throw new MissingNativeException("SaveUnitPoolHandle");
-
-    [Native(Level.Missing)]
-    public bool SaveWidgetHandle(hashtable? table, int parentKey, int childKey, widget? whichWidget) => throw new MissingNativeException("SaveWidgetHandle");
 
     [Native(Level.Missing)]
     public void SelectHeroSkill(unit? whichHero, int abilcode) => throw new MissingNativeException("SelectHeroSkill");
@@ -4102,13 +3745,7 @@ public sealed partial class GameNatives
     public void ShowUnit(unit? whichUnit, bool show) => throw new MissingNativeException("ShowUnit");
 
     [Native(Level.Missing)]
-    public float Sin(float radians) => throw new MissingNativeException("Sin");
-
-    [Native(Level.Missing)]
     public string? SkinManagerGetLocalPath(string? key) => throw new MissingNativeException("SkinManagerGetLocalPath");
-
-    [Native(Level.Missing)]
-    public float SquareRoot(float x) => throw new MissingNativeException("SquareRoot");
 
     [Native(Level.Missing)]
     public void StartCampaignAI(player? num, string? script) => throw new MissingNativeException("StartCampaignAI");
@@ -4147,18 +3784,6 @@ public sealed partial class GameNatives
     public bool StoreUnit(gamecache? cache, string? missionKey, string? key, unit? whichUnit) => throw new MissingNativeException("StoreUnit");
 
     [Native(Level.Missing)]
-    public string? StringCase(string? source, bool upper) => throw new MissingNativeException("StringCase");
-
-    [Native(Level.Missing)]
-    public int StringHash(string? s) => throw new MissingNativeException("StringHash");
-
-    [Native(Level.Missing)]
-    public int StringLength(string? s) => throw new MissingNativeException("StringLength");
-
-    [Native(Level.Missing)]
-    public string? SubString(string? source, int start, int end) => throw new MissingNativeException("SubString");
-
-    [Native(Level.Missing)]
     public void SuspendHeroXP(unit? whichHero, bool flag) => throw new MissingNativeException("SuspendHeroXP");
 
     [Native(Level.Missing)]
@@ -4178,9 +3803,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SyncStoredUnit(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("SyncStoredUnit");
-
-    [Native(Level.Missing)]
-    public float Tan(float radians) => throw new MissingNativeException("Tan");
 
     [Native(Level.Missing)]
     public terraindeformation? TerrainDeformCrater(float x, float y, float radius, float depth, int duration, bool permanent) => throw new MissingNativeException("TerrainDeformCrater");

@@ -244,7 +244,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   `System.Random`'s seeded numbers across versions. `GetRandomInt`, `GetRandomReal`, `SetRandomSeed`, `math.random` and
   `math.randomseed` share it, as the game's do (fact). `math.random(m, n)` is `GetRandomInt(m, n)` and `math.random()`
   a float from 0 below 1, with Lua 5.3's argument checks ("interval is empty", "interval too large");
-  `math.randomseed(x)` seeds with `x` cut to an integer. `GetRandomInt` takes its bounds in either order.
+  `math.randomseed(x)` seeds with `x` cut to an integer. `GetRandomInt` takes its bounds in either order (replaced by
+  D86: from the first bound up by the bounds' distance).
 - **D47. Handle ids** count up from 0x100000, the first agent id the game is said to give (claim), and are never
   reused: the game's reuse isn't measured (facts, "Handles and identity"). The 28 players, slots 0 to 27 (fact), are
   made first. `GetHandleId` waits for wave 1, with the rest of the core.
@@ -258,7 +259,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
 - **D49. The natives become Lua globals** by reflection over `GameNatives`'s `[Native]` methods, sorted by name, so the
   global table fills the same way every run; a Missing native throws before its arguments are converted, whatever
   they are. An integer parameter takes a whole float (fact) and refuses another with Lua's "number has no integer
-  representation"; a real takes an integer; a boolean is Lua's truth; a string, handle or code takes nil as null;
+  representation"; a real takes an integer; a boolean is Lua's truth; a string, handle or code takes nil as null (for
+  a string, replaced by D80: nil is refused);
   anything else, a table or a coroutine too, is Lua's `bad argument #n to 'Name' (<type> expected, got <type>)`. A
   handle is returned as the native's declared type. The game's own Lua functions, Close: `print`, joining `tostring`
   of each argument with tabs, as Lua's does; `FourCC` (facts), a string's bytes big-endian (an object id for 4; other
@@ -396,6 +398,75 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   given to a real stays a Lua integer (`bj_MELEE_MINE_SEARCH_RADIUS` is the integer 2000; `docs/upstream.md`), and
   JASS's integer division is Lua's `//`, which floors where JASS cuts toward zero. What the game's own Lua gives for
   these is not measured. After W1-1: 2 Exact, 108 Close, 2 Recorded, 1,723 Missing.
+
+### Hashtables, strings, maths and randomness (W1-3)
+
+The facts are `docs/facts.md`, "Strings, numbers and hashtables": four probes in `probes/`, kept so W1-8 can compare
+them, as every measured line is a test. Each model was fitted against those lines with the Lua library's own float
+functions before it was written.
+
+- **D80. A string parameter is read as `luaL_checklstring` reads it,** for every native: nil and booleans are refused
+  with Lua's `bad argument #n to 'X' (string expected, got nil)`, a number is written as `tostring` writes it (Lua's own
+  `%.7g` through the library, and `.0` after a whole number), and the native gets the string up to its first NUL. This
+  replaces D49's "a string takes nil as null". Measured on seven natives (nil), three (numbers) and three (NUL); that
+  the game binds every native alike is inferred.
+- **D81. The maths natives call the Lua library's float functions** (`native/mifloat.c`, through `MirrorImaged.Lua`'s
+  `Native`, which `MirrorImaged.Natives` now references), so they give `math.*`'s bits here as the game's natives give
+  the game's `math.*`'s: Close where that model is (D31, D32), the game's value beside the model's in the tests (34 of
+  the 91 measured cases are a step or more off). Where the game's natives differ from its `math.*`, they follow the
+  game: `SquareRoot` is 0 below 0.001, and `Asin`, `Acos` and `Atan2(0, 0)` give 0, as the model's functions already do.
+  `Deg2Rad` and `Rad2Deg` multiply by the floats nearest π/180 and 180/π in the game's arithmetic: Exact on the ten
+  measured. The new `math.*` measurements (`math.rad`, `math.deg`, `math.asin(2)`, `math.atan(0, 0)`, `^` of a negative
+  base, sines of 1 and 1e6) are left to W1-8, which owns the model.
+- **D82. StringHash** is lookup2 of the string's UTF-16 letters, folded to upper case and written as one or two bytes,
+  with `""` 0 (all 43 measured strings and 19 pairs). Measured folded: a, b, c, h, w, ä, é, ö, þ, ÷, œ, а, ё and я;
+  measured left: ÿ, ß, ł, ą, ž, š, ő, ı, α, β, ա, ａ, ǆ and µ. The folding of the ranges a-z, à-þ, а-я and ѐ-џ is
+  inferred from those; every letter outside them and œ is left as it is, measured or not.
+  Close: a string that isn't UTF-8, which the game decodes byte by byte without checks, reaches C# with U+FFFD in its
+  place (D38), so its hash differs; so does `SubString` cutting inside a letter, where the game gives the lone byte.
+  Keeping Lua's bytes across the binding would fix both; it is left until a map needs it.
+- **D83. S2R** sums the digits as an integer while they fit (then in the game's float arithmetic), cuts toward zero to a
+  float and divides by ten to the decimals in the game's arithmetic: 67 of the 77 measured strings exact, the other 10
+  (most with five or more decimals) a float step off, so Close. Tried and dropped: summing in floats from the first
+  digit (`123456789` lost its last digit, as the game's addition drops it), in doubles (`4294967296` came out exact,
+  not the game's 4294967040), dividing by ten once per decimal, multiplying by the game's 1/10, and dividing in steps of
+  10^4 (70 of 77, but two more rules for three strings). Past the float range the model is extrapolated: its sum wraps
+  as the game's products do (D28), and of the 13 strings of 39 to 48 characters measured (strings-4) three agree,
+  eight are 9 to 14 float steps off, and two are far: 40 nines (the game 0, the model 99) and 40 decimals (the game
+  0.123456791, as for 9 decimals; the model -1.814). How the game keeps a long fraction sane wasn't found.
+- **D84. R2S and R2SW** write the integer part as an integer and the decimals as the fraction times ten to the
+  precision, plus 0.5, cut, in the game's arithmetic, with the game's padding after the sign: 130 of the 141 measured
+  cases exact. A precision below 0 writes 6 decimals with the zeros at the end dropped but one, and above 9 writes 9;
+  the text is at most 255 bytes, cut there, and `""` when the length the width asks for passes a 32-bit integer, the
+  pad and the length wrapping as 32-bit integers do (strings-4 to strings-6 and four probes of one call: 29 cases,
+  all exact). Close from 2^31, where the game writes about ten digits of its own and then zeros and the largest
+  float as `inf`: there MirrorImaged writes the float's exact digits, unpadded, as the game's algorithm wasn't found
+  (dividing by ten repeatedly or by a power of ten made by multiplying, then taking digits, matched none). Close too
+  for a number below 0 whose text passes 255 bytes: the game closes (0xC0000409, twice), which a run can't copy, so
+  the text is cut as above 0.
+- **D85. The hashtable natives** keep each key's integer, real, boolean, string and handle apart, as measured; a
+  `Save*Handle` saves nothing and gives false for a null or destroyed handle, and saves a Convert native's value but
+  gives false, as for `FOG_OF_WAR_MASKED` (a handle made by a native that makes objects gave true); a handle destroyed
+  after its save loads as null; a save to a destroyed table saves nothing and gives false (not measured: from Lua a
+  destroyed table reads as null, D41, which was). `FlushParentHashtable` destroys the table and gives its place back
+  under the limit of 256. Exact are the natives measured and tested: `InitHashtable`, the integer, real, boolean and
+  string saves and loads, the five `HaveSaved*`, `RemoveSavedInteger`, `RemoveSavedHandle`, both flushes, the saves
+  of timer, group, agent, player and fogstate, and the loads of timer, group, widget, player and fogstate. Close: the
+  location and text tag saves (measured true, but `Location` and `CreateTextTag` are Missing, so no test makes the
+  handle), the other handle types' saves and loads (the same code, types not measured), and `RemoveSavedReal`,
+  `RemoveSavedBoolean` and `RemoveSavedString`.
+- **D86. The random natives go from the first bound up by the bounds' distance,** as measured (`GetRandomInt(5, 1)`
+  5 to 9, `GetRandomReal(2, 1)` 2 to 3); this replaces D46's "GetRandomInt takes its bounds in either order", and
+  `math.random`, which refuses an empty interval first, is unchanged. `GetRandomInt` counts its numbers in 32 bits that
+  wrap, as the four widest pairs measured show (always -2^31 for (-2^31, 2^31-1), whose count wraps to 0; below 0 for
+  (2^31-1, 0)). `GetRandomReal` works in doubles and holds at the float range's ends, so finite bounds never give inf
+  or nan: the game's spread over (-3e38, 3e38) and (0, 3e38) is matched; its (3e38, -3e38), some numbers from about 0
+  to 3.4e38 and a third tiny and below 0, is not (here 3e38 to the largest float). The generator stays SplitMix64,
+  Close: the game's numbers for seed 42 are in the facts for whoever finds its algorithm.
+- **D87. I2R, R2I, MathRound, I2S, S2I, StringLength, StringCase and the bit natives are Exact:** C#'s own operations
+  give every measured case (`R2I` and `MathRound`'s `long` hold at the ends as .NET 9 and later do on every platform),
+  with `I2R` cut toward zero as `TimerGetElapsed` cuts (D45). After W1-3, with W1-4 merged first: 65 Exact, 255
+  Close, 7 Recorded, 1,508 Missing.
 
 ### Players, forces and the game (W1-4)
 
