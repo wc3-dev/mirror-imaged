@@ -4,7 +4,7 @@ Plan sections: 4 (A1, A2, A6), 5 (script path, time and randomness), 6 (script h
 Needs wave 0. The facts' sections named below are in `C:\Users\mdlsvensson\Repo\wc3-cs\docs\game-facts.md`; every
 measured case there becomes a test, and a native it measures is Exact.
 
-Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-8 after W1-5; W1-9 after W1-2 and W1-4; W1-7 last.
+Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-8 after W1-5; W1-9 after W1-2 and W1-4; W1-10 after W1-8; W1-7 last.
 
 Parallel lanes, to keep merges painless:
 - Decision numbers by range: W1-2 D70-D79, W1-3 D80-D89, W1-4 D90-D99, W1-5 D100-D109, W1-6 D110-D119,
@@ -66,6 +66,11 @@ Parallel lanes, to keep merges painless:
   Choose knowingly whether `__eq` compares the key (D63) or the game id: a stale handle equal to a new one that reused
   its id is what the game seems to do.
 - Note the C side still calls the handle key "id" (`native/sandbox.c`, `Native.cs`): rename it when adding the game id.
+- From W1-9's events probe: a destroyed Filter given to `ForceEnumPlayers` after a Condition had taken its place ran
+  the new condition for each player (`events.txt` "destroyed c,c>0 1"). With D115's places, a destroyed condition
+  given to a native runs its place's current function; then the four `ForceEnum*` become Exact. D146 and
+  `docs/facts.md` ("the destroyed handle's id was reused (inferred)") should say "the condition's place". Whichever of
+  W1-6 and W1-9 merges second fixes the coverage counts.
 - Every native's argument check (D49, D80): a native given nil where it takes a handle, a number for a string, and so
   on, as the game reports it.
 
@@ -88,6 +93,16 @@ Needs W1-5 (the probes write through Preload) and W0-4's runner.
   `Asin`, `Acos` and `Atan2` natives need their own domain check (their Exact rows will catch it).
 - W1-2's probes: a periodic trigger event's expiry ran before a timer started later that fell due at the same moment
   (MirrorImaged keeps queue order, D45).
+- From W1-9: `TriggerRegisterGameStateEvent` stays Close for three frame effects D144 names (settle or model them),
+  and the time-of-day read-back drift D149 leaves open (0.1 reads 3dccccc0 and 23.9 reads 41bf3332 at once while
+  suspended; 7 reads 40e0000a after a frame), which keeps `SetFloatGameState`/`GetFloatGameState` Close. The lobby and
+  events probes are built with `ProbeMap`'s `withComputer` (D140) in both runs. `EndGame`'s evidence is in side files
+  (`events-after.pld`, `events-timer.pld` written, `events-end.pld` not): compare those too.
+- From W1-6: probe lines that differ from MirrorImaged by decision, not bug: `handles`' "first" and "blizzard" lines
+  and `handles-3`'s two "players" lines (D110, starting ids), the id-reuse lines in `handles-2` and `handles-3` (D111),
+  `handles-3`'s "predicted" and `handles`' "after a pass" lines (D114). Mark them in the expected files.
+  Also: `triggers.txt:16` and `triggers-2.txt:23` (raw ids, D110), `triggers-3.txt:24` (raw ids and `And(t, cn)`,
+  D110 and D114), and `handles-3.txt:32`, the "ran" line after "predicted" (`And(Not(cn), t7)`, D114).
 - Every probe's raw game lines live in `probes/expected/<probe>.txt`; the comparison reads them from there. Lines that
   vary from run to run (W1-2's wait lengths, D71) get a tolerance or are skipped, said in the expected file.
 - W1-2's two measured cases on `TriggerRegisterTimerEvent` (probe `triggers`: the tie at 3.0, the periodic event ran
@@ -127,6 +142,40 @@ Needs W1-2 and W1-4. Decisions D140-D149. What W1-4 left for after the triggers 
   the event — the probe here logs which set fired. `TriggerRegisterGameStateEvent` becomes Exact here.
 - `TriggerRegisterGameEvent` and its events, and `BlzTriggerInterrupt`/`BlzTriggerIsRunning` if W1-2's fix round
   didn't add them.
+
+## W1-10 The Lua number model fitted to the game
+
+Needs W1-8 (part 1, the comparison). Decisions D150-D159. W1-8 split off this part (its report and
+`probes/differences/`):
+
+- Fit `native/mifloat.c` to new probes: division (`1/d` over many divisor mantissas, an `n/d` grid), `sqrt` over
+  [1, 4), `sin`/`cos`/`tan` in radians, `exp`, `log`, `atan`, `pow`, subtractions that cancel bits, products near the
+  range's ends; and the `math.*` mismatches `probes/differences/strings.txt` lists (rad/deg, `asin(2)`, `atan(0, 0)`,
+  pow, trig at 0.5, 1, -1, pi, 100 and 1e6). Give `Asin`, `Acos` and `Atan2` their own domain check when
+  `math.asin` changes.
+- Find the game's string hash seed (`pairs` over string keys is the same every run, but the seed isn't 0).
+- D45's step and same-moment timer order against the `timers` probe (neither made, started nor queued order), and
+  the game reading a periodic timer's expiries at exact hundredths where MirrorImaged steps at 1/1024 s.
+- W1-2's `TriggerRegisterTimerEvent` cases and the trigger probes, once W1-6's `GetHandleId` lets them run; refresh
+  their `probes/differences` files.
+- Keep the native library reproducible and the cross-platform pins honest (re-pin on all three platforms through CI).
+- Also from W1-8's review: `lua-config.txt`'s `math.log(3, 2)`, `math.log(100, 10)`, `math.log(1000, 10)`;
+  `game-time.txt`'s `TimerGetElapsed` (1.01 to 7.01 in the game, 1.00 here); the seed is inferred, not certain (another
+  hash function or table growth would also change `pairs` order).
+- The BJ stand-ins in `ProbeComparison` (no-op `SetPlayerSlotAvailable`, `InitGenericPlayerSlots`, `InitBlizzard`):
+  once `GetHandleId` lands, players and triggers 1-3 hit them (`PolledWait` and `GetPlayersAll` nil, no
+  `TeamInitPlayerSlots`/`SetTeams(24)`, no `ConfigureNeutralVictim`/`InitSummonableCaps`, about 40 handles missing so
+  ids shift). Those lines involve Exact natives, so they can't just be recorded as differences: run the comparison
+  with the installed `blizzard.j` under `Needs=Game` once `InitBlizzard` gets past `IsFogEnabled`, or give the
+  stand-ins what those lines need.
+- The comparison needs a per-probe build option (`withComputer` for lobby and events, D140) and to read side files
+  (`EndGame`'s `events-after.pld`/`events-timer.pld`/`events-end.pld`). W1-9's `TriggerRegisterGameStateEvent` frame
+  effects (D144) and the time-of-day read-back drift (D149) are in W1-8's list above; settle them here if W1-8 didn't.
+- W1-6's differing-by-decision lines (listed under W1-8) go in `probes/differences/<probe>.txt` (D121), not the
+  expected files, which stay the game's raw lines.
+- Differences with no task yet, to accept against A6 or plan, in `docs/tasks/later.md` (wave 10): R2S/R2SW from 2^31
+  (D84), S2R past the float range (D83), StringHash/SubString on non-UTF-8 bytes (D82, D38), the random generator
+  (D46, D86) incl. `GetRandomReal(3e38, -3e38)`'s tiny negatives.
 
 ## W1-7 JASS maps
 
