@@ -24,3 +24,8 @@ his, the rest the agents' and open to his review.
   files: a tracked fixture with a game extension or signature would fail the check on this repository. (W0-1)
 - **D13.** The game-files check also fails on a file starting with `HM3W`, the header a map puts before its MPQ
   archive, so a map renamed to another extension is caught too. (W0-1)
+- **D14.** The game-files check also fails on the sound extensions `.wav`, `.mp3`, `.flac` and `.ogg`, since the rules
+  keep the game's sounds out of git and a sound has no signature the check looks for. (W0-1)
+- **D15.** The game-files check reads each file's content from git's index, not the disk, so it checks what a commit
+  holds. A path git can't give the content of (a submodule, a missing object) fails, and so does a Git LFS pointer,
+  whose real content git doesn't hold: the repository uses neither. (W0-1)
