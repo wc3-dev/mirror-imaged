@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using MirrorImaged.Data;
 using MirrorImaged.Probes;
 
 namespace MirrorImaged.GameTests;
@@ -32,13 +33,9 @@ public sealed record ProbeRun(ProbeState State, IReadOnlyList<string> Lines, str
 /// <param name="maps">Where the built maps go.</param>
 public sealed class GameRunner(string game, string documents, string maps)
 {
-    /// <summary>The installed game (in <c>MIRROR_GAME</c>'s folder when it is set), its documents, and maps built beside the tests.</summary>
+    /// <summary>The installed game (<see cref="GameInstall.Place"/>), its documents, and maps built beside the tests.</summary>
     public static GameRunner Default { get; } = new(
-        Path.Combine(
-            Environment.GetEnvironmentVariable("MIRROR_GAME") is { Length: > 0 } folder
-                ? folder
-                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Warcraft III"),
-            "_retail_", "x86_64", "Warcraft III.exe"),
+        Path.Combine(GameInstall.Place(), "_retail_", "x86_64", "Warcraft III.exe"),
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Warcraft III"),
         Path.Combine(AppContext.BaseDirectory, "maps"));
 

@@ -1,3 +1,4 @@
+using MirrorImaged.Data;
 using MirrorImaged.Probes;
 
 namespace MirrorImaged.GameTests;
@@ -8,7 +9,7 @@ public sealed class GameFactAttribute : FactAttribute
     public GameFactAttribute()
     {
         if (!File.Exists(GameRunner.Default.Game))
-            Skip = $"No Warcraft III at {GameRunner.Default.Game}; set MIRROR_GAME to the game's folder to run it";
+            Skip = $"No Warcraft III at {GameRunner.Default.Game}; set {GameInstall.Variable} to the game's folder to run it";
     }
 }
 
