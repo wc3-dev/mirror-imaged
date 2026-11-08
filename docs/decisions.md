@@ -1227,4 +1227,5 @@ model was found in Python against those lines first, then written into `native/m
   c2, c2 destroyed and taken by c3: the triggers of c1, c2 and c3 all ran c3; destroying the stale c1 freed c3's place
   (all three ran nothing), the next condition took it (all three ran it), and destroying the stale c2 did the same.
   `And(nil, nil)`, `Or(nil, nil)`, `Not(nil)`, `Condition(nil)` and `Filter(nil)` made after a destroy took no place,
-  and the next `Condition` did. After W1-10: 133 Exact, 264 Close, 11 Recorded, 1,427 Missing.
+  and the next `Condition` did. After W1-10, with W2-1 merged first: 136 Exact, 263 Close, 11 Recorded, 1,425
+  Missing (`SquareRoot`, `Sin` and `Cos` went to Exact, D152).
