@@ -1,2 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\MirrorImaged.Data\MirrorImaged.Data.csproj" />
+    <ProjectReference Include="..\MirrorImaged.Lua\MirrorImaged.Lua.csproj" />
+    <ProjectReference Include="..\MirrorImaged.Natives\MirrorImaged.Natives.csproj" />
+  </ItemGroup>
+
 </Project>

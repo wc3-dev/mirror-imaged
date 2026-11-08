@@ -2,6 +2,7 @@ using System.Reflection;
 using MirrorImaged.Data;
 using MirrorImaged.Natives;
 using MirrorImaged.NativesGenerator;
+using MirrorImaged.World;
 
 namespace MirrorImaged.Tests;
 
@@ -14,7 +15,7 @@ public sealed class NativesTests
     [Fact]
     public void Every_missing_native_throws_an_exception_that_names_it()
     {
-        var natives = new GameNatives();
+        var natives = new GameNatives(new Game(0));
         foreach (var method in All.Where(method => method.GetCustomAttribute<NativeAttribute>()!.Level == Level.Missing))
         {
             var arguments = method.GetParameters()
