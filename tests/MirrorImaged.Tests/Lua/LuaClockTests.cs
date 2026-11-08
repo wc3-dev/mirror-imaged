@@ -38,6 +38,26 @@ public sealed class LuaClockTests : IDisposable
     public void TimesBefore1970CantBeRepresented(string call) =>
         Assert.Equal([false, "time result cannot be represented in this installation"], _lua.Run($"return pcall({call})"));
 
+    // os.time writes the table's fields back before it raises, so they must be put right, not left as they were found
+    [Fact]
+    public void ARefusedDateTableIsStillPutRight()
+    {
+        object?[] Refuse(string before)
+        {
+            using var lua = new LuaState();
+            lua.Run(before);
+            return lua.Run("""
+                local t = {year = 1960, month = 1, day = 1, hour = 0}
+                local ok = pcall(os.time, t)
+                return ok, t.year, t.month, t.day, t.wday, t.yday
+                """);
+        }
+
+        object?[] friday = [false, 1960, 1, 1, 6, 1];
+        Assert.Equal(friday, Refuse("local s = '' for i = 1, 1000 do s = s .. os.date('%c', i * 86400) end"));
+        Assert.Equal(friday, Refuse("for i = 1, 50 do pcall(os.time, {year = 2000 + i, month = i, day = i}) end"));
+    }
+
     [Fact]
     public void TheFirstSecondOf1970CanBe() =>
         Assert.Equal(["1970-01-01 00:00:00", 0], _lua.Run("return os.date('!%Y-%m-%d %H:%M:%S', 0), os.time({year = 1970, month = 1, day = 1, hour = 0})"));

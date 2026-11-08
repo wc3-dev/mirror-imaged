@@ -40,14 +40,17 @@ static long long daysfrom (long long y, long long m, long long d) {
   return era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + (153 * (m > 2 ? m - 3 : m + 9) + 2) / 5 + d - 1 - 719468;
 }
 
-/* (Howard Hinnant's civil_from_days) NULL before 1970, as Windows's C library gives */
-struct tm *mirror_gmtime (time_t t, struct tm *r) {
-  long long days = (long long)t / 86400, secs = (long long)t % 86400, era, doe, yoe, doy, mp, y, m;
-  if (t < 0) return NULL;
+/* the date and time of t, before 1970 too (Howard Hinnant's civil_from_days) */
+static void civil (long long t, struct tm *r) {
+  long long days = t / 86400, secs = t % 86400, era, doe, yoe, doy, mp, y, m;
+  if (secs < 0) {
+    secs += 86400;
+    days--;
+  }
   r->tm_hour = (int)(secs / 3600);
   r->tm_min = (int)(secs / 60 % 60);
   r->tm_sec = (int)(secs % 60);
-  r->tm_wday = (int)((days + 4) % 7);  /* 1970-01-01 was a Thursday */
+  r->tm_wday = (int)((days % 7 + 11) % 7);  /* 1970-01-01 was a Thursday */
   days += 719468;
   era = (days >= 0 ? days : days - 146096) / 146097;
   doe = days - era * 146097;
@@ -61,10 +64,17 @@ struct tm *mirror_gmtime (time_t t, struct tm *r) {
   r->tm_mday = (int)(doy - (153 * mp + 2) / 5 + 1);
   r->tm_yday = (int)(daysfrom(y, m, r->tm_mday) - daysfrom(y, 1, 1));
   r->tm_isdst = 0;
+}
+
+/* NULL before 1970, as Windows's C library gives */
+struct tm *mirror_gmtime (time_t t, struct tm *r) {
+  if (t < 0) return NULL;
+  civil((long long)t, r);
   return r;
 }
 
-/* as mktime in UTC: fields out of range carry over, and come back put right; -1 before 1970, as on Windows */
+/* As mktime in UTC: fields out of range carry over, and come back put right; -1 before 1970, as on Windows. The
+   fields are put right then too, since os.time writes them back before it raises. */
 time_t mirror_mktime (struct tm *ts) {
   long long y = ts->tm_year + 1900LL + ts->tm_mon / 12, m = ts->tm_mon % 12, t;
   if (m < 0) {
@@ -72,9 +82,8 @@ time_t mirror_mktime (struct tm *ts) {
     y--;
   }
   t = (daysfrom(y, m + 1, 1) + ts->tm_mday - 1) * 86400 + ts->tm_hour * 3600LL + ts->tm_min * 60LL + ts->tm_sec;
-  if (t < 0) return (time_t)-1;
-  mirror_gmtime((time_t)t, ts);
-  return (time_t)t;
+  civil(t, ts);
+  return t < 0 ? (time_t)-1 : (time_t)t;
 }
 
 /* One conversion ("%x" or "%#x") as Windows's C library writes it in the "C" locale: '#' takes a number's leading

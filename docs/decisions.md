@@ -220,8 +220,9 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   and `%#x` from its documentation), not the C library's, which reads the machine's zone and differs between
   platforms; `loslib.c` calls them in place of `clock`, `time`, `mktime`, `strftime` and `difftime`. As Windows's C
   library (D33) gives no date before 1970, `os.date` of a time below 0 and `os.time` of a date before 1970 raise Lua's
-  "time result cannot be represented in this installation". Not measured in the game: `%c`, `%x`, `%#c`, `%Z`, and
-  times before 1970.
+  "time result cannot be represented in this installation"; `os.time` writes the table's fields back before it raises,
+  so they are put right then too, the same every run. Not measured in the game: `%c`, `%x`, `%#c`, `%Z`, and times
+  before 1970.
 - **D45. The clock's step is 1/1024 s.** The facts measure timers in game time down to 1/256 s: a periodic 1/256 s
   timer and a one-shot started again every 1/256 s each run 256 times a game second. With 1 ms steps the one-shot
   would restart every 4 ms (250 a second); with 1/1024 s, 1/256 s is 4 steps. A timer's expiries are at its start
