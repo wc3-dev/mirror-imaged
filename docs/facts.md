@@ -161,7 +161,7 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
 Probe `probes/players.lua`, one run on 3.0.1.24371, 11-08 (W1-4): MirrorImaged's probe map (D51: one user slot, no
 custom forces, a selectable race, `config` calling `InitGenericPlayerSlots` and `main` calling `InitBlizzard`) started
 with `-loadfile` on a hidden desktop, single player; the probe ran in the first zero-second timer. The run's lines
-are in pull request #8.
+are in `probes/expected/players.txt`, as the game gave them.
 
 - Slot 0 is "Local Player", Playing, `MAP_CONTROL_USER`, team 0, start location 0, colour 0. Its race was
   `RACE_UNDEAD` although `config` set `RACE_PREF_HUMAN` with the race selectable: afterwards
@@ -203,4 +203,6 @@ are in pull request #8.
   0, 2 s later 0.0999975204 (`3dcccb80`) and 20 s later 0.999865532 (`3f7ff730`), under 0.1 and 1. Inferred: the game
   adds each frame's share in floats and loses a little each time; adding fixed steps of 1/1024 to 1/4 s in the game's
   arithmetic gave none of the three values, and neither did any of ten conversions tried for 0.1 (`x * 20 / 20`,
-  `x / 24 * 24` and the like).
+  `x / 24 * 24` and the like). Against the workspace's facts: on a Moonwell check map (11-05) a time set to 7 read
+  6.999999, where here 7 read back exactly; that read may have come later, after the game had moved the time on, while
+  here it came at once. Not separated (W1-9's probe).

@@ -1,3 +1,5 @@
+using MirrorImaged.World;
+
 namespace MirrorImaged.Natives;
 
 public partial class player
@@ -42,30 +44,50 @@ public sealed partial class GameNatives
     /// <summary>
     /// Seats the players as the lobby does once <c>config</c> has run: people in <paramref name="users"/>, the first of
     /// them the local player, called "Local Player" when alone, and computers in <paramref name="computers"/>, each
-    /// slot playing with its controller set; the other slots of 0 to 23 are empty. A playing slot whose race is
-    /// selectable gets the random preference; it and every slot without a fixed race get a race from the run's random
-    /// numbers. With <paramref name="customForces"/> the game type is the map's settings, and with
-    /// <paramref name="fixedSettings"/> too, alliance changes are locked (facts, "Version and launching").
+    /// slot playing with its controller set, and the map's neutral and rescuable slots in <paramref name="others"/>,
+    /// playing with the controller <c>config</c> gave them; the other slots of 0 to 23 are empty. A playing slot whose
+    /// race is selectable gets the random preference; it and every slot without a fixed race get a random race, from a
+    /// generator of their own seeded by the run's seed, drawn for every slot in order so that a slot's race and the
+    /// map's own random numbers don't depend on who sits where. With <paramref name="customForces"/> the game type is
+    /// the map's settings, and with <paramref name="fixedSettings"/> too, alliance changes are locked (facts, "Version
+    /// and launching").
     /// </summary>
-    /// <exception cref="ArgumentException">No user, a slot outside 0 to 23, or a slot given twice.</exception>
-    public void Seat(IReadOnlyList<int> users, IReadOnlyList<int> computers, bool customForces = false, bool fixedSettings = false)
+    /// <exception cref="ArgumentException">As <see cref="CheckSeats"/>.</exception>
+    public void Seat(IReadOnlyList<int> users, IReadOnlyList<int> computers, IReadOnlyList<int>? others = null,
+        bool customForces = false, bool fixedSettings = false)
     {
-        var seated = users.Concat(computers).ToList();
-        if (users.Count == 0 || seated.Any(slot => (uint)slot >= 24) || seated.Distinct().Count() != seated.Count)
-            throw new ArgumentException("A run seats at least one user, and users and computers in slots 0 to 23, each slot once");
+        others ??= [];
+        CheckSeats(users, [.. computers, .. others]);
+        var races = new Game(_game.RunSeed ^ 0x52616365); // 'Race'
         foreach (var p in _players.Take(24))
         {
-            var playing = seated.Contains(p.Number);
-            if (playing) p.Controller = users.Contains(p.Number) ? User : Computer;
+            var (user, computer) = (users.Contains(p.Number), computers.Contains(p.Number));
+            var playing = user || computer || others.Contains(p.Number);
+            if (user || computer) p.Controller = user ? User : Computer;
             p.SlotState = playing ? Playing : Empty;
             p.States[Placed] = playing ? 1 : 0;
             if (playing && p.Selectable) p.RacePreference = 32; // RACE_PREF_RANDOM
-            p.Race = playing && FixedRace(p.RacePreference) is { } race ? race : _game.RandomInt(1, 4);
+            var drawn = races.RandomInt(1, 4);
+            p.Race = playing && FixedRace(p.RacePreference) is { } race ? race : drawn;
         }
         _local = _players[users[0]];
         if (users.Count == 1) _local.Name = "Local Player";
         _gameType = customForces ? 4 : 1; // GAME_TYPE_USE_MAP_SETTINGS, GAME_TYPE_MELEE
         if (customForces && fixedSettings) _mapFlags |= 1024; // MAP_LOCK_ALLIANCE_CHANGES
+    }
+
+    /// <summary>Refuses a lineup with no user, a slot outside 0 to 23, or a slot given twice.</summary>
+    /// <param name="users">The slots people play.</param>
+    /// <param name="others">The other slots that play.</param>
+    /// <exception cref="ArgumentException">The lineup can't be seated; the message says why.</exception>
+    public static void CheckSeats(IReadOnlyList<int> users, IReadOnlyList<int> others)
+    {
+        if (users.Count == 0) throw new ArgumentException("A run needs a person playing, and no user slot is given");
+        var seated = users.Concat(others).ToList();
+        foreach (var slot in seated)
+            if ((uint)slot >= 24) throw new ArgumentException($"Slot {slot} can't be played: people and computers play slots 0 to 23");
+        if (seated.GroupBy(slot => slot).FirstOrDefault(slot => slot.Count() > 1) is { } twice)
+            throw new ArgumentException($"Slot {twice.Key} is given twice");
     }
 
     // RACE_PREF_HUMAN, ORC, NIGHTELF, UNDEAD and DEMON as RACE_*; null for random or none.
@@ -117,8 +139,12 @@ public sealed partial class GameNatives
         if (toPlayer is not null) _game.Write($"player {toPlayer.Number}", message ?? "");
     }
 
-    /// <summary>"Player N" for slot N - 1, and "Local Player" for the one person of a single-player game.</summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Version and launching: player 1 is Local Player (10-20); docs/facts.md, Players and the game: the others Player N")]
+    /// <summary>
+    /// "Player N" for slot N - 1, and "Local Player" for the one person of a single-player game, as the facts and the
+    /// players probe read them. Close until the names a map gives its slots in <c>war3map.w3i</c> are read (W2-1): the
+    /// score screen showed one ("The Horde", facts).
+    /// </summary>
+    [Native(Level.Close)]
     public string? GetPlayerName(player? whichPlayer) => whichPlayer?.Name;
 
     /// <summary>Not measured: the game crashes lobby creation when it is called in <c>config</c> (facts), which this doesn't.</summary>
@@ -162,8 +188,7 @@ public sealed partial class GameNatives
     [Native(Level.Close)]
     public bool GetPlayerSelectable(player? whichPlayer) => whichPlayer?.Selectable ?? false;
 
-    /// <summary>The skin (look) of the player's race, which the script can't read back.</summary>
-    [Native(Level.Close)]
+    [Native(Level.Recorded, Reason = "Picks the look of the player's race; no native reads it back")]
     public void SetPlayerRaceSkin(player? whichPlayer, racepreference? whichRacePreference) { }
 
     [Native(Level.Exact, Fact = "game-facts.md, Input and sync: in single player player 1 is a user (10-20); docs/facts.md, Players and the game")]
@@ -207,7 +232,7 @@ public sealed partial class GameNatives
         sourcePlayer is not null && otherPlayer is not null && whichAllianceSetting is { Id: >= 0 and < 32 }
         && (sourcePlayer.Alliances[otherPlayer.Number] & (1 << whichAllianceSetting.Id)) != 0;
 
-    /// <summary>One way: the other player's alliance back is left as it was. Close until triggers: the game fires the alliance event inside the call (facts).</summary>
+    /// <summary>One way: the other player's alliance back is left as it was. Close until W1-9: the game fires the alliance event inside the call (facts).</summary>
     [Native(Level.Close)]
     public void SetPlayerAlliance(player? sourcePlayer, player? otherPlayer, alliancetype? whichAllianceSetting, bool value)
     {
@@ -226,7 +251,8 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// The state as the game starts it (the players probe: game result 3, food cap ceiling 100, placed 1 for a seated
-    /// slot, bounty from neutral hostile and passive) or as set. Gold and lumber kept by units and buildings come with them.
+    /// slot, bounty from neutral hostile and passive) or as set. The food that units and buildings use and give comes
+    /// with them (W2-2).
     /// </summary>
     [Native(Level.Close)]
     public int GetPlayerState(player? whichPlayer, playerstate? whichPlayerState) =>
@@ -234,7 +260,7 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Gold below 0 is 0 (the players probe), and lumber too (not measured); the rest is kept as set. Close until
-    /// triggers: the game fires the player state event on every change that meets it (facts).
+    /// W1-9: the game fires the player state event on every change that meets it (facts).
     /// </summary>
     [Native(Level.Close)]
     public void SetPlayerState(player? whichPlayer, playerstate? whichPlayerState, int value)
@@ -289,35 +315,45 @@ public sealed partial class GameNatives
         if (whichPlayer is not null) whichPlayer.TechMax[techid] = maximum;
     }
 
-    /// <summary>The level of an upgrade; a unit type's count of units comes with the units.</summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Version and launching: SetPlayerTechResearched sets the level GetPlayerTechCount reads (10-20)")]
+    /// <summary>
+    /// The level set, as the facts and the players probe read it. Close: a unit type's count of the player's units
+    /// comes with the units (W2-2), and <paramref name="specificonly"/>, which then counts only that type and not the
+    /// ones it upgrades to, is ignored.
+    /// </summary>
+    [Native(Level.Close)]
     public int GetPlayerTechCount(player? whichPlayer, int techid, bool specificonly) => whichPlayer?.TechLevels.GetValueOrDefault(techid) ?? 0;
 
     [Native(Level.Close)]
     public bool GetPlayerTechResearched(player? whichPlayer, int techid, bool specificonly) => GetPlayerTechCount(whichPlayer, techid, specificonly) > 0;
 
-    /// <summary>Sets the level, also lower (the players probe).</summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Version and launching: SetPlayerTechResearched sets the level GetPlayerTechCount reads (10-20); docs/facts.md, Players and the game: also lower")]
+    /// <summary>
+    /// Sets the level, also lower (the players probe), and not below 0 (not measured). Close: setting an upgrade above
+    /// its level count isn't measured, and that count comes with the game's data (W2-1).
+    /// </summary>
+    [Native(Level.Close)]
     public void SetPlayerTechResearched(player? whichPlayer, int techid, int setToLevel)
     {
-        if (whichPlayer is not null) whichPlayer.TechLevels[techid] = setToLevel;
+        if (whichPlayer is not null) whichPlayer.TechLevels[techid] = Math.Max(setToLevel, 0);
     }
 
-    /// <summary>Close until the game's data: the game stops an upgrade at its level count (the players probe).</summary>
+    /// <summary>Close until the game's data: the game stops an upgrade at its level count (the players probe; W2-1).</summary>
     [Native(Level.Close)]
     public void AddPlayerTechResearched(player? whichPlayer, int techid, int levels) =>
-        SetPlayerTechResearched(whichPlayer, techid, GetPlayerTechCount(whichPlayer, techid, true) + levels);
+        SetPlayerTechResearched(whichPlayer, techid, (int)Math.Min((long)GetPlayerTechCount(whichPlayer, techid, true) + levels, int.MaxValue));
 
     [Native(Level.Close)]
     public void BlzDecPlayerTechResearched(player? whichPlayer, int techid, int levels) => AddPlayerTechResearched(whichPlayer, techid, -levels);
 
     /// <summary>
     /// Takes the player out of the game: defeat leaves its slot Left, any other result keeps it Playing; its alliances
-    /// stay. Close until triggers: the game fires the victory or defeat event inside the call for a computer (facts).
+    /// stay; its <c>PLAYER_STATE_GAME_RESULT</c> becomes the result (not measured). Close until W1-9: the game fires
+    /// the victory or defeat event inside the call for a computer (facts; W1-9).
     /// </summary>
     [Native(Level.Close)]
     public void RemovePlayer(player? whichPlayer, playergameresult? gameResult)
     {
-        if (whichPlayer is not null && gameResult?.Id == 1) whichPlayer.SlotState = Left; // PLAYER_GAME_RESULT_DEFEAT
+        if (whichPlayer is null || gameResult is null) return;
+        whichPlayer.States[GameResult] = gameResult.Id;
+        if (gameResult.Id == 1) whichPlayer.SlotState = Left; // PLAYER_GAME_RESULT_DEFEAT
     }
 }

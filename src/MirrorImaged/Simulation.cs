@@ -45,6 +45,7 @@ public sealed partial class Simulation : IDisposable
         _natives = new GameNatives(_game);
         try
         {
+            var (users, computers, others) = Lineup(info, options);
             foreach (var native in typeof(GameNatives).GetMethods()
                          .Where(method => method.GetCustomAttribute<NativeAttribute>() is not null)
                          .OrderBy(method => method.Name, StringComparer.Ordinal))
@@ -55,7 +56,8 @@ public sealed partial class Simulation : IDisposable
             _lua.Run(blizzard, "blizzard.lua");
             Protect(() => _lua.Run(script, "war3map.lua"));
             Protect(() => _lua.Call("config"));
-            Seat(info, options);
+            var flags = info?.MapFlags ?? 0;
+            _natives.Seat(users, computers, others, flags.HasFlag(MapFlags.UseCustomForces), flags.HasFlag(MapFlags.FixedPlayerSettingsForCustomForces));
             Protect(() => _lua.Call("main"));
         }
         catch (LuaException e) when (_lua.Halted is not null)
@@ -78,7 +80,10 @@ public sealed partial class Simulation : IDisposable
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>.</exception>
     /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> every run needs.</exception>
     /// <exception cref="LuaException"><c>blizzard.j</c>'s Lua doesn't load or run (<c>blizzard.lua:N: ...</c>), so no map can.</exception>
-    /// <exception cref="ArgumentException">The options seat no user, a slot outside 0 to 23, or a slot twice.</exception>
+    /// <exception cref="ArgumentException">
+    /// The options seat no person, a slot twice, a slot the map's <c>war3map.w3i</c> doesn't have, a person in a slot
+    /// the map gives a computer, or anyone in its neutral or rescuable slots; checked before any of the map's Lua runs.
+    /// </exception>
     public static Simulation Load(string path, SimulationOptions? options = null)
     {
         var script = MapArchive.ReadLua(path); // first, so a missing map says so whether or not the game is installed
@@ -92,15 +97,32 @@ public sealed partial class Simulation : IDisposable
     internal static Simulation Load(string path, string blizzard, SimulationOptions? options = null) =>
         new(MapArchive.ReadLua(path), MapArchive.ReadInfo(path), blizzard, options ?? new SimulationOptions());
 
-    // The lobby: the people and computers the options name, else the map's first user and its computers.
-    void Seat(MapInfo? info, SimulationOptions options)
+    // Who the lobby seats: the people and computers the options name, else the map's first user and its computers, and
+    // the map's neutral and rescuable slots, which always play. Checked against war3map.w3i's slots before any Lua runs:
+    // a person only where the map has a user, a computer where it has a user or a computer.
+    static (IReadOnlyList<int> Users, IReadOnlyList<int> Computers, IReadOnlyList<int> Others) Lineup(MapInfo? info, SimulationOptions options)
     {
         var players = info?.Players ?? [];
         var users = options.Users ?? [players.FirstOrDefault(p => p.Controller == PlayerController.User)?.Id ?? 0];
         var computers = options.Computers ?? [.. players.Where(p => p.Controller == PlayerController.Computer).Select(p => p.Id).Except(users)];
-        var flags = info?.MapFlags ?? 0;
-        _natives.Seat(users, computers, flags.HasFlag(MapFlags.UseCustomForces), flags.HasFlag(MapFlags.FixedPlayerSettingsForCustomForces));
+        GameNatives.CheckSeats(users, computers);
+        if (info is not null)
+            foreach (var (slot, person) in users.Select(slot => (slot, true)).Concat(computers.Select(slot => (slot, false))))
+            {
+                var controller = players.FirstOrDefault(p => p.Id == slot)?.Controller;
+                if (controller is null or PlayerController.None)
+                    throw new ArgumentException($"Slot {slot} isn't one of the map's players in war3map.w3i ({string.Join(", ", players.Select(p => p.Id))})");
+                if (controller != PlayerController.User && (person || controller != PlayerController.Computer))
+                    throw new ArgumentException($"A {(person ? "person" : "computer")} can't play slot {slot}: the map gives it to a {controller.ToString()!.ToLowerInvariant()} player");
+            }
+        return (users, computers, [.. players.Where(p => p.Controller is PlayerController.Neutral or PlayerController.Rescuable).Select(p => p.Id)]);
     }
+
+    /// <summary>
+    /// Whether the map has paused the game (<c>PauseGame</c>): its clock doesn't move, and only the map can go on, as in
+    /// the game; until dialogs and input exist (waves 5 and 6), only what was due in the step it paused in still runs.
+    /// </summary>
+    public bool Paused => _game.Paused;
 
     /// <summary>The natives the run's script calls.</summary>
     internal GameNatives Natives => _natives;

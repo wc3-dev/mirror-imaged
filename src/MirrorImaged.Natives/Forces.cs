@@ -7,7 +7,7 @@ public partial class force
 
 // Forces as the players probe measures them (docs/facts.md, "Players and the game"): ForForce goes in slot order, and
 // the enumerations clear the force first and take the playing players of slots 0 to 23, not the neutral ones, though
-// those play too. A filter waits for the boolexprs (W1-2) and stops the run as Missing until then.
+// those play too. A filter waits for the boolexprs (W1-9) and stops the run as Missing until then.
 public sealed partial class GameNatives
 {
     player? _enumPlayer;
@@ -46,7 +46,7 @@ public sealed partial class GameNatives
     [Native(Level.Close)]
     public bool BlzForceHasPlayer(force? whichForce, player? whichPlayer) => IsPlayerInForce(whichPlayer, whichForce);
 
-    /// <summary>Close until filters: without one it is as the players probe measures it.</summary>
+    /// <summary>Close until filters (W1-9): without one it is as the players probe measures it.</summary>
     [Native(Level.Close)]
     public void ForceEnumPlayers(force? whichForce, boolexpr? filter) => Enumerate(whichForce, filter, nameof(ForceEnumPlayers), _ => true);
 
@@ -72,8 +72,13 @@ public sealed partial class GameNatives
             whichForce.Players |= 1 << p.Number;
     }
 
-    /// <summary>Runs <paramref name="callback"/> for each player in the force, in slot order, with the enum player set; then lets go of it.</summary>
-    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: slot order, and GetEnumPlayer nil after it")]
+    /// <summary>
+    /// Runs <paramref name="callback"/> for each player the force holds as it starts, in slot order (the players probe),
+    /// with the enum player set; then lets go of it. Close: players added or removed by the callback don't change the
+    /// run (not measured), and the facts' wait that never ends after a force looped with ForForce is destroyed isn't
+    /// modelled (W1-9).
+    /// </summary>
+    [Native(Level.Close)]
     public void ForForce(force? whichForce, Action? callback)
     {
         var outer = _enumPlayer;

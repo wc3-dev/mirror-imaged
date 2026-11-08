@@ -46,6 +46,26 @@ public sealed class ForceNativesTests
         Assert.Null(_natives.GetEnumPlayer());
     }
 
+    // decisions D94: the players the force holds as ForForce starts (not measured)
+    [Fact]
+    public void ForForce_runs_over_the_players_the_force_held_as_it_started()
+    {
+        var force = _natives.CreateForce();
+        _natives.ForceAddPlayer(force, P(1));
+        _natives.ForceAddPlayer(force, P(2));
+        var order = new List<int>();
+
+        _natives.ForForce(force, () =>
+        {
+            order.Add(_natives.GetPlayerId(_natives.GetEnumPlayer()));
+            _natives.ForceRemovePlayer(force, P(2));
+            _natives.ForceAddPlayer(force, P(3));
+        });
+
+        Assert.Equal([1, 2], order);
+        Assert.Equal([1, 3], Members(force));
+    }
+
     [Fact]
     public void A_nested_ForForce_gives_the_outer_enum_player_back()
     {

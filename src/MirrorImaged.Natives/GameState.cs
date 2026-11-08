@@ -17,11 +17,13 @@ public sealed partial class GameNatives
     float _dayScale = 1;
     bool _daySuspended;
 
-    // In hours from 0 below 24: running backward past 0 comes round to 24 (not measured).
+    // In hours from 0 below 24: running backward past 0 comes round to 24 (not measured). % on doubles is exact, so a
+    // huge scale still gives an hour of the day.
     double Day()
     {
-        var hours = _daySuspended ? _day : _day + (_game.Step - _dayStep) * (double)_dayScale * HoursPerSecond / Game.StepsPerSecond;
-        return hours - Math.Floor(hours / 24) * 24;
+        var hours = (_daySuspended ? _day : _day + (_game.Step - _dayStep) * (double)_dayScale * HoursPerSecond / Game.StepsPerSecond) % 24;
+        if (hours < 0) hours += 24;
+        return hours < 24 ? hours : 0;
     }
 
     // Moves the time's start to now, before its speed or start changes.
@@ -41,7 +43,8 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Sets the time of day, which reads back at once as set; below 0 or above 23.99 (from 23.995, measured) it is 0.
-    /// Close: the game reads 0.1 back a float step under it (docs/facts.md). Another state isn't kept.
+    /// Close: the game reads 0.1 back a float step under it (docs/facts.md), and a 7 set on a Moonwell check map read
+    /// 6.999999 later on (facts, 11-05), against the probe's 7 read at once (W1-9). Another state isn't kept.
     /// </summary>
     [Native(Level.Close)]
     public void SetFloatGameState(fgamestate? whichFloatGameState, float value)
@@ -51,9 +54,11 @@ public sealed partial class GameNatives
         _dayStep = _game.Step;
     }
 
+    /// <summary>Sets the time's speed; an infinite or NaN scale is refused and the scale stays (not measured).</summary>
     [Native(Level.Exact, Fact = "game-facts.md, Time of day: scale 2 runs twice as fast, 0 stops, -1 runs backward, and it reads what was set (11-02)")]
     public void SetTimeOfDayScale(float r)
     {
+        if (!float.IsFinite(r)) return;
         DayFromNow();
         _dayScale = r;
     }
@@ -93,7 +98,10 @@ public sealed partial class GameNatives
         if (whichspeed is { Id: not 4 }) _speed = whichspeed.Id; // MAP_SPEED_FASTEST
     }
 
-    /// <summary>Stops the game's time, timers and the time of day with it, until it goes on (not measured).</summary>
+    /// <summary>
+    /// Stops the game's time, timers and the time of day with it, once what is due in this step has run, until the map
+    /// goes on (not measured).
+    /// </summary>
     [Native(Level.Close)]
     public void PauseGame(bool flag) => _game.Paused = flag;
 

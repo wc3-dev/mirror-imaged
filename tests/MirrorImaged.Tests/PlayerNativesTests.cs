@@ -123,6 +123,19 @@ public sealed class PlayerNativesTests
         Assert.Equal("Player 4", _natives.GetPlayerName(P(3)));
     }
 
+    // decisions D91: inferred, as the game likely seats them
+    [Fact]
+    public void The_maps_neutral_and_rescuable_slots_play_with_the_controller_config_gave_them()
+    {
+        _natives.SetPlayerController(P(4), _natives.ConvertMapControl(2)); // MAP_CONTROL_RESCUABLE
+
+        _natives.Seat([0], [], others: [4]);
+
+        Assert.Same(_natives.ConvertPlayerSlotState(1), _natives.GetPlayerSlotState(P(4)));
+        Assert.Same(_natives.ConvertMapControl(2), _natives.GetPlayerController(P(4)));
+        Assert.Throws<ArgumentException>(() => _natives.Seat([0], [4], others: [4]));
+    }
+
     [Theory]
     [InlineData(new int[0], new int[0])]
     [InlineData(new[] { 24 }, new int[0])]
@@ -170,6 +183,26 @@ public sealed class PlayerNativesTests
         Assert.Equal(Races(5), Races(5));
         Assert.NotEqual(Races(5), Races(6));
         Assert.Equal(4, Races(5).Distinct().Count());
+    }
+
+    // decisions D92: a slot's random race and the map's own random numbers don't depend on who sits where
+    [Fact]
+    public void Random_races_are_drawn_apart_from_the_maps_numbers_the_same_whoever_plays()
+    {
+        (string[] Races, int Next) Seated(int[] users, int[] computers)
+        {
+            var game = new Game(5);
+            var natives = new GameNatives(game);
+            natives.Seat(users, computers);
+            return ([.. Enumerable.Range(0, 24).Select(slot => natives.GetPlayerRace(natives.Player(slot))!.Id.ToString())], game.RandomInt(0, 1000000));
+        }
+
+        var alone = Seated([0], []);
+        var more = Seated([0, 3], [1, 2]);
+
+        Assert.Equal(alone.Races, more.Races);
+        Assert.Equal(new Game(5).RandomInt(0, 1000000), alone.Next);
+        Assert.Equal(alone.Next, more.Next);
     }
 
     // facts: GetPlayerColor compares equal to ConvertPlayerColor(n)
@@ -316,6 +349,19 @@ public sealed class PlayerNativesTests
         Assert.Equal(0, _natives.GetPlayerTechCount(P(1), IronSwords, true));
     }
 
+    [Fact]
+    public void A_tech_level_doesnt_go_below_0_or_past_the_largest_integer()
+    {
+        _natives.BlzDecPlayerTechResearched(P(0), IronSwords, 3);
+        Assert.Equal(0, _natives.GetPlayerTechCount(P(0), IronSwords, true));
+        _natives.SetPlayerTechResearched(P(0), IronSwords, -2);
+        Assert.Equal(0, _natives.GetPlayerTechCount(P(0), IronSwords, true));
+
+        _natives.SetPlayerTechResearched(P(0), IronSwords, int.MaxValue);
+        _natives.AddPlayerTechResearched(P(0), IronSwords, 1);
+        Assert.Equal(int.MaxValue, _natives.GetPlayerTechCount(P(0), IronSwords, true));
+    }
+
     // facts: RemovePlayer with defeat leaves the slot Left, its alliances as they were; with victory it stays Playing
     [Fact]
     public void A_defeated_player_leaves_and_a_victorious_one_stays()
@@ -329,6 +375,10 @@ public sealed class PlayerNativesTests
         Assert.Same(_natives.ConvertPlayerSlotState(2), _natives.GetPlayerSlotState(P(1)));
         Assert.True(_natives.IsPlayerAlly(P(1), P(0)));
         Assert.Same(_natives.ConvertPlayerSlotState(1), _natives.GetPlayerSlotState(P(2)));
+        var result = _natives.ConvertPlayerState(0); // PLAYER_STATE_GAME_RESULT, the result given (decisions D97)
+        Assert.Equal(1, _natives.GetPlayerState(P(1), result));
+        Assert.Equal(0, _natives.GetPlayerState(P(2), result));
+        Assert.Equal(3, _natives.GetPlayerState(P(0), result));
     }
 
     [Fact]

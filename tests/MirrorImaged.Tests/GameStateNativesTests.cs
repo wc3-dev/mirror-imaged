@@ -88,6 +88,35 @@ public sealed class GameStateNativesTests
         Assert.Equal(-1f, _natives.GetTimeOfDayScale());
     }
 
+    // decisions D96: an infinite or NaN scale is refused; a huge one still gives an hour of the day
+    [Theory]
+    [InlineData(float.PositiveInfinity)]
+    [InlineData(float.NegativeInfinity)]
+    [InlineData(float.NaN)]
+    public void A_scale_that_isnt_a_number_is_refused(float scale)
+    {
+        _natives.SetFloatGameState(TimeOfDay, 6);
+        _natives.SetTimeOfDayScale(scale);
+        Advance(20);
+
+        Assert.Equal(1f, _natives.GetTimeOfDayScale());
+        Assert.Equal(7f, Time);
+    }
+
+    [Fact]
+    public void A_huge_scale_keeps_the_time_within_the_day()
+    {
+        _natives.SetTimeOfDayScale(float.MaxValue);
+        Advance(1);
+        Assert.InRange(Time, 0f, 24f);
+        Assert.True(Time < 24);
+        _natives.SetTimeOfDayScale(-float.MaxValue);
+        Advance(3);
+
+        Assert.InRange(Time, 0f, 24f);
+        Assert.True(Time < 24);
+    }
+
     [Fact]
     public void Running_backward_past_0_comes_round_to_24()
     {
@@ -154,15 +183,18 @@ public sealed class GameStateNativesTests
         Assert.Same(_natives.ConvertGameSpeed(0), _natives.GetGameSpeed());
     }
 
+    // decisions D95: what is due in the step the game pauses in still runs
     [Fact]
-    public void A_paused_game_runs_no_time_until_it_goes_on()
+    public void A_paused_game_finishes_its_step_and_runs_no_time_until_it_goes_on()
     {
         var ran = new List<long>();
         _natives.TimerStart(_natives.CreateTimer(), 1, false, () => _natives.PauseGame(true));
+        _natives.TimerStart(_natives.CreateTimer(), 1, false, () => ran.Add(_game.Step));
         _natives.TimerStart(_natives.CreateTimer(), 2, false, () => ran.Add(_game.Step));
 
         Advance(10);
-        Assert.Empty(ran);
+        Assert.Equal([Game.Steps(1)], ran);
+        ran.Clear();
         Assert.Equal(Game.Steps(1), _game.Step);
         Assert.Equal(0.05, Time, 1e-6);
 

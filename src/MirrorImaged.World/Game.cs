@@ -18,7 +18,14 @@ public sealed class Game
     int _nextId = 0x100000, _nextKey;
     ulong _random;
 
-    public Game(int seed) => Seed(seed);
+    public Game(int seed)
+    {
+        RunSeed = seed;
+        Seed(seed);
+    }
+
+    /// <summary>The seed the run started with, whatever the script seeds later.</summary>
+    public int RunSeed { get; }
 
     /// <summary>The clock: the steps since the run started.</summary>
     public long Step { get; private set; }
@@ -55,14 +62,15 @@ public sealed class Game
     public bool Paused { get; set; }
 
     /// <summary>
-    /// Moves the clock <paramref name="steps"/> on, running what falls due with the clock at its step; while paused,
-    /// or once something that runs pauses it, the clock stays where it is.
+    /// Moves the clock <paramref name="steps"/> on, running what falls due with the clock at its step. While paused the
+    /// clock stays where it is, and only what is due in its step runs, so a pause from a callback lets the rest of
+    /// that step finish.
     /// </summary>
     public void Advance(long steps)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(steps);
         var end = Step + steps;
-        while (!Paused && _due.TryPeek(out _, out var due) && due.Step <= end)
+        while (_due.TryPeek(out _, out var due) && due.Step <= (Paused ? Step : end))
         {
             Step = due.Step;
             _due.Dequeue()();
