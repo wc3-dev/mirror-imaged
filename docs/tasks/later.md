@@ -41,14 +41,13 @@ Each item names the wave whose file it goes into when that file is written.
   D86). And binary `load`: MirrorImaged refuses binary chunks on purpose (D36, D126: bytecode isn't verified, so a
   map could corrupt the test process), which keeps `lua-config` different for good; that A6 exception is the
   coordinator's call, listed for Sven's review at the end.
-- Wave 5 (presentation): sound file lengths (`GetSoundDuration`, from the install's sound files), and a map's own
-  FDF/TOC string lists (D211, `BlzLoadTOCFile`) for `GetLocalizedString` (W2-1).
+- Wave 5 (presentation): a map's own FDF/TOC string lists (D211, `BlzLoadTOCFile`) for `GetLocalizedString` (W2-1).
 - Wave 7 (AI): the balance sets hold their own AI scripts (`_Balance/Custom_V0.w3mod`, `Melee_V0.w3mod`:
   `Scripts/human.ai` etc. and `*Melee.pld`); take them from the set `StandardData.Sets` picks (W2-1).
 - Wave 3 (orders and movement): the game moves a unit made where others stand off them (D223); `SetUnitPosition`;
   what `PauseUnit` and `BlzPauseUnitEx` hold back; `SetUnitFacing`'s turning eased into its end and on the game's
   frames, and the facing of angles past a turn (D224); orders beyond `SetUnitOwner`'s stop (W2-2).
-- Wave 5 (presentation): the unit animation natives and `SetUnitTimeScale` (W2-2).
+- (The unit animation natives and `SetUnitTimeScale` moved to wave-5.md, W5-3.)
 - Wave 10 (speed): a cross-process cache of the standard data (about 1.2-1.7 s a process) if the benchmark or the
   corpus runs need it; it must live outside the repo and packages (A15) (W2-1).
 - Wave 10 (the number model, W1-10's rest): find the game's `exp`, `log` and `atan` (tables on straight lines, by the
@@ -63,5 +62,12 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
   is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
 - Wave 10 (JASS): a rawcode with a backslash (`'a\bc'`) loads here but the game refuses the map (D137) (W1-7).
-- Wave 2 (W2-7, abilities): `GetAbilitySound` and `GetAbilitySoundById` read an ability's sound labels (its
-  `Effectsound` and `Effectsoundlooped`); not probed, Missing (W5-2, D527).
+- Wave 10 (accuracy, W2-4): the decks are measured in whole units (D255), so `GetLocationZ` on a bridge is up to 0.5
+  off; measure them to a tenth with the workspace's deck probe, and the fall of a killed deck (over 2 s, its ends left)
+  and the rise of one restored (0.5 s, 7 s with birth), to make it Exact.
+- Wave 10 (doodads, W2-4): the doodad natives by index (`BlzGetDoodad*`, `BlzGetNumDoodads`, `BlzSetSingleDoodad*`)
+  are Missing (D257); with them, measure the placed destructables' life share and whether states 1, 3, 5 and 7 are made
+  and listed (D256). All need a probe map with a `war3map.doo` the game loads: the probe map's (War3Net's `MapFactory`
+  map) closed the game with any doo War3Net wrote (docs/facts.md, "Destructables"), while the way Moonwell's physics
+  gate took works (game-facts, "Units", 10-27): a World Editor map's files with its `war3map.doo` written by War3Net,
+  `MapDoodads.UseNewFormat` set.

@@ -54,6 +54,15 @@ public sealed class StandardDataTests
         ["_locales/enus.w3mod/ui/framedef/globalstrings.fdf"] =
             "// strings\nStringList {\n    PLAYER          \"Player\",\n    TWO_LINES       \"a\nb\",\n    LAST \"x\"\n}\n",
         ["ui/miscui.txt"] = "[Hotkeys]\nGAMEOVER_CONTINUE='C'\nGAMEOVER_CONTINUE:deDE='W'\nGERMAN_ONLY:deDE='X'\nLISTED:esES,enUS='L'\n",
+        ["units/destructablemetadata.slk"] = Slk(MetaHeader, ["bnam", "Name", "DestructableData", "0", "0", null, null],
+            ["bptx", "pathTex", "DestructableData", "0", "0", null, null]),
+        ["units/destructabledata.slk"] = Slk(["DestructableID", "Name", "pathTex"], ["LTlt", "WESTRING_DEST_SUMMER_TREE_WALL", @"PathTextures\4x4Default.tga"],
+            ["YT16", "WESTRING_DEST_LONG_STONE_CLIFF_1_VERTICAL", @"PathTextures\CityBridgeLarge0.tga"], ["OTsp", "WESTRING_DOOD_OZSP", "_"]),
+        // A TGA's header: its width and height at bytes 12 and 14
+        ["PathTextures/4x4Default.tga"] = "\0\0\u0002\0\0\0\0\0\0\0\0\0\u0004\0\u0004\0 \0",
+        ["PathTextures/CityBridgeLarge0.tga"] = "\0\0\u0002\0\0\0\0\0\0\0\0\0 \0\u0012\0 \0",
+        ["_locales/enus.w3mod/ui/worldeditgamestrings.txt"] =
+            "// strings the game uses\n[WorldEditStrings]\nWESTRING_DEST_SUMMER_TREE_WALL=Summer Tree Wall\nWESTRING_DEST_LONG_STONE_CLIFF_1_VERTICAL=\"Long Stone Bridge\"\n",
     };
 
     static GameData Read(string? values = null, string? objects = null, string locale = "enUS") =>
@@ -207,5 +216,20 @@ public sealed class StandardDataTests
 
         Assert.Equal((values, objects), StandardData.Sets(info));
         Assert.Equal(("custom_v1", "custom_v1"), StandardData.Sets(null));
+    }
+
+    // probe destructables: a destructable's name is a key of the locale's ui/worldeditgamestrings.txt, quotes dropped;
+    // its pathing texture's size is the TGA's width and height
+    [Fact]
+    public void Destructable_names_and_pathing_textures_are_read()
+    {
+        var data = Read();
+
+        Assert.Equal("Summer Tree Wall", data.EditorString(data.Object(ObjectKind.Destructable, Id("LTlt"))!.Text(Id("bnam"))!));
+        Assert.Equal("Long Stone Bridge", data.EditorString("westring_dest_long_stone_cliff_1_vertical"));
+        Assert.Null(data.EditorString("WESTRING_DOOD_OZSP"));
+        Assert.Equal((4, 4), data.PathingSize(@"PathTextures\4x4Default.tga"));
+        Assert.Equal((32, 18), data.PathingSize(@"pathtextures\citybridgelarge0.tga"));
+        Assert.Null(data.PathingSize(@"PathTextures\None.tga"));
     }
 }
