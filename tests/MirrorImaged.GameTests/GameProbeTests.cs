@@ -35,7 +35,8 @@ public sealed class GameProbeTests
     [MemberData(nameof(Probes))]
     public void A_probe_gives_the_games_lines_in_the_game_and_in_MirrorImaged(string name)
     {
-        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), ProbeComparison.Longest, ProbeComparison.WithComputer(name), ProbeComparison.Change(name));
+        var run = GameRunner.Default.Run(name, ProbeComparison.Source(name), ProbeComparison.Longest, ProbeComparison.WithComputer(name), ProbeComparison.Change(name),
+            ProbeComparison.IsJass(name));
         Assert.True(run.State is ProbeState.Done or ProbeState.Closed, $"{run.State}: {run.Detail}");
         IReadOnlyList<string> lines = run.State == ProbeState.Closed ? [ProbeComparison.Closes] : run.Lines;
         Assert.True(File.Exists(ProbeComparison.Expected(name)), $"""
@@ -76,6 +77,22 @@ public sealed class GameProbeTests
         Assert.StartsWith("error: ", run.Lines[1]);
         Assert.Contains("a line is at most 253 bytes, a backslash counting two, with no line break", run.Lines[1]);
         Assert.Equal(2, run.Lines.Count);
+    }
+
+    // A JASS map whose rawcode holds a backslash never loads (decisions D130, D137), where War3Net reads an escape; not
+    // a probe of probes/, as the comparison needs lines
+    [GameFact]
+    public void The_game_doesnt_load_a_JASS_map_with_a_backslash_in_a_rawcode()
+    {
+        var run = GameRunner.Default.Run("jass-backslash", """
+            function probe takes nothing returns nothing
+                call out("backslash " + I2S('a\bc'))
+                call done()
+            endfunction
+            """, TimeSpan.FromSeconds(75), jass: true);
+
+        Assert.Empty(run.Lines);
+        Assert.DoesNotContain("the map loaded", run.Detail);
     }
 
     // EndGame's evidence (decisions D147): the events probe's code after it and a 0 s timer started before it write their

@@ -22,17 +22,77 @@ public sealed class MapArchiveTests : IDisposable
     {
         const string script = "-- é\nfunction main() end\n";
 
-        Assert.Equal(script, Encoding.UTF8.GetString(MapArchive.Read(_maps.Build(script)).Script!));
+        var map = MapArchive.Read(_maps.Build(script));
+
+        Assert.Equal(script, Encoding.UTF8.GetString(map.Script!));
+        Assert.False(map.Jass);
     }
 
     [Fact]
-    public void A_jass_map_has_no_war3map_lua_and_doesnt_run()
+    public void A_jass_map_s_script_is_its_war3map_j()
     {
-        var map = _maps.Build("function main takes nothing returns nothing\nendfunction\n", ScriptLanguage.Jass);
+        const string script = "function main takes nothing returns nothing\nendfunction\n";
 
-        Assert.Null(MapArchive.Read(map).Script);
-        var error = Assert.Throws<FileNotFoundException>(() => Simulation.Load(map, ""));
-        Assert.Contains("war3map.lua", error.Message);
+        var map = MapArchive.Read(_maps.Build(script, ScriptLanguage.Jass));
+
+        Assert.Equal(script, Encoding.UTF8.GetString(map.Script!));
+        Assert.True(map.Jass);
+    }
+
+    // decisions D130, not measured
+    [Theory]
+    [InlineData(ScriptLanguage.Lua, false)]
+    [InlineData(ScriptLanguage.Jass, true)]
+    public void With_both_scripts_war3map_w3i_s_language_chooses(ScriptLanguage language, bool jass)
+    {
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".w3x");
+        var info = MapFactory.Info(32, 32);
+        info.ScriptLanguage = language;
+        var builder = new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info) });
+        builder.AddFiles(MpqFile.New(new MemoryStream("-- lua\n"u8.ToArray()), "war3map.lua"), MpqFile.New(new MemoryStream("// jass\n"u8.ToArray()), "war3map.j"));
+        builder.Build(path);
+        try
+        {
+            var map = MapArchive.Read(path);
+
+            Assert.Equal(jass, map.Jass);
+            Assert.Equal(jass ? "// jass\n" : "-- lua\n", Encoding.UTF8.GetString(map.Script!));
+        }
+        finally { File.Delete(path); }
+    }
+
+    // where older maps keep it
+    [Fact]
+    public void A_war3map_j_in_the_scripts_folder_is_read_too()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".w3x");
+        var info = MapFactory.Info(32, 32);
+        var builder = new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info) });
+        builder.AddFiles(MpqFile.New(new MemoryStream("// old\n"u8.ToArray()), @"scripts\war3map.j"));
+        builder.Build(path);
+        try
+        {
+            var map = MapArchive.Read(path);
+
+            Assert.Equal("// old\n", Encoding.UTF8.GetString(map.Script!));
+            Assert.True(map.Jass);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void A_map_without_a_script_doesnt_run()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".w3x");
+        var info = MapFactory.Info(32, 32);
+        new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info) }).Build(path);
+        try
+        {
+            Assert.Null(MapArchive.Read(path).Script);
+            var error = Assert.Throws<FileNotFoundException>(() => Simulation.Load(path, ""));
+            Assert.Equal($"{path} has no war3map.lua or war3map.j", error.Message);
+        }
+        finally { File.Delete(path); }
     }
 
     [Fact]

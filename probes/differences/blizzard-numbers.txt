@@ -1,0 +1,9 @@
+# Where MirrorImaged differs from the game's lines in expected/blizzard-numbers.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# The probe measures the game's own blizzard.j, which the comparison runs without (D120); JassBlizzardTests checks the
+# same lines with the installed blizzard.j (D131).
+- modulo -5 2 -4 1
++ error: war3map.lua:44: attempt to call a nil value (global 'ModuloInteger')
+- types float 2000.0 float float
+- modulo zero false

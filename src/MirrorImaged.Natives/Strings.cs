@@ -20,24 +20,26 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// The bytes from <paramref name="start"/> up to <paramref name="end"/>; "" for a start below 0 or past the
-    /// end, and the rest of the string for an end before the start. A cut inside a letter gives U+FFFD (decisions D38),
-    /// where the game gives the byte.
+    /// end, and the rest of the string for an end before the start; null for null, which JASS gives (probe
+    /// jass-threads). A cut inside a letter gives U+FFFD (decisions D38), where the game gives the byte.
     /// </summary>
     [Native(Level.Close)]
     public string? SubString(string? source, int start, int end)
     {
-        var bytes = Encoding.UTF8.GetBytes(source ?? "");
+        if (source is null) return null;
+        var bytes = Encoding.UTF8.GetBytes(source);
         if (start < 0 || start >= bytes.Length) return "";
         return Encoding.UTF8.GetString(bytes, start, (end < start ? bytes.Length : Math.Min(end, bytes.Length)) - start);
     }
 
     /// <summary>
-    /// The string with its ASCII letters in upper or lower case; other letters stay as they are. A string that isn't
-    /// UTF-8 reaches C# with U+FFFD in place of each bad byte (decisions D38), and comes back so.
+    /// The string with its ASCII letters in upper or lower case; other letters stay as they are; null for null, which
+    /// JASS gives (probe jass-threads). A string that isn't UTF-8 reaches C# with U+FFFD in place of each bad byte
+    /// (decisions D38), and comes back so.
     /// </summary>
     [Native(Level.Exact, Fact = StringsFact)]
-    public string? StringCase(string? source, bool upper) =>
-        string.Concat((source ?? "").Select(c =>
+    public string? StringCase(string? source, bool upper) => source is null ? null :
+        string.Concat(source.Select(c =>
             upper && char.IsAsciiLetterLower(c) ? (char)(c - 32) : !upper && char.IsAsciiLetterUpper(c) ? (char)(c + 32) : c));
 
     /// <summary>
