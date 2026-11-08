@@ -81,6 +81,12 @@ Needs W2-2.
   `SetAllUnitTypeSlots`; at 120 s the restock timer needs `IsItemIdSellable`, `AddItemToStock`, `GetItemLevel`,
   `GetItemType` and `ChooseRandomItemEx` (with the group natives from W2-6). Include the other stock natives
   (`AddUnitToStock`, `RemoveItemFromStock`, `SetItemTypeSlots`, ...).
+- From W2-10's review: item pools (`CreateItemPool`, `ItemPoolAddItemType`, `ItemPoolRemoveItemType`,
+  `PlaceRandomItem`, `DestroyItemPool`) and unit pools (`CreateUnitPool`, `UnitPoolAddUnitType`,
+  `UnitPoolRemoveUnitType`, `PlaceRandomUnit`, `DestroyUnitPool`), with the weighted pick probed against the game's
+  random numbers.
+- From W5-1's shipped-map count (D507): `BlzCreateItemWithSkin` (46 maps), `SetHeroLevel` and
+  `UnitAddItemToSlotById` are among the first stops.
 
 ## W2-4 Destructables, trees and doodads
 
