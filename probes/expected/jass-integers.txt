@@ -1,0 +1,3 @@
+# probes/jass-integers.j on 3.0.1.24371, single player, 11-08 (W1-7), in the game's JASS machine: the game's lines.
+# One run.
+big -1 -2147483648 -2147483648 0 1215752191

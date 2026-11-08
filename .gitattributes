@@ -1,0 +1,2 @@
+# The natives generator writes LF line endings; its files keep them in every checkout.
+*.g.cs text eol=lf

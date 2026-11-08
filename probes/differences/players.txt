@@ -1,0 +1,17 @@
+# Where MirrorImaged differs from the game's lines in expected/players.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# An upgrade's level count needs the game's data (D93, W2-1).
+- max allowed hfoo 2147483647 Rhme 3 zzzz 2147483647; count Rhme 0 hfoo 0; researched Rhme false
++ max allowed hfoo 2147483647 Rhme 2147483647 zzzz 2147483647; count Rhme 0 hfoo 0; researched Rhme false
+- tech set 2, set 1, add 5, dec 1 Rhme; set 4 zzzz; max -5 hfoo: 2 1 3 2 4 2147483647 true
++ tech set 2, set 1, add 5, dec 1 Rhme; set 4 zzzz; max -5 hfoo: 2 1 6 5 4 2147483647 true
+
+# The time of day: the game reads a set 0.1 a float step lower, and loses a little each frame as the day runs (D96,
+# D149, Close).
+- set 23.98>23.9799995 41bfd70a, 23.99>23.9899998 41bfeb85, 23.995>0 00000000, 23.999>0 00000000, 0.5>0.5 3f000000, 0.1>0.099999994 3dcccccc
++ set 23.98>23.9799995 41bfd70a, 23.99>23.9899998 41bfeb85, 23.995>0 00000000, 23.999>0 00000000, 0.5>0.5 3f000000, 0.1>0.100000001 3dcccccd
+- 23.9 then 2 s: 23.9999962 41bffffe
++ 23.9 then 2 s: 23.9999981 41bfffff
+- 0 then 2 s: 0.0999975204 3dcccb80; then 20 s: 0.999865532 3f7ff730
++ 0 then 2 s: 0.099999994 3dcccccc; then 20 s: 1 3f800000

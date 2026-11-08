@@ -1,0 +1,16 @@
+# probes/units-camera.lua on 3.0.1.24371, single player, 11-08: the game's lines.
+follow now 0.0000 0.0000 10.0000
+follow 0s 0.0000 0.0000 10.0000
+follow 0.5s 300.0000 150.0000 10.0000
+unit moved now 300.0000 150.0000 10.0000
+unit moved 0.5s 700.0000 -250.0000 10.0000
+orient 600.0000 -300.0000 10.0000 rotation 1.5708
+orient faced 0 600.0000 -300.0000 10.0000 rotation 1.5708
+after pan 0.0000 0.0000 10.0000 rotation 1.5708
+after pan unit moved 0.0000 0.0000 10.0000
+follow again -500.0000 -300.0000 10.0000
+after reset unit moved -500.0000 -300.0000 10.0000 rotation 1.5708
+inherit 500.0000 -300.0000 10.0000 rotation 1.5708
+inherit faced 180 500.0000 -300.0000 10.0000 rotation 1.5708
+after position at target 500.0000 -300.0000 10.0000
+removed 0.0000 -300.0000 10.0000

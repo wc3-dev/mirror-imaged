@@ -1,0 +1,14 @@
+# Where MirrorImaged differs from the game's lines in expected/units-more.txt, in order, with why (decisions D121): a
+# line starting - is the game's, + MirrorImaged's. A note starts "# ".
+
+# The game rescued the footman 0.5 s after a unit of the player it was rescuable by was made 100 away; here no unit is
+# rescued, as that needs the units in range (W2-6), so the 1 s line comes in another place (D314, Close).
+- rescued 19 v by 0 owner 27 player 27 1.90
+- rescued 63 v by 0 owner 27 player 27 1.90
+- rescue 1s 27 27 27
++ rescue 1s 27 27 27
+
+# With the Water Elemental's timed life buff (BHwe) the game gave the body no decay event and took it away at its decay
+# time (its undefend); here every timed life is BTLF's (D312, Close).
+- > ? 38 852056 0 dead t 0.0 t paused f 4.44
++ timed buff decay 4.44 killer nil life 0.0

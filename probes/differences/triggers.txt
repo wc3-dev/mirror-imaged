@@ -1,0 +1,56 @@
+# Where MirrorImaged differs from the game's lines in expected/triggers.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# Ids: the players' ids start where the game's don't, and InitBlizzard's sounds, rects and units aren't made (D110,
+# D150).
+- handles false 1048736 1048736 1048737 1048738
++ handles false 1048660 1048660 1048661 1048662
+
+# Times: here the clock reads the 1/1024 s step, where the game reads the hundredth or a hair past it (D45, D127;
+# W1-10).
+- condition evaluated false 0.5001
++ condition evaluated false 0.5000
+- w before 0.6000
++ w before 0.5996
+- w start 0.6000 false false
++ w start 0.5996 false false
+- w after execute 0.6000
++ w after execute 0.5996
+
+# A wait in a coroutine the script made inside an action yields that coroutine here, and ends the action in the game
+# (D70).
++ in a coroutine 0.7002 true nil
+
+# Times, as above (D45, D127; W1-10).
+- waiter start 0.8000
++ waiter start 0.7998
+- waiter after 0.8000
++ waiter after 0.7998
+- waiter left 0.8000
++ waiter left 0.7998
+- func false false 0.9000 trig nil
++ func false false 0.9004 trig nil
+- after ExecuteFunc 0.9000
++ after ExecuteFunc 0.9004
+- zero event 1.0100
++ zero event 1.0098
+- variable set 1.1000
++ variable set 1.0996
+- state 1.2000 0 -253
++ state 1.2002 0 -253
+- state set 1.2000 1
++ state set 1.2002 1
+- gated condition 1.2501 false false true 4
++ gated condition 1.2500 false false true 4
+- periodic 1.5001 4 true nil 1 1
++ periodic 1.5000 4 true nil 1 1
+- expire trigger 1.7501 true 4
++ expire trigger 1.7500 true 4
+- expire callback 1.7501 false false
++ expire callback 1.7500 false false
+- periodic 2.0001 4 true nil 2 2
++ periodic 2.0000 4 true nil 2 2
+- enable 3.0001
++ enable 3.0000
+- periodic 3.5001 4 true nil 5 3
++ periodic 3.5000 4 true nil 5 3

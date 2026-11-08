@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MirrorImaged.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="War3Net.Build.Core" />
+    <PackageReference Include="War3Net.IO.Mpq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Decks.txt" LogicalName="Decks.txt" />
+  </ItemGroup>
+
+</Project>

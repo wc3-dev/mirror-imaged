@@ -1,0 +1,11 @@
+# Where MirrorImaged differs from the game's lines in expected/lobby.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# The time of day read back with the day stopped: the game's read drifts with the frames, by a rule not found (D149,
+# Close); here it reads as set.
+- suspended 7: 7 40e00000, 7 40e00000, 7.00000477 40e0000a, 7.00000477 40e0000a
++ suspended 7: 7 40e00000, 7 40e00000, 7 40e00000, 7 40e00000
+- suspended 0.1: 0.0999999046 3dccccc0, 0.0999999046 3dccccc0, 0.0999999046 3dccccc0, 0.0999999046 3dccccc0
++ suspended 0.1: 0.100000001 3dcccccd, 0.100000001 3dcccccd, 0.100000001 3dcccccd, 0.100000001 3dcccccd
+- suspended 23.9: 23.8999977 41bf3332, 23.8999977 41bf3332, 23.8999977 41bf3332, 23.8999977 41bf3332
++ suspended 23.9: 23.8999996 41bf3333, 23.8999996 41bf3333, 23.8999996 41bf3333, 23.8999996 41bf3333

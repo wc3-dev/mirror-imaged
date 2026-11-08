@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\probes\MirrorImaged.Probes.csproj" />
+    <ProjectReference Include="..\..\src\MirrorImaged\MirrorImaged.csproj" />
+    <ProjectReference Include="..\..\src\MirrorImaged.Data\MirrorImaged.Data.csproj" />
+    <ProjectReference Include="..\..\src\MirrorImaged.Lua\MirrorImaged.Lua.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,6 @@
+# Where MirrorImaged differs from the game's lines in expected/data-objects.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# UnitDamageTarget is Missing until W2-5; the names and life before it are W2-2's, and the data model's side is
+# GameDataTests' and InstalledDataTests' (D213).
+! war3map.lua:63: The native UnitDamageTarget is Missing: MirrorImaged does not simulate it yet.

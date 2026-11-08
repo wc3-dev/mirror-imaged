@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="War3Net.Build.Core" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MirrorImaged\MirrorImaged.csproj" />
+    <ProjectReference Include="..\..\src\MirrorImaged.Cli\MirrorImaged.Cli.csproj" />
+    <ProjectReference Include="..\..\src\MirrorImaged.Data\MirrorImaged.Data.csproj" />
+    <ProjectReference Include="..\..\src\MirrorImaged.Natives\MirrorImaged.Natives.csproj" />
+    <ProjectReference Include="..\..\tools\MirrorImaged.NativesGenerator\MirrorImaged.NativesGenerator.csproj" />
+    <ProjectReference Include="..\..\src\MirrorImaged.Lua\MirrorImaged.Lua.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

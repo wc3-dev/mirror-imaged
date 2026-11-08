@@ -1,0 +1,32 @@
+# Where MirrorImaged differs from the game's lines in expected/sounds.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# An mp3's length is its frames and one more, which the game reads for 27 of the 61 mp3s measured, and not for Human1
+# (D520, Close).
+- file Sound\Music\mp3Music\Human1.mp3 272848
++ file Sound\Music\mp3Music\Human1.mp3 273057
+
+# A unit's label names its files without their folder; the game found them and took one at random (D523, Close).
+- label HeroPaladinWhat duration 1184 playing false loading false
++ label HeroPaladinWhat duration 0 playing false loading false
+
+# The game reads a sound playing a while past its length, as its start waits a varying while (0.8 to 1.4 s in this probe,
+# 3.6 to 4.0 s in sounds-2); here it plays from StartSound for its length (D522, Close). These reads were the same in every
+# run whose lines were kept (not the second's before 2.0 s, nor the fifth's timed reads); the ones that varied (at 2.0 s,
+# played from 1000 ms and at pitch 2) are {w} in the expected file.
+- 0.6 position duration 1288 playing true loading false
++ 0.6 position duration 1288 playing false loading false
+- 2.0 plain duration 1288 playing true loading false
++ 2.0 plain duration 1288 playing false loading false
+- 2.0 set 3000 duration 1288 playing true loading false
++ 2.0 set 3000 duration 1288 playing false loading false
+- 2.0 set -5 duration 1288 playing true loading false
++ 2.0 set -5 duration 1288 playing false loading false
+- 2.0 twice duration 1288 playing true loading false
++ 2.0 twice duration 1288 playing false loading false
+- 2.0 position first duration 1288 playing true loading false
++ 2.0 position first duration 1288 playing false loading false
+- 2.0 again duration 1288 playing true loading false
++ 2.0 again duration 1288 playing false loading false
+- 4.5 label duration 3750 playing true loading false
++ 4.5 label duration 3750 playing false loading false

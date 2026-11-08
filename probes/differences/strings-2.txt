@@ -1,0 +1,6 @@
+# Where MirrorImaged differs from the game's lines in expected/strings-2.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# CreateTextTag is Missing until its wave: the probe saves a text tag in a hashtable, which stops it here (Location,
+# which stopped it before, came with W2-4).
+! war3map.lua:127: The native CreateTextTag is Missing: MirrorImaged does not simulate it yet.

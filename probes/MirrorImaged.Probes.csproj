@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="War3Net.Build.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="*.lua" Link="probes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="*.j" Link="probes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="expected\*.txt" Link="probes\expected\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="differences\*.txt" Link="probes\differences\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,18 @@
+# Where MirrorImaged differs from the game's lines in expected/lua-config.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# math.log with a base, as log(x) / log(base) in the game's arithmetic, and log10 (D32, D33, D152, Close): the game's
+# log is off from 1.5 up (log(1000) by 41 float steps), the model's isn't.
+- math.log 3 2 = f 3fcae008 1.58496189
++ math.log 3 2 = f 3fcae00f 1.58496273
+- math.log 100 10 = f 3ffffffd 1.99999964
++ math.log 100 10 = f 40000000 2
+- math.log 1000 10 = f 403fffde 2.99999189
++ math.log 1000 10 = f 40400000 3
+
+# The game seems to read a binary chunk (inferred: it reached the bytecode reader); here every load refuses one, as
+# Lua never checks bytecode (D36, D126): an exception to A6, for Sven's review (docs/tasks/later.md).
+- load binary = error binary string: truncated precompiled chunk
++ load binary = error attempt to load a binary chunk (mode is 't')
+- load binary mode b = error binary: truncated precompiled chunk
++ load binary mode b = error attempt to load a binary chunk (mode is 't')

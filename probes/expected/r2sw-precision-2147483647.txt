@@ -1,0 +1,2 @@
+# probes/r2sw-precision-2147483647.lua on 3.0.1.24371, single player, 11-08 (W1-8): the game's lines. One run, as W1-3's.
+R2SW 1.25 0 -2147483647 = "1.25"

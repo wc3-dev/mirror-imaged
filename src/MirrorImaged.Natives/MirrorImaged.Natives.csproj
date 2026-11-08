@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The handle types keep common.j's lower-case names (decisions D19), in every file that adds to them. -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CS8981</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MirrorImaged.Data\MirrorImaged.Data.csproj" />
+    <ProjectReference Include="..\MirrorImaged.Lua\MirrorImaged.Lua.csproj" />
+    <ProjectReference Include="..\MirrorImaged.World\MirrorImaged.World.csproj" />
+  </ItemGroup>
+
+  <!-- The binding gives GetHandleId a destroyed handle's id (decisions D110); the tests read what a unit keeps for the viewer. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="MirrorImaged" />
+    <InternalsVisibleTo Include="MirrorImaged.Tests" />
+  </ItemGroup>
+
+</Project>

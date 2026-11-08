@@ -1,0 +1,58 @@
+# Where MirrorImaged differs from the game's lines in expected/strings.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# A string that isn't UTF-8 (D82, Close): the game decodes the lone byte ff as a 0, while here the string reaches
+# C# with U+FFFD in its place (D38).
+- StringHash <ff> = i 1843378377
++ StringHash <ff> = i -1471725602
+
+# Atan and Atan2 one or two float steps off the game's (D32, D152, Close).
+- Atan 3f800000 = f 3f490fdc 0.785398245 same
++ Atan 3f800000 = f 3f490fda 0.785398126 same
+- Atan bf800000 = f bf490fdc -0.785398245 same
++ Atan bf800000 = f bf490fda -0.785398126 same
+- Atan 3f000000 = f 3eed6339 0.463647634 same
++ Atan 3f000000 = f 3eed6338 0.463647604 same
+- Atan2 3f800000 3f800000 = f 3f490fdc 0.785398245 same
++ Atan2 3f800000 3f800000 = f 3f490fda 0.785398126 same
+- Atan2 bf800000 bf800000 = f c016cbe4 -2.3561945 same
++ Atan2 bf800000 bf800000 = f c016cbe3 -2.35619426 same
+- Atan2 40400000 40800000 = f 3f24bc7e 0.643501163 same
++ Atan2 40400000 40800000 = f 3f24bc7d 0.643501103 same
+
+# Pow as ^, exp(y log x) where the power isn't whole (D32, D152, Close): a few float steps off.
+- Pow 40000000 3f000000 = f 3fb504f3 1.41421354 same
++ Pow 40000000 3f000000 = f 3fb504f2 1.41421342 same
+- Pow 41c80000 3f000000 = f 409ffff6 4.99999523 same
++ Pow 41c80000 3f000000 = f 409fffff 4.99999952 same
+- Pow c1000000 3eaaaaab = f 3ffffffd 1.99999964 same
++ Pow c1000000 3eaaaaab = f 3fffffff 1.99999988 same
+- Pow 40000000 bf800000 = f 3f000002 0.500000119 same
++ Pow 40000000 bf800000 = f 3f000001 0.50000006 same
+- Pow 3f000000 3f000000 = f 3f3504f5 0.707106888 same
++ Pow 3f000000 3f000000 = f 3f3504f6 0.707106948 same
+
+# The random generator is SplitMix64, not the game's, which isn't known (D46, D86, Close).
+- GetRandomInt 0 99 after seed 42 = 63 11 34 15 77
++ GetRandomInt 0 99 after seed 42 = 74 15 27 34 3
+- GetRandomReal 0 1 after seed 42 = 3f71d256 3e8b35bc 3e2bf0d8
++ GetRandomReal 0 1 after seed 42 = 3f3dd732 3e23bf8c 3e8ea4ce
+- GetRandomReal 2 1 over 1000 = f 40001af4 2.00164509 f 403ff31a 2.99921274
++ GetRandomReal 2 1 over 1000 = f 40000eb9 2.0008986 f 403ff6f4 2.99944782
+
+# R2S and R2SW from 2^31: the game writes about ten digits of its own, then zeros (D84, Close).
+- R2S 60ad78ec = s 25 "100000057600000000000.000"
++ R2S 60ad78ec = s 25 "100000002004087734272.000"
+- R2S e0ad78ec = s 26 "-100000057600000000000.000"
++ R2S e0ad78ec = s 26 "-100000002004087734272.000"
+- R2S 7f7fc99e = s 43 "340000512000000000000000000000000000000.000"
++ R2S 7f7fc99e = s 43 "339999995214436424907732413799364296704.000"
+- R2SW 60ad78ec 0 2 = s 24 "100000057600000000000.00"
++ R2SW 60ad78ec 0 2 = s 24 "100000002004087734272.00"
+
+# SubString cutting inside a letter: the game gives the lone bytes, while here the cut letter reaches Lua as U+FFFD
+# (D82, Close).
+- SubString a<c3><a4>b 1 2 = s 1 "<c3>"
++ SubString a<c3><a4>b 1 2 = s 3 "<ef><bf><bd>"
+- SubString a<c3><a4>b 2 4 = s 2 "<a4>b"
++ SubString a<c3><a4>b 2 4 = s 4 "<ef><bf><bd>b"

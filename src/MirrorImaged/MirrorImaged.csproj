@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MirrorImaged.Tests" />
+    <InternalsVisibleTo Include="MirrorImaged.GameTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="War3Net.CodeAnalysis.Transpilers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MirrorImaged.Data\MirrorImaged.Data.csproj" />
+    <ProjectReference Include="..\MirrorImaged.Lua\MirrorImaged.Lua.csproj" />
+    <ProjectReference Include="..\MirrorImaged.Natives\MirrorImaged.Natives.csproj" />
+  </ItemGroup>
+
+</Project>

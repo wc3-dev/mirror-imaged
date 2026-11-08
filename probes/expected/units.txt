@@ -1,0 +1,490 @@
+# probes/units.lua on 3.0.1.24371, single player, 11-08 (W2-2): the game's lines. Two runs, the same, the turning and decay lines too; two more after the rawequal of the widget was added, the same.
+create
+ids 1 1 1 1
+hfoo unit true Footman owner 0 at 1500.5 -1700.25 1500.5 -1700.25 facing 30.0 z 0.0
+hfoo life 420.0 420.0 420.0 420 mana 0.0 0.0 0 level 2 alive true true
+hfoo speed 270.0 270.0 turn 0.6 0.6 fly 0.0 0.0 acquire 500.0 500.0 prop 1.047197 60.0
+hfoo food 2 0 points 100 100 race 1 true data 0 skin true owned true false
+Hpal life 650.0 650 mana 255.0 255 level 1 name Paladin fly 0.0
+hbar life 1500.0 1500 mana 0.0 level 0 speed 0.0 turn 0.001 fly 0.0 0.0 z 0.0 food 0 0 race 1 acquire 0.0
+hgry life 825.0 825 mana 0.0 level 5 speed 320.0 turn 0.4 fly 240.0 240.0 z 0.0 food 4 0 race 1 acquire 500.0
+hpea life 220.0 220 mana 0.0 level 1 speed 190.0 turn 0.6 fly 0.0 0.0 z 0.0 food 1 0 race 1 acquire 500.0
+hkni life 800.0 800 mana 0.0 level 4 speed 350.0 turn 0.5 fly 0.0 0.0 z 0.0 food 4 0 race 1 acquire 500.0
+nshe life 15.0 15 mana 0.0 level 0 speed 100.0 turn 0.5 fly 0.0 0.0 z 0.0 food 0 0 race 10 acquire 0.0
+hhou life 500.0 500 mana 0.0 level 0 speed 0.0 turn 0.001 fly 0.0 0.0 z 0.0 food 0 6 race 1 acquire 0.0
+make zzzz nil
+make phea nil
+make LTlt nil
+make AHhb nil
+make 0 nil
+face 400 40.00002
+face -90 270.0
+face 720 0.0
+face 359.9 359.9
+face -0.5 359.5
+face 1e+09 0.0
+face 100000.0 280.0085
+face -100000.0 79.99146
+face 3600.5 0.5002212
+far 2032.0 -2000.0
+skin true true Footman 420 0.8
+corpse unit true 0.0 false true 420
+race ogru 2 turn 0.6 0.6
+race ugho 3 turn 0.5 0.5
+race earc 4 turn 0.6 0.6
+race ninf 5 turn 0.4 0.4
+race nmrl 8 turn 0.5 0.5
+race nmyr 11 turn 0.5 0.5
+race nvil 9 turn 0.5 0.5
+race nfrl 8 turn 0.5 0.5
+race ncop 7 turn 0.0 0.001
+race hbar 1 turn 0.0 0.001
+race nshe 10 turn 0.5 0.5
+hero id true false true true true
+states
+life 100.5 100.5 420 true
+life 500 420.0 420 true
+state 200.25 200.25 420 true
+max state 600 200.25 420 true
+max 150 150.0 150 true
+max 600 150.0 600 true
+max 0 0.0 0 false
+max -5 0.0 -5 false
+edge hfoo 0.41 0.4100037 true
+edge Hpal 0.41 0.4099731 true
+edge hfoo 0.405 0.0 false
+edge Hpal 0.405 0.4050293 true
+edge hfoo 0.4049 0.0 false
+edge Hpal 0.4049 0.0 false
+edge hfoo 0.4 0.0 false
+edge Hpal 0.4 0.0 false
+edge hfoo 1.1 1.100006 true
+edge Hpal 1.1 1.099976 true
+edge hfoo 419.99 419.99 true
+edge Hpal 419.99 419.99 true
+kept 0.5 0.5
+dead set 100.0 false
+dead max 50 50.0
+dead -5 0.0 false
+no mana 0.0 0.0
+max mana 50 0.0 50
+mana 70 50.0
+max mana 10 10.0 10
+mana -5 0.0
+max mana state 90 10
+Hpal mana 300 255.0
+Hpal mana 100.5 100.5
+flags
+pause false
+pause twice then once false
+ex once false
+ex twice then once false
+ex again false
+ex then pause false false
+hidden false
+hide true -800.0 -800.0 420.0
+hidden at 900.0 1300.0
+show false
+invulnerable false
+set invulnerable true
+cleared invulnerable false
+data 42
+name Renamed Footman Footman
+scale 0.8 tint 255 255 255 255
+moved 5096.5 -300.25 true
+speed 400.0 150.0 150.0 270.0
+turn 5.0 5.283185 0.6
+acquire ranges 0 500.0 500.0, 7.5 500.0 500.0, 50 500.0 500.0, 55 55.0 55.0, 60 60.0 60.0, 64 64.0 64.0, 70 70.0 70.0, 80 80.0 80.0, 88 88.0 88.0, 89 89.0 89.0, 90 90.0 90.0, 91 91.0 91.0, 100 100.0 100.0
+acquire hrif 600.0: 30 600.0, 100 100.0, 300 300.0, 499 499.0, 600 600.0
+acquire hbar 900.0: 30 0.0, 100 0.0, 300 0.0, 499 0.0, 600 0.0
+acquire nshe 500.0: 30 0.0, 100 0.0, 300 0.0, 499 0.0, 600 0.0
+turn 0 0.001 7 0.7168145
+acquire 300.5 300.5 500.0
+prop 1.0 60.0
+fly 200.0 0.0 0.0
+types hfoo 000010110000000000000000000
+types Hpal 100010110000000000000000000
+types hbar 001000000000000100000000000
+types hgry 000101101000000000000000000
+types hpea 000010110000000010000000000
+types hkni 000010110000000000000000000
+types nshe 000010000000000000000000000
+types ugho 000010110000001000000000000
+types hmtm 000010101000000000000000000
+types otau 000010110000000000001000000
+types ugol 001000000000001100000000000
+types ewsp 000010000000000010000000000
+types dead 010010110000000000000000000
+names
+object hfoo [Footman]
+object Hpal [Paladin]
+object phea [Potion of Healing]
+object AHhb [Holy Light]
+object Rhme [Iron Forged Swords]
+object Bdef [Default string]
+object BHbd [Default string]
+object LTlt [Default string]
+object YTlb [Default string]
+object ZPfw [Default string]
+object zzzz [Default string]
+object 0 [Default string]
+death
+kill
+widget 89 trig true widget widget true false dying false killer nil player nil life 0.0 alive false
+player 20 trig true widget nil false false dying true killer nil player 0 life 0.0 alive false
+refused 20 trig true widget nil false false dying true killer nil player 0 life 0.0 alive false
+unit 53 trig true widget nil false false dying true killer nil player 0 life 0.0 alive false
+unit again 53 trig true widget nil false false dying true killer nil player 0 life 0.0 alive false
+killed 0.0 false
+again
+player 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+refused 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+life death 0.0 false
+after 0.0
+player 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+refused 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+state death 0.0
+player 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+refused 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+max death 0.0
+max 0 0.0 false
+decay
+killed at 0.4000
+flier
+flier field 100.0 100.0 240.0
+flier max 90.0 240.0 50.0
+building speed 0.0 0.0
+primary 1
+permanent 0 1 1
+strength 30 850.0 850 30
+hero level 3 4 4
+owner
+order 38 851972 true true owner 0 player 0
+order 75 851972 true true owner 0 player 0
+change 270 true true prev 0 owner 1 player 1
+change 287 true true prev 0 owner 1 player 1
+order 38 852056 true true owner 1 player 1
+order 75 852056 true true owner 1 player 1
+given 1 true
+given again 1
+order 38 851972 true true owner 1 player 1
+order 75 851972 true true owner 1 player 1
+change 270 true true prev 1 owner 0 player 0
+change 287 true true prev 1 owner 0 player 0
+order 38 852056 true true owner 0 player 0
+order 75 852056 true true owner 0 player 0
+given back 0
+order 38 852056 false false owner 0 player 0
+dead 287
+dead given 2
+remove
+removed true 420.0 true 0 1700.0 dead true false
+removed death
+removed death
+removed then 1 0.0
+removed later 1751543663 0.0 false 1 1700.0 Footman 0 unit
+field AGILITY
+get Hpal 13
+set Hpal true 7
+field AGILITY_PERMANENT
+get Hpal 13
+set Hpal true 1
+field AGILITY_WITH_BONUS
+get Hpal 13
+set Hpal false 13
+field ARMOR_TYPE
+get hfoo 2 Hpal 2 hbar 5 hgry 1
+set hfoo true 7 Hpal true 7 hbar true 7
+field DEFENSE_TYPE
+get hfoo 2 Hpal 5 hbar 3 hgry 0
+set hfoo true 7 Hpal true 7 hbar true 7
+field ELEVATION_SAMPLE_POINTS
+get hfoo 0 Hpal 0 hbar 4 hgry 2
+set hfoo true 7 Hpal true 7 hbar true 7
+field FORMATION_RANK
+get hfoo 0 Hpal 0 hbar 0 hgry 2
+set hfoo true 7 Hpal true 7 hbar true 7
+field GOLD_BOUNTY_AWARDED_BASE
+get hfoo 20 Hpal 30 hbar 0 hgry 25
+set hfoo true 7 Hpal true 7 hbar true 7
+field GOLD_BOUNTY_AWARDED_NUMBER_OF_DICE
+get hfoo 6 Hpal 8 hbar 0 hgry 7
+set hfoo true 7 Hpal true 7 hbar true 7
+field GOLD_BOUNTY_AWARDED_SIDES_PER_DIE
+get hfoo 3 Hpal 3 hbar 0 hgry 3
+set hfoo true 7 Hpal true 7 hbar true 7
+field HIT_POINTS_REGENERATION_TYPE
+get hfoo 1 Hpal 1 hbar 0 hgry 1
+set hfoo true 7 Hpal true 7 hbar true 7
+field INTELLIGENCE
+get Hpal 17
+set Hpal true 7
+field INTELLIGENCE_PERMANENT
+get Hpal 17
+set Hpal true 1
+field INTELLIGENCE_WITH_BONUS
+get Hpal 17
+set Hpal false 17
+field LEVEL
+get hfoo 2 Hpal 1 hbar 0 hgry 5
+set hfoo true 7 Hpal true 8 hbar true 7
+field LOOPING_FADE_IN_RATE
+get hfoo 0 Hpal 0 hbar 512 hgry 0
+set hfoo true 7 Hpal true 7 hbar true 7
+field LOOPING_FADE_OUT_RATE
+get hfoo 0 Hpal 0 hbar 512 hgry 0
+set hfoo true 7 Hpal true 7 hbar true 7
+field LUMBER_BOUNTY_AWARDED_BASE
+get hfoo 0 Hpal 0 hbar 0 hgry 0
+set hfoo true 7 Hpal true 7 hbar true 7
+field LUMBER_BOUNTY_AWARDED_NUMBER_OF_DICE
+get hfoo 0 Hpal 0 hbar 0 hgry 0
+set hfoo true 7 Hpal true 7 hbar true 7
+field LUMBER_BOUNTY_AWARDED_SIDES_PER_DIE
+get hfoo 0 Hpal 0 hbar 0 hgry 0
+set hfoo true 7 Hpal true 7 hbar true 7
+field MOVE_TYPE
+get hfoo 1 Hpal 1 hbar 0 hgry 2
+set hfoo true 7 Hpal true 7 hbar true 7
+field ORIENTATION_INTERPOLATION
+get hfoo 0 Hpal 5 hbar 0 hgry 1
+set hfoo true 7 Hpal true 7 hbar true 7
+field PLACEMENT_PREVENTED_BY
+get hfoo 0 Hpal 0 hbar 8 hgry 0
+set hfoo true 7 Hpal true 7 hbar true 7
+field PRIMARY_ATTRIBUTE
+get hfoo 1 Hpal 1 hbar 1 hgry 1
+set hfoo true 1 Hpal true 1 hbar true 1
+field STRENGTH
+get Hpal 22
+set Hpal true 7
+field STRENGTH_PERMANENT
+get Hpal 22
+set Hpal true 1
+field STRENGTH_WITH_BONUS
+get Hpal 22
+set Hpal false 22
+field TARGETED_AS
+get hfoo 2 Hpal 2 hbar 8 hgry 4
+set hfoo true 7 Hpal true 7 hbar true 7
+field TINTING_COLOR_ALPHA
+get hfoo 255 Hpal 255 hbar 255 hgry 255
+set hfoo true 255 Hpal true 255 hbar true 255
+field TINTING_COLOR_BLUE
+get hfoo 255 Hpal 255 hbar 255 hgry 255
+set hfoo true 255 Hpal true 255 hbar true 255
+field TINTING_COLOR_GREEN
+get hfoo 255 Hpal 255 hbar 255 hgry 255
+set hfoo true 255 Hpal true 255 hbar true 255
+field TINTING_COLOR_RED
+get hfoo 255 Hpal 255 hbar 255 hgry 255
+set hfoo true 255 Hpal true 255 hbar true 255
+field UNIT_CLASSIFICATION
+get hfoo 0 Hpal 0 hbar 8 hgry 0
+set hfoo true 7 Hpal true 7 hbar true 7
+field ACQUISITION_RANGE
+get hfoo 500.0 Hpal 500.0 hbar 0.0 hgry 500.0
+set hfoo true 500.0 Hpal true 500.0 hbar true 0.0
+field AGILITY_PER_LEVEL
+get hfoo 0.0 Hpal 1.5 hbar 0.0 hgry 0.0
+set hfoo false 0.0 Hpal true 7.5 hbar false 0.0
+field ANIMATION_RUN_SPEED
+get hfoo 270.0 Hpal 290.0 hbar 200.0 hgry 320.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field ANIMATION_WALK_SPEED
+get hfoo 270.0 Hpal 290.0 hbar 200.0 hgry 320.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field CAST_BACK_SWING
+get hfoo 0.51 Hpal 1.67 hbar 0.51 hgry 0.5
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field CAST_POINT
+get hfoo 0.3 Hpal 0.5 hbar 0.0 hgry 0.3
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field DEATH_TIME
+get hfoo 3.04 Hpal 1.5 hbar 2.34 hgry 1.67
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field DEFENSE
+get hfoo 2.0 Hpal 3.9 hbar 5.0 hgry 0.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field ELEVATION_SAMPLE_RADIUS
+get hfoo 20.0 Hpal 30.0 hbar 50.0 hgry 50.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field FLY_HEIGHT
+get hfoo 0.0 Hpal 0.0 hbar 0.0 hgry 240.0
+set hfoo true 0.0 Hpal true 0.0 hbar true 0.0
+field FLY_MAX_HEIGHT
+get hfoo 0.0 Hpal 0.0 hbar 0.0 hgry 240.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field FOG_OF_WAR_SAMPLE_RADIUS
+get hfoo 0.0 Hpal 0.0 hbar 0.0 hgry 0.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field HIT_POINTS_REGENERATION_RATE
+get hfoo 0.25 Hpal 0.25 hbar 0.0 hgry 0.25
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field HP
+get hfoo 420.0 Hpal 650.0 hbar 1500.0 hgry 825.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field INTELLIGENCE_PER_LEVEL
+get hfoo 0.0 Hpal 1.8 hbar 0.0 hgry 0.0
+set hfoo false 0.0 Hpal true 7.5 hbar false 0.0
+field MANA
+get hfoo 0.0 Hpal 255.0 hbar 0.0 hgry 0.0
+set hfoo true 0.0 Hpal true 7.5 hbar true 0.0
+field MANA_REGENERATION
+get hfoo 0.0 Hpal 0.01 hbar 0.0 hgry 0.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field MAXIMUM_PITCH_ANGLE_DEGREES
+get hfoo 0.0 Hpal 0.0 hbar 0.0 hgry 0.0
+set hfoo false 0.0 Hpal false 0.0 hbar false 0.0
+field MAXIMUM_ROLL_ANGLE_DEGREES
+get hfoo 0.0 Hpal 0.0 hbar 0.0 hgry 0.0
+set hfoo false 0.0 Hpal false 0.0 hbar false 0.0
+field MINIMUM_ATTACK_RANGE
+get hfoo 0.0 Hpal 0.0 hbar 0.0 hgry 0.0
+set hfoo true 7.5 Hpal true 7.5 hbar false 0.0
+field OCCLUDER_HEIGHT
+get hfoo 0.0 Hpal 0.0 hbar 0.0 hgry 0.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field PRIORITY
+get hfoo 6.0 Hpal 9.0 hbar 9.0 hgry 2.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field SCALING_VALUE
+get hfoo 0.8 Hpal 0.935 hbar 1.0 hgry 1.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field SELECTION_CIRCLE_HEIGHT
+get hfoo 0.0 Hpal 0.0 hbar 0.0 hgry 230.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field SELECTION_SCALE
+get hfoo 1.0 Hpal 1.25 hbar 5.0 hgry 1.5
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field SHADOW_IMAGE_CENTER_X
+get hfoo 50.0 Hpal 65.0 hbar 0.0 hgry 90.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field SHADOW_IMAGE_CENTER_Y
+get hfoo 50.0 Hpal 65.0 hbar 0.0 hgry 90.0
+set hfoo true 7.5 Hpal true 7.5 hbar true 7.5
+field SHADOW_IMAGE_HEIGHT
+get hfoo 140.0 Hpal 170.0 hbar 0.0 hgry 180.0
+set hfoo true 140.0 Hpal true 170.0 hbar true 0.0
+field SHADOW_IMAGE_WIDTH
+get hfoo 140.0 Hpal 170.0 hbar 0.0 hgry 180.0
+set hfoo true 140.0 Hpal true 170.0 hbar true 0.0
+field SIGHT_RADIUS
+get hfoo 800.0 Hpal 800.0 hbar 600.0 hgry 900.0
+set hfoo true 800.0 Hpal true 800.0 hbar true 600.0
+field SPEED
+get hfoo 270.0 Hpal 270.0 hbar 0.0 hgry 320.0
+set hfoo true 150.0 Hpal true 150.0 hbar true 0.0
+field STRENGTH_PER_LEVEL
+get hfoo 0.0 Hpal 2.7 hbar 0.0 hgry 0.0
+set hfoo false 0.0 Hpal true 7.5 hbar false 0.0
+field TURN_RATE
+get hfoo 0.6 Hpal 0.6 hbar 0.001 hgry 0.4
+set hfoo true 1.216815 Hpal true 1.216815 hbar true 1.216815
+field DECAYABLE
+get hfoo true Hpal true hbar true hgry false
+set hfoo true false Hpal true false hbar true false
+field FORCE_DISPLAY_HP
+get hfoo false Hpal false hbar false hgry false
+set hfoo true true Hpal true true hbar true true
+field HAS_WATER_SHADOW
+get hfoo true Hpal true hbar true hgry true
+set hfoo true false Hpal true false hbar true false
+field HERO_HIDE_HERO_DEATH_MESSAGE
+get hfoo false Hpal false hbar false hgry false
+set hfoo true true Hpal true true hbar true true
+field HERO_HIDE_HERO_INTERFACE_ICON
+get hfoo false Hpal false hbar false hgry false
+set hfoo true true Hpal true true hbar true true
+field HERO_HIDE_HERO_MINIMAP_DISPLAY
+get hfoo false Hpal false hbar false hgry false
+set hfoo true true Hpal true true hbar true true
+field HIDE_MINIMAP_DISPLAY
+get hfoo false Hpal false hbar false hgry false
+set hfoo true false Hpal true false hbar true false
+field IS_A_BUILDING
+get hfoo false Hpal false hbar true hgry false
+set hfoo true true Hpal true true hbar true false
+field NEUTRAL_BUILDING_SHOWS_MINIMAP_ICON
+get hfoo true Hpal true hbar true hgry true
+set hfoo true false Hpal true false hbar true false
+field RAISABLE
+get hfoo true Hpal false hbar false hgry false
+set hfoo true false Hpal true true hbar true true
+field SCALE_PROJECTILES
+get hfoo true Hpal true hbar true hgry true
+set hfoo true false Hpal true false hbar true false
+field SELECTION_CIRCLE_ON_WATER
+get hfoo false Hpal false hbar false hgry false
+set hfoo true true Hpal true true hbar true true
+field SHOW_AIR_TO_GROUND
+get hfoo false Hpal false hbar false hgry false
+set hfoo true true Hpal true true hbar true true
+field USE_EXTENDED_LINE_OF_SIGHT
+get hfoo false Hpal false hbar false hgry false
+set hfoo true true Hpal true true hbar true true
+field GROUND_TEXTURE
+get hfoo []
+get Hpal []
+get hbar [HMED]
+get hgry []
+set hfoo true Probe Hpal true Probe hbar true Probe
+field NAME
+get hfoo [Footman]
+get Hpal [Paladin]
+get hbar [Barracks]
+get hgry [Gryphon Rider]
+set hfoo true Probe Hpal true Probe hbar true Probe
+field PROPER_NAMES
+get hfoo []
+get Hpal [named]
+get hbar []
+get hgry []
+set hfoo true  Hpal true Probe hbar true 
+field SHADOW_IMAGE_UNIT
+get hfoo [Shadow]
+get Hpal [Shadow]
+get hbar []
+get hgry [ShadowFlyer]
+set hfoo true Probe Hpal true Probe hbar true Probe
+decay 3.1400 21 false false 0 0.0
+decay 3.1400 21 false false 0 0.0
+decay 3.1400 21 false false 0 0.0
+decay 3.1400 21 false false 0 0.0
+decay 3.1400 21 false false 0 0.0
+decay 3.1900 21 false false 0 0.0
+decay 3.3400 21 false false 0 0.0
+decay 3.3400 21 false false 0 0.0
+decay 3.3400 21 false false 0 0.0
+decay 3.3400 21 false false 0 0.0
+decay 3.4400 21 true true 0 0.0
+decay 3.4400 54 true true 0 0.0
+links
+RF_SPEED 150.0
+RF_TURN_RATE 0.3
+RF_ACQUISITION_RANGE 300.0
+RF_FLY_HEIGHT 0.0
+RF_HP 100.0 420
+RF_MANA 20.0 50
+SF_NAME Field Name
+IF_LEVEL 5
+RF_DEATH_TIME 0.5
+speed 200.0
+turn 0.2
+acquire 250.0
+fly 60.0
+life 200.0
+max life 420.0 420.0
+name Named
+scale 0.8
+hero str 22 22 level 1 1
+turning
+facing ex 123.5
+facing ex -30 330.0
+turn hfoo 180 0.0 12.0 35.0 57.9 80.8 103.7 126.6 149.5 172.5 179.6 179.9 179.9 180.0 180.0 180.0 180.0 180.0
+turn hfoo 90 0.0 12.0 35.0 57.9 80.8 89.7 89.9 89.9 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0
+turn hkni 180 0.0 6.9 22.3 39.5 56.7 73.9 91.1 108.3 125.0 139.4 151.4 161.0 171.4 175.3 176.9 177.7 178.3
+turn hgry 180 0.0 5.2 16.0 27.5 39.0 50.4 61.9 73.3 84.8 96.3 107.7 119.2 136.4 147.8 159.3 170.7 179.1
+turn hfoo -90 0.0 348.0 325.0 302.1 279.2 270.3 270.1 270.1 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0
+turn hfoo slow 180 0.0 12.0 35.0 57.9 80.8 103.7 126.6 149.5 172.5 179.6 179.9 179.9 180.0 180.0 180.0 180.0 180.0
+fly rate 100.0 300.0 300.0 300.0 300.0 300.0

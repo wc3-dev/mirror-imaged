@@ -1,0 +1,181 @@
+# 3.0.1.24371, 11-08 (W2-4): the probe's lines as the game gave them; six runs as it grew, the lines they shared the same each time
+hfoo nil zero nil
+variation 15 true
+variation -1 true
+snap LTlt 960.0,960.0 0.0,0.0 0.0,0.0 0.0,0.0 0.0,0.0 64.0,-64.0 -64.0,64.0 1536.0,-1536.0 -960.0,1152.0 0.0,0.0 0.0,0.0 64.0,-192.0
+snap LTbr 992.0,992.0 32.0,32.0 -32.0,-32.0 32.0,-32.0 32.0,32.0 96.0,-96.0 -96.0,96.0 1568.0,-1568.0 -992.0,1184.0 32.0,32.0 -32.0,-32.0 96.0,-224.0
+snap YT16 992.0,960.0 32.0,0.0 -32.0,0.0 32.0,0.0 32.0,0.0 96.0,-64.0 -96.0,64.0 1568.0,-1536.0 -992.0,1152.0 32.0,0.0 -32.0,0.0 96.0,-192.0
+snap LT06 960.0,992.0 0.0,32.0 0.0,-32.0 0.0,-32.0 0.0,32.0 64.0,-96.0 -64.0,96.0 1536.0,-1568.0 -960.0,1184.0 0.0,32.0 0.0,-32.0 64.0,-224.0
+snap LTg1 960.0,960.0 0.0,0.0 0.0,0.0 0.0,0.0 0.0,0.0 64.0,-64.0 -64.0,64.0 1536.0,-1536.0 -960.0,1152.0 0.0,0.0 0.0,0.0 64.0,-192.0
+snap XTmx 960.0,992.0 0.0,32.0 0.0,-32.0 0.0,-32.0 0.0,32.0 64.0,-96.0 -64.0,96.0 1536.0,-1568.0 -960.0,1184.0 0.0,32.0 0.0,-32.0 64.0,-224.0
+snap OTsp 1000.0,1000.0 0.0,0.0 -10.0,-10.0 10.0,-40.0 63.0,63.0 64.0,-64.0 -96.0,96.0 1536.0,-1536.0 -1000.0,1200.0 31.75,32.0 -10.25,-0.5 100.5,-201.0
+snap YTc1 1000.0,1000.0 0.0,0.0 -10.0,-10.0 10.0,-40.0 63.0,63.0 64.0,-64.0 -96.0,96.0 1536.0,-1536.0 -1000.0,1200.0 31.75,32.0 -10.25,-0.5 100.5,-201.0
+facing XTmx 0 32.0,0.0 992.0,960.0
+facing XTmx 30 0.0,32.0 960.0,992.0
+facing XTmx 45 0.0,32.0 960.0,992.0
+facing XTmx 60 0.0,32.0 960.0,992.0
+facing XTmx 90 0.0,32.0 960.0,992.0
+facing XTmx 135 0.0,32.0 960.0,992.0
+facing XTmx 180 32.0,0.0 992.0,960.0
+facing XTmx 300 0.0,32.0 960.0,992.0
+facing XTmx 360 0.0,32.0 960.0,992.0
+facing XTmx -90 0.0,32.0 960.0,992.0
+facing XTmx 0.5 0.0,32.0 960.0,992.0
+facing XTmx 179.9 0.0,32.0 960.0,992.0
+facing XTmx 270 0.0,32.0 960.0,992.0
+facing XTmx 540 0.0,32.0 960.0,992.0
+facing XTmx -180 0.0,32.0 960.0,992.0
+zero place 0.000 0.000 less 0 -0.0 name of nil true []
+z 960.000 960.000 50.000/50.000
+new 50.000/50.000 widget 50.000 0.000 type 1280601204
+set 20.5 20.500/50.000
+set 999 50.000/50.000
+set 0.405 0.405/50.000
+set 0.4
+  death tree life 0.000 widget true event 89
+after 0.000/50.000
+dead set 20 20.000/50.000
+  death tree life 0.000 widget true event 89
+killed again 0.000/50.000
+killed twice 0.000/50.000
+  death set0.1 life 0.000 widget true event 89
+set 0.1 0.000/50.000
+  death set0.1 life 0.000 widget true event 89
+  death set0 life 0.000 widget true event 89
+set 0 0.000/50.000
+  death set0 life 0.000 widget true event 89
+  death set-5 life 0.000 widget true event 89
+set -5 0.000/50.000
+  death set-5 life 0.000 widget true event 89
+max 50 80.7 81.000/81.000
+  death max life 81.000 widget true event 89
+max 50 80.5 81.000/81.000
+  death max life 81.000 widget true event 89
+max 50 80.4 80.000/80.000
+  death max life 80.000 widget true event 89
+max 50 10 10.000/10.000
+  death max life 10.000 widget true event 89
+max 50 0 0.000/0.000
+  death max life 0.000 widget true event 89
+max 50 -5 0.000/-5.000
+  death max life 0.000 widget true event 89
+max 20 100 40.000/100.000
+  death max life 40.000 widget true event 89
+max 20 25 10.000/25.000
+  death max life 10.000 widget true event 89
+max 20 10 4.000/10.000
+  death max life 4.000 widget true event 89
+  death max life 0.000 widget true event 89
+max 0 70 0.000/70.000
+  death max life 0.000 widget true event 89
+max 0 then 50 0.000/50.000
+max 0 killed 0.000/50.000
+  death zero life 0.000 widget true event 89
+  death restore life 0.000 widget true event 89
+restore 30 30.000/50.000
+  death restore life 30.000 widget true event 89
+  death restore life 0.000 widget true event 89
+restore 0 50.000/50.000
+  death restore life 50.000 widget true event 89
+  death restore life 0.000 widget true event 89
+restore 999 50.000/50.000
+  death restore life 50.000 widget true event 89
+  death restore life 0.000 widget true event 89
+restore 0.3 0.500/50.000
+  death restore life 0.500 widget true event 89
+  death restore life 0.000 widget true event 89
+restore 0.5 0.500/50.000
+  death restore life 0.500 widget true event 89
+  death restore life 0.000 widget true event 89
+restore -5 0.500/50.000
+  death restore life 0.500 widget true event 89
+restore living 20.000/50.000
+  death living life 0.000 widget true event 89
+restored, killed again
+  death living life 0.000 widget true event 89
+remove living
+  death living life 20.000 widget true event 89
+removed 0 0.000/0.000 0.000 0.000
+dead 0.000/50.000
+dead restored 50.000/50.000
+  death dead life 50.000 widget true event 89
+widget 10.500 32.000 32.000 10.500/20.000
+  death widget life 0.000 widget true event 89
+widget killed 0.000/20.000
+  death widget life 0.000 widget true event 89
+invulnerable false
+invulnerable true
+  death guarded life 0.000 widget true event 89
+invulnerable set 0 0.000/50.000
+  death guarded life 0.000 widget true event 89
+invulnerable killed 0.000/50.000
+  death guarded life 0.000 widget true event 89
+occluder LTlt 230.000 100.700 name Summer Tree Wall
+occluder LTlt -5 -5.000
+occluder LTbr 0.000 100.700 name Barrel
+occluder LTbr -5 -5.000
+occluder YT16 0.000 100.700 name Long Stone Bridge
+occluder YT16 -5 -5.000
+occluder OTsp 0.000 100.700 name Shimmering Portal
+occluder OTsp -5 -5.000
+hidden 50.000/50.000 found 1
+  death shown life 50.000 widget true event 89
+  death gate life 0.000 widget true event 89
+gate open 0.000/500.000
+gate closed 500.000/500.000
+  death gate life 500.000 widget true event 89
+centred LTlt 1:0 16:0 31:0 32:1 33:1 48:1 63:1 64:1 65:1 96:1 128:1 129:1
+below LTlt -128:0 -65:0 -64:0 -63:0 -32:0 -1:0 0:0 1:0 32:1 63:1 64:1 65:1 128:1
+above LTlt -128:1 -65:1 -64:1 -63:1 -32:1 -1:1 0:0 1:0 32:0 63:0 64:0 65:0 128:0
+strip LTlt -64:0/0 -32:0/0 0:0/0 32:0/0 64:0/0
+centred LTbr 1:0 16:0 31:0 32:1 33:1 48:1 63:1 64:1 65:1 96:1 128:1 129:1
+below LTbr -128:0 -65:0 -64:0 -63:0 -32:0 -1:0 0:0 1:0 32:1 63:1 64:1 65:1 128:1
+above LTbr -128:1 -65:1 -64:1 -63:1 -32:1 -1:1 0:0 1:0 32:0 63:0 64:0 65:0 128:0
+strip LTbr -64:0/0 -32:0/0 0:0/0 32:0/0 64:0/0
+filtered order4 order2 order5 order3 order1 enum order4=filter order2=filter order5=filter order1=filter after nil nil
+no filter order4+filter order2+filter order5+filter order3+filter order1+filter
+  death order1 life 50.000 widget true event 89
+  death order2 life 50.000 widget true event 89
+  death order3 life 50.000 widget true event 89
+  death order4 life 50.000 widget true event 89
+  death order5 life 50.000 widget true event 89
+portal -1000.500 -1000.500 -1000.75..-960.5:0 -1030..-990:1 -1001..-968.5:0 -1001..-968.75:0 -1000.5..-900:0
+one square in5 in4 in3 in2 in1
+  death in1 life 50.000 widget true event 89
+  death in2 life 50.000 widget true event 89
+  death in3 life 50.000 widget true event 89
+  death in4 life 50.000 widget true event 89
+  death in5 life 50.000 widget true event 89
+grid g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11 tree g12 g13 g14 g15 g16
+  death g6 life 50.000 widget true event 89
+  death g11 life 50.000 widget true event 89
+  death g1 life 50.000 widget true event 89
+  death g16 life 50.000 widget true event 89
+  death g9 life 50.000 widget true event 89
+  death g3 life 50.000 widget true event 89
+  death g14 life 50.000 widget true event 89
+  death g5 life 50.000 widget true event 89
+  death g12 life 50.000 widget true event 89
+  death g2 life 50.000 widget true event 89
+  death g8 life 50.000 widget true event 89
+  death g15 life 50.000 widget true event 89
+  death g4 life 50.000 widget true event 89
+  death g10 life 50.000 widget true event 89
+  death g13 life 50.000 widget true event 89
+  death g7 life 50.000 widget true event 89
+  self death 1 killed life 0.000
+  self death 2 killed life 0.000
+  self death 3 killed life 0.000
+self killed 3 0 []
+  self death 1 removed life 50.000
+  self death 2 removed life 50.000
+  self death 3 removed life 50.000
+self removed 3 0
+revival unit nil nil true
+deck YT16 32.000 -1280.000 286.5 277.5 255.0 247.1 198.8 158.2 288.9 0.0 0.0 0.0
+deck LT06 -1280.000 32.000 274.2 274.2 0.0 0.0 0.0 0.0 269.3 251.2 250.3 243.5
+  death bridge life 0.000 widget true event 89
+deck killed 286.5 277.5 255.0 247.1 198.8 158.2 288.9 0.0 0.0 0.0
+deck 3 s 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+revived 50.000/50.000
+deck restored 3 s 286.5 277.5 255.0 247.1 198.8 158.2 288.9 0.0 0.0 0.0
