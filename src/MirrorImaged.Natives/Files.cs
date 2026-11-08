@@ -18,8 +18,8 @@ public sealed partial class GameNatives
     public Documents Documents { get; init; } = new();
 
     /// <summary>
-    /// Runs a Preload file's JASS, given its path and its text, as the game does in <c>Preloader</c>; the simulation sets it. Without it a file is
-    /// read and nothing runs.
+    /// Runs a Preload file's JASS, given its path and its text, as the game does in <c>Preloader</c>; the simulation
+    /// sets it. Without it a file is read and nothing runs.
     /// </summary>
     public Action<string, string>? RunPreloadFile { get; init; }
 
@@ -41,7 +41,7 @@ public sealed partial class GameNatives
     /// <summary>
     /// Writes what Preload kept to <paramref name="filename"/> in <c>CustomMapData</c>, as the game writes it, each text
     /// in a <c>call Preload( "..." )</c> with its backslashes doubled; nothing where the game writes nothing (D101).
-    /// <c>PreloadEnd</c>'s number is 0.0: the game's is for a file written in one call, and it wrote 1.9 for one ended
+    /// <c>PreloadEnd</c>'s number is 0.0, the game's for a file written in one call; it wrote 1.9 and 2.0 for one ended
     /// 2.5 game seconds after <c>PreloadGenStart</c>.
     /// </summary>
     [Native(Level.Close)]

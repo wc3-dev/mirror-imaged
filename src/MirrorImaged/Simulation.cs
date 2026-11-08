@@ -33,10 +33,10 @@ public sealed class SimulationOptions
 /// A map's script running on a simulated game, with no game open. <see cref="Load"/> sets <c>common.j</c>'s globals,
 /// runs the installed game's <c>blizzard.j</c>, then the script, its <c>config</c> and <c>main</c>;
 /// <see cref="Advance"/> moves the clock on and runs the timers that fall due. A Lua error goes in the log and the run
-/// carries on, as the game drops it. A Missing native stops the run, and so does a call the game closes on (a
-/// <see cref="GameClosedException"/>): <see cref="Stopped"/> is then a <see cref="LuaException"/> that starts with the
-/// calling line (<c>war3map.lua:3: The native ...</c>), whose inner exception is the <see cref="MissingNativeException"/>, and
-/// <see cref="Advance"/> throws it. The log keeps what came before.
+/// carries on, as the game drops it. A Missing native stops the run, and so does a call the game closes on:
+/// <see cref="Stopped"/> is then a <see cref="LuaException"/> that starts with the calling line
+/// (<c>war3map.lua:3: The native ...</c>), whose inner exception is the <see cref="MissingNativeException"/> or the
+/// <see cref="GameClosedException"/>, and <see cref="Advance"/> throws it. The log keeps what came before.
 /// </summary>
 public sealed partial class Simulation : IDisposable
 {
