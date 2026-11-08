@@ -6,7 +6,7 @@ of the tests, and every native a fact measures is Exact.
 
 Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time; W2-8 after W2-7; W2-9 any time after W2-1; W2-10 after W2-2; W2-11 any time after W2-1.
 
-Parallel lanes: decision numbers by range: W2-1 D200-D219, W2-2 D220-D239, W2-3 D240-D249, W2-4 D250-D259,
+Parallel lanes: decision numbers by range: W2-1 D200-D219, W2-2 D220-D239, W2-3 D240-D249 and D330-D349, W2-4 D250-D259,
 W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289, W2-8 D290-D299, W2-9 D300-D309, W2-10 D310-D319, W2-11 D320-D329. Generated-file conflicts are resolved by re-running the generator.
 W2-1 started before wave 1 finished (11-08): it touches the data loading, which wave 1's open lanes don't.
 
@@ -81,6 +81,12 @@ Needs W2-2.
   `SetAllUnitTypeSlots`; at 120 s the restock timer needs `IsItemIdSellable`, `AddItemToStock`, `GetItemLevel`,
   `GetItemType` and `ChooseRandomItemEx` (with the group natives from W2-6). Include the other stock natives
   (`AddUnitToStock`, `RemoveItemFromStock`, `SetItemTypeSlots`, ...).
+- From W2-10's review: item pools (`CreateItemPool`, `ItemPoolAddItemType`, `ItemPoolRemoveItemType`,
+  `PlaceRandomItem`, `DestroyItemPool`) and unit pools (`CreateUnitPool`, `UnitPoolAddUnitType`,
+  `UnitPoolRemoveUnitType`, `PlaceRandomUnit`, `DestroyUnitPool`), with the weighted pick probed against the game's
+  random numbers.
+- From W5-1's shipped-map count (D507): `BlzCreateItemWithSkin` (46 maps), `SetHeroLevel` and
+  `UnitAddItemToSlotById` are among the first stops.
 
 ## W2-4 Destructables, trees and doodads
 
