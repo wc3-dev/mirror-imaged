@@ -396,3 +396,73 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   given to a real stays a Lua integer (`bj_MELEE_MINE_SEARCH_RADIUS` is the integer 2000; `docs/upstream.md`), and
   JASS's integer division is Lua's `//`, which floors where JASS cuts toward zero. What the game's own Lua gives for
   these is not measured. After W1-1: 2 Exact, 108 Close, 2 Recorded, 1,723 Missing.
+
+### Players, forces and the game (W1-4)
+
+The players probe (`probes/players.lua`, `docs/facts.md` "Players and the game") measured what a one-player
+`-loadfile` game starts with; the choices below follow it where it measured and say so where not.
+
+- **D90. A player's colour, race, controller and slot state are kept as values** on the `player` handle and given out
+  through the Convert handles (D64), so `GetPlayerColor(p) == ConvertPlayerColor(n)` and `GetPlayerRace(p) ==
+  RACE_HUMAN` hold with Lua's `==` (facts); `ConvertPlayerColor` and `ConvertRace` are Exact with them. A player's data
+  (name, team, start location, alliances, states, handicaps, tech) lives on its handle, as later waves' unit data will.
+- **D91. Who plays is seated after `config`, before `main`,** as the lobby does once `config` has run
+  (`GameNatives.Seat`). The test chooses with `SimulationOptions.Users` (the slots people play, the first the local
+  player) and `Computers`; without them it is a single-player game in the map's first user slot of `war3map.w3i`, with
+  the map's computer slots that aren't users. The chosen slots play with their controller set; the other slots of 0 to
+  23 are Empty and keep the controller `config` gave them. The one user of a single-player game is "Local Player"
+  (facts); with several users each keeps "Player N", as the game's account names aren't known. Before seating, in the
+  script's top level and in `config`, the local player is slot 0 (not measured). No user, a slot outside 0 to 23 or a
+  slot given twice is an `ArgumentException` from `Simulation.Load`. Two options, not three: the first user is the
+  local player, so a test choosing whose game the run is orders `Users`.
+- **D92. Races come from the lobby:** a playing slot whose race is fixed (its preference names a race, and it isn't
+  selectable) has that race; a selectable one gets `RACE_PREF_RANDOM` and, like a random preference, a race drawn from
+  the run's random numbers, as do the unused slots of 0 to 23 (probe); the neutral slots have race 0. The draws are
+  made in slot order at seating, so they move what the map's own `GetRandomInt` gives after them, the same every run
+  with a seed; whether the game's lobby draws from the generator the script shares is not known (D46).
+- **D93. The starting state is the probe's:** names "Player N", slots 1 to 23 Empty with `MAP_CONTROL_NONE`, team -1
+  and start location -1, the neutral slots Playing as `MAP_CONTROL_CREEP` on team 0, colour the slot, races
+  selectable; each player giving itself alliance types 0 to 7, neutral passive and every player passive to each other
+  (26 to 27 inferred), nothing else; game result 3, food cap ceiling 100, bounty from the neutral slots (26 inferred),
+  `PLACED` 1 for a seated slot; handicaps 1; speed normal, difficulty easy, placement the map's settings, game type
+  melee. Gold below 0 reads 0 (measured) and so does lumber (inferred); other states keep any value. A tech maximum
+  below 0 reads 2147483647; `SetPlayerTechResearched` sets the level, also lower; `AddPlayerTechResearched` isn't
+  stopped at an upgrade's level count, nor does an upgrade's maximum read its level count: both need the game's data
+  (wave 2), so those two are Close. `SetGameSpeed` refuses `MAP_SPEED_FASTEST` (measured); the speed changes nothing
+  else, as game time is simulated. `GetGameTypeSelected` is the map's settings for a map with custom forces (inferred
+  from the lobby, which offers no other there), and custom forces with fixed player settings set
+  `MAP_LOCK_ALLIANCE_CHANGES` (facts); `war3map.w3i` is read with War3Net's `ReadMapInfo` from
+  `War3Net.Build.Core`, now a package of `MirrorImaged.Data` too. Player names from `war3map.w3i` aren't used: they
+  are `TRIGSTR_n` until the strings file is read (W2-1), and in the game a slot shows the account's name.
+- **D94. Forces are a mask of slots,** so `ForForce` goes in slot order (measured). The enumerations clear the force
+  first and take the playing players of slots 0 to 23, not the neutral ones (measured with one user; computers
+  inferred). `ForceEnumAllies` takes the players the given player is passive to, itself among them, and
+  `ForceEnumEnemies` the others (the direction isn't measured). A filter stops the run as the native being Missing
+  until the boolexprs (W1-2) can be evaluated, so a map never gets a wrong answer; `GetFilterPlayer` waits with them.
+  `ForForce` lets go of its callback (D42) and gives the outer enum player back after a nested one. Not modelled: the
+  facts' wait that never ends after a force was looped with `ForForce` and destroyed.
+- **D95. Pausing stops the clock** (`Game.Paused`): `Game.Advance` runs nothing more and leaves the clock where a
+  callback paused it, and `Simulation.Advance` counts no paused time, so once the game goes on the clock moves from
+  where it stopped. Not measured; the facts say only that the victory and defeat boxes pause the game. Nothing in the
+  run can resume it until dialogs and input exist (waves 5 and 6).
+- **D96. The time of day is worked out from the clock,** from where it was last set, at 0.05 hours a second times the
+  scale, kept from 0 below 24 and read cut toward zero to a float, so it reads under 24 (from 23.9, 2 s later
+  23.999998, where the game read 23.9999962). Setting reads back as set; below 0 and above 23.99 read 0 (measured: 23.99
+  kept, 23.995 not). Close: the game adds each frame's share and loses a little (0.0999975 for 0.1 after 2 s), reads a
+  set 0.1 a float step lower, and its event at 12 reads a float step under 12; the scale and suspending are Exact. A day
+  is the standard 24 hours of 480 s until the game's data (wave 2) gives a map's own (the facts' `DayHours=30` cases).
+- **D97. Events wait for the triggers (W1-2):** `TriggerRegisterPlayerEvent` (victory, defeat, leave),
+  `TriggerRegisterPlayerStateEvent`, `TriggerRegisterPlayerAllianceChange` and `TriggerRegisterGameStateEvent` stay
+  Missing, and with them the events the facts measure inside `RemovePlayer`, `SetPlayerAlliance` and `SetPlayerState`
+  and as the time of day passes an hour, so those three natives are Close. `RemovePlayer` sets the slot only: Left for
+  defeat, Playing for any other result (victory measured). `EndGame`, which ends the game for `CustomVictorySkipBJ`,
+  stays Missing; `CustomVictoryBJ` and `CustomDefeatBJ` also need dialogs (wave 5).
+- **D98. What only the lobby reads does nothing,** Close rather than Recorded: `SetMapName`, `SetMapDescription`,
+  `SetStartLocPrioCount`, `SetEnemyStartLocPrio`, `SetEnemyStartLocPrioCount` and `SetPlayerRaceSkin`. A Recorded call
+  goes in the run's log, and these show nothing during a run. The start priorities `SetStartLocPrio` sets are kept for
+  their getters; the lobby's placement of players on start locations isn't simulated, so a player's start location is
+  the one `config` set, or -1.
+- **D99. After W1-4:** 30 Exact, 169 Close, 2 Recorded, 1,634 Missing. `config` of the four maps in
+  `Maps\lua-reference` runs through, and each stops at the first line of `main`, `GetCameraMargin` (wave 5);
+  `main`'s player setup (`InitBlizzard`) comes after the cameras, sounds, regions and units, and its first player
+  function, `InitBlizzardGlobals`, needs `Filter` (W1-2) and sounds first.

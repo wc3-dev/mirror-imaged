@@ -51,17 +51,23 @@ public sealed class Game
     /// </summary>
     public void At(long step, Action action) => _due.Enqueue(action, (Math.Max(step, Step), _scheduled++));
 
-    /// <summary>Moves the clock <paramref name="steps"/> on, running what falls due with the clock at its step.</summary>
+    /// <summary>Whether the game is paused: the clock doesn't move.</summary>
+    public bool Paused { get; set; }
+
+    /// <summary>
+    /// Moves the clock <paramref name="steps"/> on, running what falls due with the clock at its step; while paused,
+    /// or once something that runs pauses it, the clock stays where it is.
+    /// </summary>
     public void Advance(long steps)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(steps);
         var end = Step + steps;
-        while (_due.TryPeek(out _, out var due) && due.Step <= end)
+        while (!Paused && _due.TryPeek(out _, out var due) && due.Step <= end)
         {
             Step = due.Step;
             _due.Dequeue()();
         }
-        Step = end;
+        if (!Paused) Step = end;
     }
 
     /// <summary>The next agent's id; ids count up from 0x100000 and are never given twice.</summary>
