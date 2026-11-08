@@ -21,12 +21,12 @@ MirrorImaged loads `.w3x` archives (aka. maps), runs its script against C# copie
 
 ### Natives `████████░░░░░░░░░░░░` 42%
 
-| Level    | Meaning                                                 | Count | Share                      |
-| -------- | ------------------------------------------------------- | ----- | -------------------------- |
-| Exact    | Matches the game on every case a probe measured         | 285   | `███░░░░░░░░░░░░░░░░░` 16% |
-| Close    | A documented model, not fully measured                  | 381   | `████░░░░░░░░░░░░░░░░` 21% |
-| Recorded | Changes nothing a map can read back; the call is logged | 97    | `█░░░░░░░░░░░░░░░░░░░` 5%  |
-| Missing  | Stops the run with the native's name                    | 1,072 | `████████████░░░░░░░░` 58% |
+| Level    | Meaning                                       | Count | Share                      |
+| -------- | --------------------------------------------- | ----- | -------------------------- |
+| Exact    | Every case matched                            | 285   | `███░░░░░░░░░░░░░░░░░` 16% |
+| Close    | Documented as matching but not fully measured | 381   | `████░░░░░░░░░░░░░░░░` 21% |
+| Recorded | Changes nothing a map can read                | 97    | `█░░░░░░░░░░░░░░░░░░░` 5%  |
+| Missing  | Stops testing and names the native for now    | 1,072 | `████████████░░░░░░░░` 58% |
 
 ## Licence
 
