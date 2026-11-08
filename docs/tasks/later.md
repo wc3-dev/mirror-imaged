@@ -34,3 +34,8 @@ Each item names the wave whose file it goes into when that file is written.
   `GetHandleId` to Sven. Until then, maps that forget to flush data keyed by `GetHandleId` behave differently (D111).
 - Wave 10 (the nil condition): probe further for `Condition(nil)`'s value inside `And`/`Or`/`Not` (the 6 mismatched
   cases in D114); `Condition`, `Filter`, `And`, `Or` and `Not` stay Close until it fits every measured case.
+- Wave 10 (accuracy): accept against A6, or fit, these standing differences: R2S/R2SW from 2^31 (D84), S2R past the
+  float range (D83), StringHash/SubString on bytes that aren't UTF-8 (D82, D38), the game's random generator (D46,
+  D86). And binary `load`: MirrorImaged refuses binary chunks on purpose (D36, D126: bytecode isn't verified, so a
+  map could corrupt the test process), which keeps `lua-config` different for good; that A6 exception is the
+  coordinator's call, listed for Sven's review at the end.
