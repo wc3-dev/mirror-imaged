@@ -4,7 +4,7 @@ Plan sections: 4 (A1, A2, A6), 5 (script path, time and randomness), 6 (script h
 Needs wave 0. The facts' sections named below are in `C:\Users\mdlsvensson\Repo\wc3-cs\docs\game-facts.md`; every
 measured case there becomes a test, and a native it measures is Exact.
 
-Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-8 after W1-5; W1-9 after W1-2 and W1-4; W1-7 last.
+Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-8 after W1-5; W1-9 after W1-2 and W1-4; W1-10 after W1-8; W1-7 last.
 
 Parallel lanes, to keep merges painless:
 - Decision numbers by range: W1-2 D70-D79, W1-3 D80-D89, W1-4 D90-D99, W1-5 D100-D109, W1-6 D110-D119,
@@ -140,6 +140,23 @@ Needs W1-2 and W1-4. Decisions D140-D149. What W1-4 left for after the triggers 
   the event — the probe here logs which set fired. `TriggerRegisterGameStateEvent` becomes Exact here.
 - `TriggerRegisterGameEvent` and its events, and `BlzTriggerInterrupt`/`BlzTriggerIsRunning` if W1-2's fix round
   didn't add them.
+
+## W1-10 The Lua number model fitted to the game
+
+Needs W1-8 (part 1, the comparison). Decisions D150-D159. W1-8 split off this part (its report and
+`probes/differences/`):
+
+- Fit `native/mifloat.c` to new probes: division (`1/d` over many divisor mantissas, an `n/d` grid), `sqrt` over
+  [1, 4), `sin`/`cos`/`tan` in radians, `exp`, `log`, `atan`, `pow`, subtractions that cancel bits, products near the
+  range's ends; and the `math.*` mismatches `probes/differences/strings.txt` lists (rad/deg, `asin(2)`, `atan(0, 0)`,
+  pow, trig at 0.5, 1, -1, pi, 100 and 1e6). Give `Asin`, `Acos` and `Atan2` their own domain check when
+  `math.asin` changes.
+- Find the game's string hash seed (`pairs` over string keys is the same every run, but the seed isn't 0).
+- D45's step and same-moment timer order against the `timers` probe (neither made, started nor queued order), and
+  the game reading a periodic timer's expiries at exact hundredths where MirrorImaged steps at 1/1024 s.
+- W1-2's `TriggerRegisterTimerEvent` cases and the trigger probes, once W1-6's `GetHandleId` lets them run; refresh
+  their `probes/differences` files.
+- Keep the native library reproducible and the cross-platform pins honest (re-pin on all three platforms through CI).
 
 ## W1-7 JASS maps
 
