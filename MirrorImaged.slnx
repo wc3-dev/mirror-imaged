@@ -7,6 +7,9 @@
     <Project Path="src/MirrorImaged.World/MirrorImaged.World.csproj" />
     <Project Path="src/MirrorImaged/MirrorImaged.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/MirrorImaged.NativesGenerator/MirrorImaged.NativesGenerator.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MirrorImaged.Tests/MirrorImaged.Tests.csproj" />
   </Folder>
