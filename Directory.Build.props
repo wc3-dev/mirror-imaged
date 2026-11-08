@@ -1,0 +1,23 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>mdlsvensson</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/wc3-dev/mirror-imaged</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/wc3-dev/mirror-imaged.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!-- Every dotnet test run ends: a test that stops making progress fails the run (tests/Tests.runsettings). -->
+  <PropertyGroup>
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)tests\Tests.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+
+</Project>
