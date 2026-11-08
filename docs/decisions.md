@@ -1442,16 +1442,18 @@ is in W2-3, W2-5, W2-6 and W2-7 (`docs/tasks/wave-2.md`) and `docs/tasks/later.m
 - **D225. Unit events fire in the call, by kind** (probe units): a death fires the unit's widget death events
   (`TriggerRegisterDeathEvent`), then its owner's player-unit events, then its own unit events, each kind in the order
   registered (the probe registered unit, player, widget, unit and saw widget, player, unit, unit); a decay, an owner
-  change and an order the player-unit events then the unit's. The registrations are kept per unit and per player in
-  the order made, so an event reads only its unit's and its owner's (4,000 deaths with a registration each took 17 to
-  21 ms against 10 to 15 without, Release). `TriggerRegisterPlayerUnitEvent`'s filter never runs and doesn't hold the
-  event back, as measured, so
-  `GetFilterUnit` waits for the enumerations (W2-6). The responses read the firing (D75): `GetTriggerUnit` in every unit
-  event, `GetTriggerWidget` only in the widget event, `GetDyingUnit` only in the unit and player-unit deaths,
-  `GetTriggerPlayer` the owner but in the widget event, `GetKillingUnit` nil for every death this wave makes,
-  `GetDecayingUnit`, `GetChangingUnit`, `GetChangingUnitPrevOwner`, `GetOrderedUnit` and `GetIssuedOrderId` in their
-  own events, nil or 0 elsewhere (not measured outside them). The other unit events register and never fire until
-  their waves; `TriggerRegisterUnitStateEvent` and `TriggerRegisterFilterUnitEvent` stay Missing (W2-10).
+  change and an order the player-unit events then the unit's. The registrations are kept per unit and per player in the
+  order made, so an event reads only its unit's and its owner's, and each registration knows its list, so
+  `DestroyTrigger` reads only its own; an empty list goes, and a unit's goes with it (Release: 8,000 deaths took 24 to
+  42 ms with no registration, 31 to 38 with one each, 46 to 54 with each trigger destroyed in its own death action;
+  destroying 8,000 one-registration triggers 5 to 11 ms). `TriggerRegisterPlayerUnitEvent`'s filter never runs and
+  doesn't hold the event back, as measured, so `GetFilterUnit` waits for the enumerations (W2-6). The responses read the
+  firing (D75): `GetTriggerUnit` in every unit event, `GetTriggerWidget` only in the widget event, `GetDyingUnit` only
+  in the unit and player-unit deaths, `GetTriggerPlayer` the owner but in the widget event, `GetKillingUnit` nil for
+  every death this wave makes, `GetDecayingUnit`, `GetChangingUnit`, `GetChangingUnitPrevOwner`, `GetOrderedUnit` and
+  `GetIssuedOrderId` in their own events, nil or 0 elsewhere (not measured outside them). The other unit events register
+  and never fire until their waves; `TriggerRegisterUnitStateEvent` and `TriggerRegisterFilterUnitEvent` stay Missing
+  (W2-10).
 - **D226. SetUnitOwner** (probe units, the facts' "Orders and events"): a living unit gets a stop (851972) whose order
   events read the old owner, then changes hands, then fires its owner change on the new owner's registrations
   (`GetTriggerPlayer` the new owner, `GetChangingUnitPrevOwner` the old); given to the owner it has, nothing happens; a

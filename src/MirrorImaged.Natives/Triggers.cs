@@ -77,6 +77,7 @@ public partial class @event
 {
     internal trigger? Trigger;
     internal timer? Timer;  // an expiry event's
+    internal agent? Of;  // a unit event's widget or player, whose list holds it
 }
 
 public partial class timer
@@ -128,13 +129,13 @@ public sealed partial class GameNatives
         {
             _game.Remove(registered.Key);
             registered.Timer?.ExpireEvents?.Remove(registered);
+            ForgetUnitEvent(registered);
         }
         whichTrigger.Events.Clear();
         _stateEvents.RemoveAll(state => state.Event.Trigger == whichTrigger);
         _playerEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _allianceEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _playerStateEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
-        ForgetUnitEvents(whichTrigger);
         _game.Remove(whichTrigger.Key);
     }
 

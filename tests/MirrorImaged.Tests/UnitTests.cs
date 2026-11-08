@@ -517,25 +517,37 @@ public sealed class UnitTests : IDisposable
         Assert.Equal(["0.0\t-5\t400.0", "1.150444\t5.132742", "true\t0.8\ttrue\t2"], Printed(simulation));
     }
 
-    // Unit events are kept by unit and by player: a death reads only its own registrations, so 4,000 deaths with a
-    // registration each cost about as much as without (the code review's measure)
+    // Unit events are kept by unit and by player, so a death reads only its own unit's and owner's, and a destroyed
+    // trigger lets go of only its own registrations (the code review's case: a unit's trigger destroyed in its own
+    // death action); a list goes once it is empty, so the bodies that stay keep none
     [Fact]
-    public void A_death_reads_only_its_own_units_registrations()
+    public void Unit_event_lists_are_each_units_and_go_with_their_registrations()
     {
-        static TimeSpan Kills(bool registered)
+        var natives = new GameNatives(new World.Game(0)) { Data = new GameData(Standard()) };
+        var units = Enumerable.Range(0, 100).Select(_ => natives.CreateUnit(natives.Player(0), Ids.Of("hfoo"), 0, 0, 0)!).ToList();
+        var deaths = 0;
+        foreach (var u in units)
         {
-            var natives = new GameNatives(new World.Game(0)) { Data = new GameData(Standard()) };
-            var units = Enumerable.Range(0, 4000).Select(_ => natives.CreateUnit(natives.Player(0), Ids.Of("hfoo"), 0, 0, 0)!).ToList();
-            if (registered)
-                foreach (var u in units) natives.TriggerRegisterUnitEvent(natives.CreateTrigger(), u, natives.ConvertUnitEvent(53));
-            var clock = System.Diagnostics.Stopwatch.StartNew();
-            foreach (var u in units) natives.KillUnit(u);
-            return clock.Elapsed;
+            var own = natives.CreateTrigger()!;
+            natives.TriggerRegisterDeathEvent(own, u);
+            natives.TriggerRegisterUnitEvent(own, u, natives.ConvertUnitEvent(53));
+            natives.TriggerAddAction(own, () =>
+            {
+                deaths++;
+                natives.DestroyTrigger(own);
+            });
         }
+        var everyone = natives.CreateTrigger();
+        natives.TriggerRegisterPlayerUnitEvent(everyone, natives.Player(0), natives.ConvertPlayerUnitEvent(20), null);
+        Assert.Equal(101, natives.UnitEventLists);
 
-        Kills(true);
-        var (without, with) = (Kills(false), Kills(true));
-        Assert.True(with < without * 4 + TimeSpan.FromMilliseconds(50), $"4,000 deaths took {with.TotalMilliseconds} ms with a registration each, {without.TotalMilliseconds} ms without");
+        foreach (var u in units.Take(50)) natives.KillUnit(u);
+        Assert.Equal((50, 51), (deaths, natives.UnitEventLists));
+        foreach (var u in units.Skip(50)) natives.KillUnit(u);
+        natives.DestroyTrigger(everyone);
+
+        // the widget death ran first and destroyed the trigger, so its unit death never ran
+        Assert.Equal((100, 0), (deaths, natives.UnitEventLists));
     }
 
     // probe units: the kinds a unit reads as

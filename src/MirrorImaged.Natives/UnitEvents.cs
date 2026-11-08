@@ -12,7 +12,7 @@ public sealed partial class GameNatives
     const int PlayerUnitDeath = 20, PlayerUnitDecay = 21, PlayerUnitIssuedOrder = 38, PlayerUnitChangeOwner = 270; // EVENT_PLAYER_UNIT_*
 
     // The unit and widget death registrations of each widget, and the player-unit registrations of each player, in the
-    // order made, so an event reads only its own unit's and owner's
+    // order made, so an event reads only its own unit's and owner's; a list goes once it is empty, or with its unit
     readonly Dictionary<widget, List<(int Kind, @event Event)>> _widgetEvents = [];
     readonly Dictionary<player, List<(int Kind, @event Event)>> _playerUnitEvents = [];
 
@@ -41,6 +41,7 @@ public sealed partial class GameNatives
     {
         if (t is null || w is null && p is null || kind is null) return null;
         var registered = Register(t);
+        registered.Of = (agent?)w ?? p;
         var list = w is not null ? Registrations(_widgetEvents, w) : Registrations(_playerUnitEvents, p!);
         list.Add((kind.Id, registered));
         return registered;
@@ -49,11 +50,22 @@ public sealed partial class GameNatives
     static List<(int Kind, @event Event)> Registrations<T>(Dictionary<T, List<(int Kind, @event Event)>> lists, T key) where T : notnull =>
         lists.TryGetValue(key, out var list) ? list : lists[key] = [];
 
-    // DestroyTrigger lets go of its unit registrations
-    void ForgetUnitEvents(trigger t)
+    // DestroyTrigger lets go of a unit registration: only its own widget's or player's list is read
+    void ForgetUnitEvent(@event registered)
     {
-        foreach (var list in _widgetEvents.Values.Concat(_playerUnitEvents.Values)) list.RemoveAll(e => e.Event.Trigger == t);
+        if (registered.Of is widget w) Forget(_widgetEvents, w, registered);
+        else if (registered.Of is player p) Forget(_playerUnitEvents, p, registered);
     }
+
+    static void Forget<T>(Dictionary<T, List<(int Kind, @event Event)>> lists, T key, @event registered) where T : notnull
+    {
+        if (!lists.TryGetValue(key, out var list)) return;
+        list.RemoveAll(e => e.Event == registered);
+        if (list.Count == 0) lists.Remove(key);
+    }
+
+    /// <summary>How many unit event lists are kept, a widget's or a player's each: for the tests.</summary>
+    internal int UnitEventLists => _widgetEvents.Count + _playerUnitEvents.Count;
 
     /// <summary>The unit an event is about, in its widget death event too; nil outside a unit's event.</summary>
     [Native(Level.Exact, Fact = UnitsProbe)]
