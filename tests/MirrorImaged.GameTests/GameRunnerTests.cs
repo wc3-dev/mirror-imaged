@@ -69,11 +69,17 @@ public sealed class GameRunnerTests : IDisposable
         Assert.Equal([copy], GameRunner.SaveReplays([replay], list));
         Assert.Equal("Sven's game", File.ReadAllText(copy));
 
-        // Another replay with the same write time leaves the copy as it is.
+        // The same replay again is saved already.
+        Assert.Empty(GameRunner.SaveReplays([replay], list));
+
+        // Another replay with the same write time leaves the copy as it is and is saved under its hash's start too, once.
         File.WriteAllText(replay, "another game");
         File.SetLastWriteTime(replay, new DateTime(2026, 11, 8, 1, 17, 15));
+        var other = Path.Combine(replays, "Saved by MirrorImaged", $"LastReplay 2026-11-08 011715 {Hash(replay)[..8]}.w3g");
+        Assert.Equal([other], GameRunner.SaveReplays([replay], list));
         Assert.Empty(GameRunner.SaveReplays([replay], list));
         Assert.Equal("Sven's game", File.ReadAllText(copy));
+        Assert.Equal("another game", File.ReadAllText(other));
     }
 
     [Fact]

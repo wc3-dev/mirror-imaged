@@ -204,7 +204,8 @@ public sealed class GameRunner(string game, string documents, string maps)
 
     /// <summary>
     /// Copies each replay that no probe run made (its hash isn't in <paramref name="probeReplays"/>) to
-    /// <c>Saved by MirrorImaged\LastReplay &lt;its write time&gt;.w3g</c> beside it, never over a file that is there. Says
+    /// <c>Saved by MirrorImaged\LastReplay &lt;its write time&gt;.w3g</c> beside it, or with the start of its hash added
+    /// when another replay holds that name; never over a file, and not again when a copy with its content is there. Says
     /// which copies it made.
     /// </summary>
     internal static List<string> SaveReplays(IEnumerable<string> replays, string probeReplays)
@@ -216,16 +217,29 @@ public sealed class GameRunner(string game, string documents, string maps)
             if (Hash(replay) is not { } hash || probes.Contains(hash))
                 continue;
             var folder = Path.Combine(Path.GetDirectoryName(replay)!, "Saved by MirrorImaged");
-            var copy = Path.Combine(folder, $"LastReplay {File.GetLastWriteTime(replay).ToString("yyyy-MM-dd HHmmss", CultureInfo.InvariantCulture)}.w3g");
+            var name = Path.Combine(folder, $"LastReplay {File.GetLastWriteTime(replay).ToString("yyyy-MM-dd HHmmss", CultureInfo.InvariantCulture)}");
             Directory.CreateDirectory(folder);
-            try
+
+            // Under its write time, or, when another replay holds that name, with the start of its hash too.
+            foreach (var copy in new[] { name + ".w3g", $"{name} {hash[..8]}.w3g" })
             {
-                File.Copy(replay, copy, overwrite: false);
-                saved.Add(copy);
-            }
-            catch (IOException) when (File.Exists(copy))
-            {
-                // Saved already, by an earlier run.
+                if (File.Exists(copy))
+                {
+                    if (Hash(copy) == hash)
+                        break;
+                    continue;
+                }
+
+                try
+                {
+                    File.Copy(replay, copy, overwrite: false);
+                    saved.Add(copy);
+                    break;
+                }
+                catch (IOException) when (File.Exists(copy))
+                {
+                    // Made by another run in the meantime: never written over.
+                }
             }
         }
 

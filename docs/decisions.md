@@ -301,22 +301,23 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
 - **D56.** The game starts suspended in a job object of its own with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, and is
   resumed once in it, so everything it starts is in the job (measured: no breakaway). The runner ends the job, never
   closing the game's window, which opens the quit dialog; when the test host ends, however it ends, Windows closes the
-  job and the game goes with it. It stops nothing outside the job. The game gets the user's own environment as a new
-  logon builds it (`CreateEnvironmentBlock` without inheriting), not the test host's, so the caller's shell (Git Bash's
-  `HOME`, `MSYSTEM` and `PATH`) never reaches it; that alone did not end the stalls under the Bash tool (facts). (W0-4)
+  job and the game goes with it. It stops nothing outside the job. (W0-4)
 - **D57.** Runs are one at a time on a computer: a run holds the named mutex `MirrorImaged.GameRunner` for its whole
   length, a second waits for it up to 5 minutes (well inside the 10 after which the test host's blame collector ends a
-  run) and then fails saying so, and a run refuses to start while any
-  Warcraft III is running, as it couldn't tell that game's files from its own. Two runs at once made one fail (facts).
+  run) and then fails saying so, and a run refuses to start while any Warcraft III is running, as it couldn't tell that
+  game's files from its own. Two runs at once made one fail (facts).
   A test that starts a fake `Warcraft III.exe` holds the mutex while it runs. The run's detail names the installed
   build and warns when it isn't 3.0.1.24371, the version the facts were measured on. (W0-4)
 - **D58.** Built maps go to `%LOCALAPPDATA%\MirrorImaged\maps`, as `<name>-<8 random hex digits>.w3x`, new each run and
   deleted after it, since the game loads no map whose path is longer than 173 characters (facts) and the test assembly's
   folder is long already; a longer path is refused before the run. (W0-4)
-- **D59.** The runner never writes over any of Sven's files and puts nothing back. The one file a run changes is the
-  account's `LastReplay.w3g`, which the probe's game replaces (facts). So before a run each account's
+- **D59.** The runner never writes over any of Sven's files and puts nothing back. The one file of his whose content a
+  run changes is the account's `LastReplay.w3g`, which the probe's game replaces (facts). Every launch also rewrites
+  `Documents\Warcraft III\Logs\War3Log.txt` (the game does it), which the workspace's `docs/tools/gate.ps1` reads to
+  confirm Sven's own test-map runs, so a run between his test map and that read loses it. Before a run each account's
   `LastReplay.w3g` whose SHA-256 isn't one a probe run made is copied to `Replays\Saved by MirrorImaged\LastReplay
-  <its write time, yyyy-MM-dd HHmmss>.w3g`, never over a file that is there; after the run the hash of each
+  <its write time, yyyy-MM-dd HHmmss>.w3g`, or with the first 8 digits of its hash added when another replay holds that
+  name; never over a file, and not again when a copy with its content is there. After the run the hash of each
   `LastReplay.w3g` that changed is added to `%LOCALAPPDATA%\MirrorImaged\probe-replays.txt` (hexadecimal, one a line),
   unless a Warcraft III outside the run's job was seen during it (Sven's own game, or World Editor's Test Map), in which
   case the replay may be his and the next run saves it. This replaced a keep-and-restore of five files, which could put
