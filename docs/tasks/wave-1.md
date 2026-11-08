@@ -6,6 +6,14 @@ measured case there becomes a test, and a native it measures is Exact.
 
 Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-8 after W1-5; W1-7 last.
 
+Parallel lanes, to keep merges painless:
+- Decision numbers by range: W1-2 D70-D79, W1-3 D80-D89, W1-4 D90-D99, W1-5 D100-D109, W1-6 D110-D119,
+  W1-8 D120-D129, W1-7 D130-D139. Gaps are fine.
+- A conflict in `src/MirrorImaged.Natives/Generated/` is resolved by taking either side and re-running the generator
+  (D22), never by hand.
+- Each lane writes its natives in its own files (`Triggers.cs`, `Hashtables.cs`, `Players.cs`, `Files.cs`,
+  `Handles.cs`, ...); shared files (`GameNatives.cs`, `Simulation*.cs`) get only small, additive changes.
+
 ## W1-1 The game's globals and `blizzard.j`
 
 - The constants and globals of `common.j` (`PLAYER_COLOR_RED`, `EVENT_PLAYER_UNIT_DEATH`, and the rest, made by the
