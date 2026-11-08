@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\src\MirrorImaged.Data\MirrorImaged.Data.csproj" />
     <ProjectReference Include="..\..\src\MirrorImaged.Natives\MirrorImaged.Natives.csproj" />
     <ProjectReference Include="..\..\tools\MirrorImaged.NativesGenerator\MirrorImaged.NativesGenerator.csproj" />
+    <ProjectReference Include="..\..\src\MirrorImaged.Lua\MirrorImaged.Lua.csproj" />
   </ItemGroup>
 
   <ItemGroup>
