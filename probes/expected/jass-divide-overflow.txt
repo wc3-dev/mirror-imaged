@@ -1,0 +1,1 @@
+# No lines: the game closed (exit code 1, BlizzardError) as the probe divided -2147483648 by -1.

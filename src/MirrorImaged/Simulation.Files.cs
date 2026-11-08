@@ -1,6 +1,7 @@
 using System.Reflection;
 using MirrorImaged.Lua;
 using MirrorImaged.Natives;
+using MirrorImaged.World;
 using War3Net.CodeAnalysis.Jass;
 using War3Net.CodeAnalysis.Jass.Syntax;
 
@@ -15,6 +16,9 @@ public sealed partial class Simulation
 
     LuaFunction? _preloadFile;
     (string Lua, string Path) _preloadNext;
+
+    // common.j's declarations, made once: a game's globals have the same names and types as any other's
+    static JassCompilationUnitSyntax CommonJ() => _commonJ ??= JassSyntaxFactory.ParseCompilationUnit(Declarations(new GameNatives(new Game(0))));
 
     static IEnumerable<MethodInfo> NativeMethods => typeof(GameNatives).GetMethods().Where(method => method.GetCustomAttribute<NativeAttribute>() is not null);
 
@@ -75,7 +79,7 @@ public sealed partial class Simulation
         try
         {
             // A thread is started with no arguments, so the function asks for the file; a wait in it isn't kept (D102).
-            _preloadNext = (Blizzard.ToLua(_commonJ ??= JassSyntaxFactory.ParseCompilationUnit(Declarations(_natives)), jass), path);
+            _preloadNext = (Blizzard.ToLua(CommonJ(), jass), path);
             _preloadFile!.Start().Dispose();
         }
         catch (Exception e) when (_lua.Halted is null)

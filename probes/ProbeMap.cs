@@ -28,6 +28,9 @@ public static partial class ProbeMap
     /// <summary>The Lua of a probe in <c>probes/</c>, by its name.</summary>
     public static string Source(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "probes", name + ".lua"));
 
+    /// <summary>The JASS of a probe in <c>probes/</c>, by its name (<c>&lt;name&gt;.j</c>).</summary>
+    public static string JassSource(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "probes", name + ".j"));
+
     /// <summary>Builds a probe's map at <paramref name="path"/>.</summary>
     /// <param name="name">The probe's name, letters, digits and dashes; its lines go to <c>MirrorImaged\&lt;name&gt;.pld</c>.</param>
     /// <param name="lua">
@@ -131,6 +134,101 @@ public static partial class ProbeMap
             PlayerData Slot(int id, PlayerController controller, string slotName) =>
                 new() { Id = id, Controller = controller, Race = PlayerRace.Human, Flags = PlayerFlags.RaceSelectable, Name = slotName, StartPosition = start };
         }
+        Write(info, script, path);
+    }
+
+    /// <summary>
+    /// Builds a JASS probe's map at <paramref name="path"/>: the same map, its script <c>war3map.j</c>, which the game
+    /// runs in its JASS machine. <paramref name="jass"/> may start with a <c>globals</c> block, which joins the map's,
+    /// and defines <c>function probe takes nothing returns nothing</c>, which runs once the game has started; it calls
+    /// <c>out(text)</c> for each line and <c>done()</c> when it has finished. JASS has no <c>pcall</c>: a thread the
+    /// probe crashes just stops, so it runs what may crash in threads of its own (<c>ExecuteFunc</c>), and a timer calls
+    /// <c>done()</c> 30 s in, in case the probe's own thread stopped. A line over 253 bytes becomes an error line. The
+    /// map calls no blizzard.j function, so MirrorImaged can run it without the game's blizzard.j.
+    /// </summary>
+    public static void BuildJass(string name, string jass, string path)
+    {
+        if (!Name().IsMatch(name))
+            throw new ArgumentException($"A probe's name is letters, digits and dashes, not \"{name}\"", nameof(name));
+
+        var globals = GlobalsBlock().Match(jass);
+        var script = $$"""
+            globals
+                string array probe_lines
+                integer probe_count = 0
+                boolean probe_done = false
+            {{globals.Groups[1].Value}}
+            endglobals
+
+            function out takes string text returns nothing
+                if StringLength(text) > 253 then
+                    set text = "error: a line is at most 253 bytes: " + SubString(text, 0, 40)
+                endif
+                set probe_lines[probe_count] = text
+                set probe_count = probe_count + 1
+            endfunction
+
+            function done takes nothing returns nothing
+                local integer i = 0
+                if probe_done then
+                    return
+                endif
+                set probe_done = true
+                call PreloadGenClear()
+                call PreloadGenStart()
+                loop
+                    exitwhen i >= probe_count
+                    call Preload("\")\n" + probe_lines[i] + "\n//")
+                    set i = i + 1
+                endloop
+                call PreloadGenEnd({{Lua($@"{Folder}\{name}.pld")}})
+                call EndGame(false)
+            endfunction
+
+            {{jass[(globals.Index + globals.Length)..]}}
+
+            function probe_mark takes string file returns nothing
+                call PreloadGenClear()
+                call PreloadGenStart()
+                call PreloadGenEnd(file)
+            endfunction
+
+            function probe_start takes nothing returns nothing
+                call probe_mark({{Lua(Started)}})
+                call TimerStart(CreateTimer(), 30.0, false, function done)
+                call probe()
+            endfunction
+
+            function config takes nothing returns nothing
+                call SetMapName("MirrorImaged probe")
+                call SetPlayers(1)
+                call SetTeams(1)
+                call SetGamePlacement(MAP_PLACEMENT_USE_MAP_SETTINGS)
+                call DefineStartLocation(0, 0.0, 0.0)
+                call SetPlayerStartLocation(Player(0), 0)
+                call SetPlayerColor(Player(0), ConvertPlayerColor(0))
+                call SetPlayerRacePreference(Player(0), RACE_PREF_HUMAN)
+                call SetPlayerRaceSelectable(Player(0), true)
+                call SetPlayerController(Player(0), MAP_CONTROL_USER)
+            endfunction
+
+            function main takes nothing returns nothing
+                call probe_mark({{Lua(Loaded)}})
+                call TimerStart(CreateTimer(), 0.0, false, function probe_start)
+            endfunction
+
+            """;
+
+        var info = MapFactory.Info(32, 32);
+        info.MapName = name;
+        info.MapFlags &= ~MapFlags.MeleeMap;
+        info.Forces[0].Players = new Bitmask32(1);
+        info.ScriptLanguage = ScriptLanguage.Jass;
+        Write(info, script, path);
+    }
+
+    static void Write(MapInfo info, string script, string path)
+    {
         var builder = new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info), Script = script });
         builder.AddFiles(MpqFile.New(new MemoryStream(Minimap), "war3mapMap.tga"));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
@@ -201,4 +299,8 @@ public static partial class ProbeMap
 
     [GeneratedRegex(@"^[A-Za-z0-9-]+\z")]
     private static partial Regex Name();
+
+    // A JASS probe's own globals block, at its start after any comments
+    [GeneratedRegex(@"\A(?:\s|//[^\n]*)*globals\b(.*?)^\s*endglobals\b", RegexOptions.Singleline | RegexOptions.Multiline)]
+    private static partial Regex GlobalsBlock();
 }

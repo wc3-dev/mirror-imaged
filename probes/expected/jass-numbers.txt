@@ -1,0 +1,15 @@
+add -2147483648 2147483647 -2 -2147483648
+mul -2 0 -2147479015 -2147483648 1
+div 3 -3 -3 3 0 0 -1073741824 -2147483647
+modulo 1 2 1 -4
+divide real 40400000 40600000 40600000
+i2r 16777219 set 4b800001 native 4b800001 argument 4b800001 return 01000003 plus 4b800001
+i2r -16777219 set cb800001 native cb800001 argument cb800001 return fefffffd plus cb800001
+i2r 2147483647 set 4effffff native 4effffff argument 4effffff return 00000000 plus 4effffff
+i2r 33554435 set 4c000000 native 4c000000 argument 4c000000 return 02000003 plus 4c000000
+i2r literal 4b800001 4b800001 cb800001
+sum 3e99999a 3e99999a 3eaaaaab 40e00001 3f2aaaab 3dccccc8
+literal 3dccccce 3e99999a 4b800000 00000000 3a83126f
+equal true true true false true true false false
+order true false false false
+r2i 2 -2

@@ -49,8 +49,8 @@ static int Usage()
     Console.Error.Write("""
         usage:
           mirror coverage                                  How many natives are at each trust level, and which are Missing
-          mirror run <map> [--seconds <n>] [--seed <n>]    Runs a Lua map for n simulated seconds (60) with a seed (0),
-                                                           then prints its log
+          mirror run <map> [--seconds <n>] [--seed <n>]    Runs a Lua or JASS map for n simulated seconds (60) with a
+                                                           seed (0), then prints its log
 
         """);
     return 2;

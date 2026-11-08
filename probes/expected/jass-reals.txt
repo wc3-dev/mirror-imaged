@@ -1,0 +1,16 @@
+ladder 0 100000001000
+ladder 1 110000001000
+ladder -1 110000001000
+ladder 100 110000001000
+ladder 1000 111000001000
+ladder 0.5 110000001000
+far 11100
+integer 1011
+order 1100
+returns literal start
+returns literal 01000003
+returns one start
+returns sum start
+returns sum 01000004
+returns real start
+returns real 4b800001

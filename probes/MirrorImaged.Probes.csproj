@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <None Update="*.lua" Link="probes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="*.j" Link="probes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Update="expected\*.txt" Link="probes\expected\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

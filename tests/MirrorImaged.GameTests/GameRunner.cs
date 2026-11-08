@@ -86,7 +86,8 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// <exception cref="ArgumentException">The name is not a probe's, or makes the map's path too long for the game.</exception>
     /// <exception cref="TimeoutException">Another run kept the game longer than five minutes.</exception>
     /// <param name="withComputer">The probe map with a computer and named slots (<see cref="ProbeMap.Build"/>).</param>
-    public ProbeRun Run(string name, string lua, TimeSpan timeout, bool withComputer = false)
+    /// <param name="jass">The probe is JASS (<see cref="ProbeMap.BuildJass"/>), <paramref name="lua"/> its script.</param>
+    public ProbeRun Run(string name, string lua, TimeSpan timeout, bool withComputer = false, bool jass = false)
     {
         using var one = new Mutex(false, OneRunAtATime);
         bool mine;
@@ -107,7 +108,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         {
             if (Process.GetProcessesByName("Warcraft III").Length > 0)
                 throw new InvalidOperationException("Warcraft III is already running; the runner uses only a game it starts itself");
-            return RunAlone(name, lua, timeout, withComputer);
+            return RunAlone(name, lua, timeout, withComputer, jass);
         }
         finally
         {
@@ -115,7 +116,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         }
     }
 
-    ProbeRun RunAlone(string name, string lua, TimeSpan timeout, bool withComputer)
+    ProbeRun RunAlone(string name, string lua, TimeSpan timeout, bool withComputer, bool jass)
     {
         var map = MapPath(maps, name);
         var output = Path.Combine(Data, name + ".pld");
@@ -139,7 +140,8 @@ public sealed class GameRunner(string game, string documents, string maps)
         GameProcess? running = null;
         try
         {
-            ProbeMap.Build(name, lua, map, withComputer);
+            if (jass) ProbeMap.BuildJass(name, lua, map);
+            else ProbeMap.Build(name, lua, map, withComputer);
             Directory.CreateDirectory(Data);
             File.Delete(output);
             File.Delete(loaded);

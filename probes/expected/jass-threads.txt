@@ -1,0 +1,36 @@
+limit Spin 428571
+limit SpinCalling 300000
+limit SpinNative 300000
+limit SpinLocal 333333
+limit SpinExit 230769
+outer first
+inner done
+outer second
+uninit integer start
+uninit integer native start
+uninit real start
+uninit string start
+uninit string native start
+uninit boolean start
+uninit handle start
+uninit handle native start
+uninit copy start
+uninit global start
+uninit global handle start
+uninit set start
+uninit set after 5
+arrays start
+arrays integer 0 0
+arrays string true false 0
+arrays timer true
+arrays after
+null length 0
+null join [a] [b]
+null join both true false
+null equal true false false
+null case true false
+null sub true false
+null numbers 0 0.000 0
+null saved true true true false
+before wait
+after wait

@@ -67,12 +67,15 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = TablesFact)]
     public void SaveBoolean(hashtable? table, int parentKey, int childKey, bool value) => Save(table, parentKey, childKey, Slot.Boolean, value);
 
-    /// <summary>Saves the string and gives true; false, saving nothing, with no table or a destroyed one (Lua refuses a nil string).</summary>
+    // A null string saved, which JASS can give and which loads as null (probe jass-threads); Lua refuses a nil one
+    static readonly object NullString = new();
+
+    /// <summary>Saves the string, null too, and gives true; false, saving nothing, with no table or a destroyed one.</summary>
     [Native(Level.Exact, Fact = TablesFact)]
     public bool SaveStr(hashtable? table, int parentKey, int childKey, string? value)
     {
-        if (table is null || !Alive(table) || value is null) return false;
-        Save(table, parentKey, childKey, Slot.String, value);
+        if (table is null || !Alive(table)) return false;
+        Save(table, parentKey, childKey, Slot.String, value ?? NullString);
         return true;
     }
 
@@ -86,7 +89,12 @@ public sealed partial class GameNatives
     public bool LoadBoolean(hashtable? table, int parentKey, int childKey) => Load(table, parentKey, childKey, Slot.Boolean) as bool? ?? false;
 
     [Native(Level.Exact, Fact = TablesFact)]
-    public string? LoadStr(hashtable? table, int parentKey, int childKey) => Load(table, parentKey, childKey, Slot.String) as string ?? "";
+    public string? LoadStr(hashtable? table, int parentKey, int childKey) => Load(table, parentKey, childKey, Slot.String) switch
+    {
+        string s => s,
+        null => "",
+        _ => null,
+    };
 
     [Native(Level.Exact, Fact = TablesFact)]
     public bool HaveSavedInteger(hashtable? table, int parentKey, int childKey) => Have(table, parentKey, childKey, Slot.Integer);

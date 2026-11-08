@@ -310,7 +310,8 @@ static int halt (lua_State *L) {
 }
 
 /* The position of the nearest Lua function calling in, in this thread or else the main thread, so a halt called
-   straight from pcall or a coroutine still names its line */
+   straight from pcall or a coroutine still names its line; MirrorImaged's own Lua (the chunk "mirror") is passed over,
+   so the line is the script's */
 static void pushwhere (lua_State *L) {
   lua_State *threads[2];
   lua_Debug ar;
@@ -320,7 +321,7 @@ static void pushwhere (lua_State *L) {
   for (t = 0; t < 2; t++) {
     for (level = t == 0; lua_getstack(threads[t], level, &ar); level++) {
       lua_getinfo(threads[t], "Sl", &ar);
-      if (ar.currentline > 0) {
+      if (ar.currentline > 0 && strcmp(ar.short_src, "mirror") != 0) {
         lua_pushfstring(L, "%s:%d: ", ar.short_src, ar.currentline);
         return;
       }
@@ -515,6 +516,35 @@ LUALIB_API int mirror_resume (lua_State *L, int thread, int *yielded) {
   int status = protect(L, doresume, &r, LUA_MULTRET);
   *yielded = status == LUA_OK && r.n;
   return status;
+}
+
+/* JASS's operation limit: the thread raises once it has run its count of Lua instructions */
+static void overlimit (lua_State *L, lua_Debug *ar) {
+  (void)ar;
+  L->allowhook = 1;  /* as rehalt's: the error leaves the hook without turning hooks back on */
+  luaL_where(L, 0);  /* in a hook, level 0 is the Lua function running */
+  lua_pushliteral(L, "the thread passed JASS's operation limit");
+  lua_concat(L, 2);
+  lua_error(L);
+}
+
+static int dolimit (lua_State *L) {
+  const Request *r = (const Request *)lua_touserdata(L, 1);
+  lua_State *t = G(L)->mainthread;
+  if (lua_getfield(L, LUA_REGISTRYINDEX, HALT) != LUA_TNIL) return 0;  /* a halted state keeps rehalt's hooks */
+  if (r->ref != LUA_NOREF) {
+    lua_rawgeti(L, LUA_REGISTRYINDEX, r->ref);
+    t = lua_tothread(L, -1);
+  }
+  lua_sethook(t, r->n > 0 ? overlimit : NULL, r->n > 0 ? LUA_MASKCOUNT : 0, r->n);
+  return 0;
+}
+
+/* Gives the thread mirror_start left as thread, or the main thread for LUA_NOREF, count Lua instructions from now
+   before it raises; a thread started later takes the main thread's count afresh. A count of 0 takes the limit away. */
+LUALIB_API int mirror_limit (lua_State *L, int thread, int count) {
+  Request r = {NULL, NULL, count, NULL, thread};
+  return protect(L, dolimit, &r, 0);
 }
 
 /* What the string s of length bytes is as a number to Lua, as luaL_checkinteger and luaL_checknumber read one: 1 an

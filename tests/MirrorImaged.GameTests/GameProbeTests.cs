@@ -14,6 +14,12 @@ public sealed class GameFactAttribute : FactAttribute
     }
 }
 
+/// <summary>As <see cref="GameFactAttribute"/>, for a theory.</summary>
+public sealed class GameTheoryAttribute : TheoryAttribute
+{
+    public GameTheoryAttribute() => Skip = new GameFactAttribute().Skip;
+}
+
 [Trait("Needs", "Game")]
 public sealed class GameProbeTests
 {
@@ -96,9 +102,44 @@ public sealed class GameProbeTests
     [GameFact]
     public void The_forforce_wait_probe_gives_the_lines_measured() => Measured("forforce-wait");
 
-    static void Measured(string name, bool withComputer = false)
+    // docs/facts.md, "JASS maps": JASS probes run in the game's JASS machine, and blizzard.j in a Lua map's Lua
+    [GameTheory]
+    [InlineData("jass-numbers")]
+    [InlineData("jass-reals")]
+    [InlineData("jass-literals")]
+    [InlineData("jass-equal")]
+    [InlineData("jass-threads")]
+    [InlineData("jass-debug")]
+    [InlineData("jass-rawcodes")]
+    [InlineData("jass-rawcode-quote")]
+    [InlineData("jass-divide-integer")]
+    [InlineData("jass-divide-real")]
+    public void A_jass_probe_gives_the_lines_measured(string name) => Measured(name, jass: true);
+
+    [GameFact]
+    public void The_blizzard_numbers_probe_gives_the_lines_measured() => Measured("blizzard-numbers");
+
+    [GameFact]
+    public void Dividing_the_lowest_integer_by_minus_one_in_JASS_closes_the_game()
     {
-        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), TimeSpan.FromMinutes(2), withComputer);
+        var run = GameRunner.Default.Run("jass-divide-overflow", ProbeMap.JassSource("jass-divide-overflow"), TimeSpan.FromMinutes(2), jass: true);
+
+        Assert.Empty(run.Lines);
+        Assert.Contains("the game had exited by itself", run.Detail);
+    }
+
+    [GameFact]
+    public void The_game_doesnt_load_a_JASS_map_with_a_backslash_in_a_rawcode()
+    {
+        var run = GameRunner.Default.Run("jass-rawcode-backslash", ProbeMap.JassSource("jass-rawcode-backslash"), TimeSpan.FromSeconds(75), jass: true);
+
+        Assert.Empty(run.Lines);
+        Assert.DoesNotContain("the map loaded", run.Detail);
+    }
+
+    static void Measured(string name, bool withComputer = false, bool jass = false)
+    {
+        var run = GameRunner.Default.Run(name, jass ? ProbeMap.JassSource(name) : ProbeMap.Source(name), TimeSpan.FromMinutes(2), withComputer, jass);
 
         Assert.True(run.State == ProbeState.Done, $"{run.State}: {run.Detail}");
         ExpectedLines.Assert(Path.Combine(AppContext.BaseDirectory, "probes", "expected", name + ".txt"), run.Lines);

@@ -23,6 +23,7 @@ public sealed unsafe class LuaState : IDisposable
     readonly List<Func<object?[], object?[]>> _functions = [];
     readonly StateHandle _handle;
     bool _yield;
+    int _limit;
 
     public LuaState()
     {
@@ -51,6 +52,27 @@ public sealed unsafe class LuaState : IDisposable
         set => Use(l => *mirror_clockms(l) = value.Ticks / TimeSpan.TicksPerMillisecond);
     }
 
+    /// <summary>
+    /// JASS's operation limit, as a count of Lua instructions: a thread that runs more raises an error, counted from
+    /// when it starts or is resumed, and for the main thread from each <see cref="Run(byte[], string)"/> and
+    /// <see cref="Call"/>; 0, as a state is made, for no limit.
+    /// </summary>
+    public int OperationLimit
+    {
+        get => _limit;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
+            _limit = value;
+            Use(l => Limit(l, NoReference));
+        }
+    }
+
+    const int NoReference = -2;  // Lua's LUA_NOREF, which mirror_limit reads as the main thread
+
+    // Starts the thread's count again, when there is a limit (or it was just taken away)
+    object?[] Limit(nint l, int thread) => Results(l, lua_gettop(l), mirror_limit(l, thread, _limit));
+
     /// <summary>Runs a chunk and returns what it returns. Error messages name it: <c>war3map.lua:3: ...</c>.</summary>
     public object?[] Run(string code, string chunkName = "chunk") => Run(Encoding.UTF8.GetBytes(code), chunkName);
 
@@ -61,12 +83,17 @@ public sealed unsafe class LuaState : IDisposable
             int top = lua_gettop(l), status;
             fixed (byte* p = code) status = luaL_loadbufferx(l, p, (nuint)code.Length, "@" + chunkName, "t");
             if (status != 0) throw Error(l, top);
+            if (_limit > 0) Limit(l, NoReference);
             return Results(l, top, mirror_pcall(l, 0, MultipleResults));
         });
 
     /// <summary>Calls the global function <paramref name="name"/> and returns its results.</summary>
     public object?[] Call(string name, params object?[] args) =>
-        Use(l => Results(l, lua_gettop(l), mirror_call(l, name, _handle.Write(args), args.Length)));
+        Use(l =>
+        {
+            if (_limit > 0) Limit(l, NoReference);
+            return Results(l, lua_gettop(l), mirror_call(l, name, _handle.Write(args), args.Length));
+        });
 
     /// <summary>
     /// Calls the global function <paramref name="name"/> in a new Lua thread, as <see cref="LuaFunction.Start"/> does.
@@ -88,6 +115,7 @@ public sealed unsafe class LuaState : IDisposable
     internal (object?[] Results, bool Yielded) Resume(int thread) =>
         Use(l =>
         {
+            if (_limit > 0) Limit(l, thread);
             int top = lua_gettop(l), yielded, status = mirror_resume(l, thread, &yielded);
             return yielded != 0 ? ([], true) : (Results(l, top, status, argument: true), false);
         });

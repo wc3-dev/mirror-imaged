@@ -170,6 +170,24 @@ public sealed class ProbeMapTests : IDisposable
     }
 
     // Line ends as \n whatever the checkout gives the raw string the script is written from.
+    // The game runs a JASS map's war3map.j in its JASS machine; the probe's globals join the map's, which must come first
+    [Fact]
+    public void A_jass_probe_map_has_the_probe_in_its_war3map_j_and_calls_no_blizzard_j()
+    {
+        var path = Path.Combine(_folder, "jass.w3x");
+        ProbeMap.BuildJass("jass", "// a probe\nglobals\n    integer mine = 1\nendglobals\n\nfunction probe takes nothing returns nothing\n    call done()\nendfunction\n", path);
+        var map = Map.Open(path);
+        var script = map.Script!.ReplaceLineEndings("\n");
+
+        Assert.Equal(ScriptLanguage.Jass, map.Info!.ScriptLanguage);
+        Assert.StartsWith("globals\n    string array probe_lines\n", script);
+        Assert.Contains("    integer mine = 1\n\nendglobals\n", script);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(script, @"^\s*globals\b", System.Text.RegularExpressions.RegexOptions.Multiline));
+        Assert.True(script.IndexOf("function done", StringComparison.Ordinal) < script.IndexOf("function probe ", StringComparison.Ordinal));
+        Assert.Contains(@"call PreloadGenEnd(""MirrorImaged\\jass.pld"")", script);
+        Assert.DoesNotContain("InitBlizzard", script);
+    }
+
     Map Build(string name, string lua, bool withComputer = false)
     {
         var path = Path.Combine(_folder, name + ".w3x");

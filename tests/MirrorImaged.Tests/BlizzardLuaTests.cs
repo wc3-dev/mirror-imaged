@@ -57,6 +57,60 @@ public sealed class BlizzardLuaTests : IDisposable
         Assert.Equal(11, state.Call("Count")[0]);
     }
 
+    // War3Net writes them after Lua's return, which Lua refuses (WotLK RPG 17.11b's war3map.j has such a function)
+    [Fact]
+    public void Statements_after_a_return_are_left_out()
+    {
+        var lua = Blizzard.ToLua(
+            "native Fail takes nothing returns nothing",
+            """
+            function Early takes boolean b returns integer
+                if b then
+                    return 1
+                    call Fail()
+                endif
+                return 2
+                call Fail()
+            endfunction
+            """);
+
+        using var state = new LuaState();
+        state.Run(lua);
+
+        Assert.Equal(1, state.Call("Early", true)[0]);
+        Assert.Equal(2, state.Call("Early", false)[0]);
+    }
+
+    // a whole number given to a real is a real, as the game's own Lua blizzard.j has bj_MELEE_MINE_SEARCH_RADIUS (probe
+    // blizzard-numbers)
+    [Fact]
+    public void A_whole_number_where_a_real_goes_is_a_real()
+    {
+        var lua = Blizzard.ToLua(
+            "native Echo takes real r returns real",
+            """
+            globals
+                constant real RADIUS = 2000
+                real speed = -5
+            endglobals
+            function Half takes real r returns real
+                local real h = 3
+                set h = $10
+                return Echo(1) + h + r - 'a'
+            endfunction
+            function Zero takes nothing returns real
+                return 0
+            endfunction
+            """);
+
+        using var state = new LuaState();
+        state.Register("Echo", args => [args[0]]);
+        state.Run(lua);
+        state.Run("x = { math.type(RADIUS), math.type(speed), math.type(Half(1)), math.type(Zero()), RADIUS, speed, Half(1) }");
+
+        Assert.Equal(["float", "float", "float", "float", 2000f, -5f, -79f], state.Run("return table.unpack(x)"));
+    }
+
     [Fact]
     public void The_cache_s_file_is_named_for_the_game_s_build_in_the_user_s_cache()
     {
