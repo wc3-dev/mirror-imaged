@@ -1,0 +1,40 @@
+# probes/handles-2.lua on 3.0.1.24371, single player, 11-08: the game's lines. Three runs gave each new timer's id in turn,
+# with these lines but for where another id came among the four "new" ones (first twice, last once); these lines
+# three times since. Lines starting "# " are notes.
+freed
+collected true
+at once 2 other
+a second later
+new c1 c2 c3, 1 other
+held let go
+collected true
+at once 2 other
+a second after
+new h1 h2 h3, 1 other
+places
+before false
+after false
+ran n1
+filter false
+ran filter2
+filter then condition false
+ran n3
+two true
+ran x4,y4
+after other handles true
+ran n5
+in a not false
+ran n6
+and then or true
+ran a7,b7
+equality
+agents ok false, ok false, ok false
+agent first error war3map.lua:174: bad argument #2 to '__eq' (agent expected), error war3map.lua:174: bad argument #2 to '__eq' (agent expected)
+handle first ok true, ok false, ok true
+handles ok true, ok true, ok false
+not handles ok false, ok false, ok true
+metatable boolean
+same userdata
+expired true
+collected true
+loaded again false true

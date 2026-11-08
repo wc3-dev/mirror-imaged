@@ -30,26 +30,29 @@ internal static unsafe partial class Native
     public const int Yields = -3;
 
     /// <summary>
-    /// A value crossing to C (sandbox.c's <c>ManagedValue</c>); the string is not owned. A handle is its id and its
-    /// type's name.
+    /// A value crossing to C (sandbox.c's <c>ManagedValue</c>); the string is not owned. A handle (<see cref="Handle"/>,
+    /// or <see cref="Agent"/> for an agent) is its key, its game id and its type's name.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct Value
     {
-        public const int Nil = 0, Boolean = 1, Integer = 2, Float = 3, String = 4, Handle = 5;
+        public const int Nil = 0, Boolean = 1, Integer = 2, Float = 3, String = 4, Handle = 5, Agent = 6;
 
         public int Type;
         public int IntegerValue;
         public float FloatValue;
         public byte* StringValue;
         public nuint Length;
+        public int Id;
     }
 
     /// <summary>A handle's userdata (sandbox.c's <c>Handle</c>).</summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct Handle
     {
+        public int Key;
         public int Id;
+        public int Agent;
         public byte* Type;
     }
 
@@ -76,6 +79,9 @@ internal static unsafe partial class Native
 
     [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
     public static partial int mirror_register(nint l, string name, nint state, int id);
+
+    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mirror_tonumber(string s, nuint length, int* integer, float* number);
 
     [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
     public static partial int luaL_loadbufferx(nint l, byte* code, nuint size, string name, string mode);

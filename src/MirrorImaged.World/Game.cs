@@ -68,7 +68,10 @@ public sealed class Game
     /// </summary>
     public void At(long step, long place, Action action) => _due.Enqueue(action, (Math.Max(step, Step), place));
 
-    /// <summary>Takes back <paramref name="action"/>, queued by At, if it hasn't run.</summary>
+    /// <summary>
+    /// Takes back <paramref name="action"/>, queued by At, if it hasn't run: the first queued that equals it as delegates
+    /// compare, by target and method, so a closure only matches itself.
+    /// </summary>
     public void Cancel(Action action) => _due.Remove(action, out _, out _);
 
     /// <summary>Whether the game is paused: the clock doesn't move.</summary>

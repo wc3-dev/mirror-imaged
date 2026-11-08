@@ -239,7 +239,23 @@ public sealed unsafe class LuaState : IDisposable
     };
 
     static LuaHandle ReadHandle(Native.Handle* handle) =>
-        new(Marshal.PtrToStringUTF8((nint)handle->Type)!, handle->Id);
+        new(Marshal.PtrToStringUTF8((nint)handle->Type)!, handle->Key, handle->Id, handle->Agent != 0);
+
+    /// <summary>
+    /// What <paramref name="text"/> is as a number to Lua, as its own functions read a string they take for a number: an
+    /// <see cref="int"/>, a <see cref="float"/>, or null when it isn't a numeral (<c>"x"</c>, <c>"inf"</c>).
+    /// </summary>
+    public static object? ToNumber(string text)
+    {
+        int integer;
+        float number;
+        return mirror_tonumber(text, (nuint)Encoding.UTF8.GetByteCount(text), &integer, &number) switch
+        {
+            1 => integer,
+            2 => number,
+            _ => null,
+        };
+    }
 
     static string ReadString(nint l, int index)
     {
@@ -291,7 +307,7 @@ public sealed unsafe class LuaState : IDisposable
                         break;
                     case LuaHandle h:
                         length = Encoding.UTF8.GetBytes(h.Type, new Span<byte>(text, _capacity - (int)(text - _buffer)));
-                        result[i] = new() { Type = Value.Handle, IntegerValue = h.Key, StringValue = text, Length = (nuint)length };
+                        result[i] = new() { Type = h.Agent ? Value.Agent : Value.Handle, IntegerValue = h.Key, Id = h.Id, StringValue = text, Length = (nuint)length };
                         text += length;
                         break;
                     case var other: throw new ArgumentException($"A {other.GetType().Name} can't be passed to Lua.");

@@ -23,7 +23,7 @@ public sealed class BlizzardTests : IDisposable
             print(JASS_MAX_ARRAY_SIZE, math.type(JASS_MAX_ARRAY_SIZE), TRUE, FALSE, PLAYER_NEUTRAL_PASSIVE, PLAYER_NEUTRAL_AGGRESSIVE)
             print(tostring(PLAYER_COLOR_RED):match("^playercolor: %x+$") ~= nil, PLAYER_COLOR_RED == ConvertPlayerColor(0), PLAYER_COLOR_RED == PLAYER_COLOR_BLUE)
             print(EVENT_PLAYER_UNIT_DEATH == ConvertPlayerUnitEvent(20), MAP_LOCK_SPEED == ConvertMapFlag(16384), OSKEY_BACKSPACE == ConvertOsKeyType(8))
-            print(ABILITY_IF_BUTTON_POSITION_NORMAL_X == ConvertAbilityIntegerField(FourCC('abpx')), RACE_HUMAN == ConvertRace(1), ConvertRace(0) == ConvertPlayerColor(0))
+            print(ABILITY_IF_BUTTON_POSITION_NORMAL_X == ConvertAbilityIntegerField(FourCC('abpx')), RACE_HUMAN == ConvertRace(1), rawequal(ConvertRace(0), ConvertPlayerColor(0)))
             """);
 
         Assert.Equal([
@@ -44,7 +44,7 @@ public sealed class BlizzardTests : IDisposable
 
         Assert.Equal([
             "0.000 print: false\tbad argument #1 to 'ConvertPlayerColor' (number has no integer representation)",
-            "0.000 print: false\tbad argument #1 to 'TimerStart' (timer expected, got playercolor)",
+            "0.000 print: false\tbad argument #1 to 'TimerStart' (timer expected)",
         ], simulation.Log);
     }
 

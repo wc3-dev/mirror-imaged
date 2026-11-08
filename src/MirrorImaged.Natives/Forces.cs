@@ -57,25 +57,25 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// The playing players of slots 0 to 23 that the filter passes, as a trigger's condition passes, called for each in
-    /// slot order with GetFilterPlayer set. Close: in the game a destroyed filter's handle ran a condition made after it
-    /// (handle ids, W1-6).
+    /// slot order with GetFilterPlayer set; a destroyed filter runs what its place holds (decisions D115).
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: the players probe; " + Events)]
     public void ForceEnumPlayers(force? whichForce, boolexpr? filter) => Enumerate(whichForce, filter, _ => true);
 
     /// <summary>As ForceEnumPlayers, until it holds <paramref name="countLimit"/> players: the filter isn't called after.</summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: the players probe; " + Events)]
     public void ForceEnumPlayersCounted(force? whichForce, boolexpr? filter, int countLimit) => Enumerate(whichForce, filter, _ => true, countLimit);
 
     /// <summary>
     /// The players <paramref name="whichPlayer"/> is passive to, itself among them (not measured beyond itself), that the
     /// filter passes: it is called for every playing player, ally or not.
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: the players and lobby probes; " + Events)]
     public void ForceEnumAllies(force? whichForce, player? whichPlayer, boolexpr? filter) =>
         Enumerate(whichForce, filter, p => IsPlayerAlly(whichPlayer, p));
 
-    [Native(Level.Close)]
+    /// <summary>As ForceEnumAllies, for the players it isn't passive to.</summary>
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: the players and lobby probes; " + Events)]
     public void ForceEnumEnemies(force? whichForce, player? whichPlayer, boolexpr? filter) =>
         Enumerate(whichForce, filter, p => IsPlayerEnemy(whichPlayer, p));
 

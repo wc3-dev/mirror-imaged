@@ -393,7 +393,8 @@ public sealed class PlayerEventTests : IDisposable
 
     // the events probe: a filter is called for each playing player of slots 0 to 23 in order, with GetFilterPlayer set
     // and no enum or trigger player, and passes as a condition does; the count stops the enumeration, filter and all;
-    // ForceEnumAllies and ForceEnumEnemies call it for every playing player
+    // ForceEnumAllies and ForceEnumEnemies call it for every playing player; a destroyed filter runs the condition that
+    // took its place (decisions D115)
     [Fact]
     public void A_filter_is_called_for_each_playing_player_with_GetFilterPlayer_set()
     {
@@ -430,8 +431,11 @@ public sealed class PlayerEventTests : IDisposable
                 results[#results + 1] = enum(r[1], function() ForceEnumPlayers(f, filter(r[2])) end)
               end
               print("filter results " .. table.concat(results, "; "))
+              local destroyed = Filter(function() log[#log + 1] = "d" return true end)
+              DestroyFilter(destroyed)
               print("filter " .. enum("condition", function() ForceEnumPlayers(f, Condition(function() log[#log + 1] = "c" return true end)) end)
                 .. "; " .. enum("and", function() ForceEnumPlayers(f, And(filter(true), filter(false))) end)
+                .. "; " .. enum("destroyed", function() ForceEnumPlayers(f, destroyed) end)
                 .. "; " .. enum("Filter(nil)", function() ForceEnumPlayers(f, Filter(nil)) end)
                 .. "; " .. enum("raises", function() ForceEnumPlayers(f, Filter(function() log[#log + 1] = "r" error("raised") end)) end))
             """);
@@ -440,7 +444,7 @@ public sealed class PlayerEventTests : IDisposable
             "0.000 filter true 0,1>0 1; false 0,1>; is 1 0,1>1; after nil",
             "0.000 filter counted 1 0>0; counted 1 not 0 0,1>1; allies of 0 0,1>0; enemies of 0 0,1>1",
             "0.000 filter results 1 0,1>0 1; 0 0,1>; x 0,1>; nil 0,1>; table 0,1>",
-            "0.000 filter condition c,c>0 1; and 0,0,1,1>; Filter(nil) >0 1; raises r,r>",
+            "0.000 filter condition c,c>0 1; and 0,0,1,1>; destroyed c,c>0 1; Filter(nil) >0 1; raises r,r>",
         ], Printed(simulation).Where(line => !line.Contains(" error: ")));
     }
 

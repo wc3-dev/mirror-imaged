@@ -5,9 +5,12 @@ using MirrorImaged.Natives;
 
 namespace MirrorImaged;
 
-// The natives and the game's own Lua functions as Lua globals (decisions D49).
+// The natives and the game's own Lua functions as Lua globals (decisions D49, D113).
 public sealed partial class Simulation
 {
+    // An argument the call left out, which Lua's messages call "no value"
+    static readonly object None = new();
+
     Func<object?[], object?[]> Bind(MethodInfo native)
     {
         if (native.GetCustomAttribute<NativeAttribute>()!.Level == Level.Missing)
@@ -17,23 +20,26 @@ public sealed partial class Simulation
         {
             var values = new object?[parameters.Length];
             for (int i = 0; i < values.Length; i++)
-                values[i] = ToCSharp(i < args.Length ? args[i] : null, parameters[i].ParameterType, i + 1, native.Name);
+                values[i] = ToCSharp(i < args.Length ? args[i] : None, parameters[i].ParameterType, i + 1, native.Name);
             var result = native.Invoke(_natives, BindingFlags.DoNotWrapExceptions, null, values, null);
-            return native.ReturnType == typeof(void) ? [] : [result is handle h ? new LuaHandle(native.ReturnType.Name, h.Key) : result];
+            return native.ReturnType == typeof(void) ? [] : [result is handle h ? ToLua(h, native.ReturnType) : result];
         };
     }
+
+    // A handle as Lua holds it, seen as the type declared, whose == compares the game's ids (decisions D63, D112)
+    static LuaHandle ToLua(handle h, Type declared) => new(declared.Name, h.Key, h.Id, typeof(agent).IsAssignableFrom(declared));
 
     internal object? ToCSharp(object? value, Type type, int position, string function)
     {
         if (type == typeof(int)) return Integer(value, position, function);
         if (type == typeof(float))
-            return value switch
+            return Number(value) switch
             {
                 int n => (float)n,
                 float f => f,
                 _ => throw BadArgument(position, function, $"number expected, got {TypeName(value)}"),
             };
-        if (type == typeof(bool)) return value is not (null or false);
+        if (type == typeof(bool)) return value is not (null or false) && value != None;
         // As luaL_checklstring: a number is written as tostring writes it, nil is refused, and the native reads up to
         // the first NUL (docs/facts.md, "Strings, numbers and hashtables").
         if (type == typeof(string))
@@ -44,18 +50,24 @@ public sealed partial class Simulation
                 float f => Native.Text(f),
                 _ => throw BadArgument(position, function, $"string expected, got {TypeName(value)}"),
             };
-        if (value is null) return null;
+        if (value is null || value == None) return null;
         if (type == typeof(Action) && value is LuaFunction code) return (Action)new LuaCode(this, code.Keep()).Run;
         if (type == typeof(Func<bool>) && value is LuaFunction condition) return (Func<bool>)new LuaCode(this, condition.Keep()).Evaluate;
-        // Found by its key, whatever type Lua sees it as; one of another type is refused, as the type Lua sees is.
+        // Found by its key, whatever type Lua sees it as; one of another type is refused, as the type Lua sees is. A
+        // destroyed one reads as null, but GetHandleId, the one native taking any handle, reads its id (probe handles),
+        // and a destroyed Condition or Filter is still found, as its place's (decisions D115).
         if (value is LuaHandle h && typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}") is { } declared && type.IsAssignableFrom(declared)
             && _game.Handle(h.Key) is var found && (found is null || type.IsInstanceOfType(found)))
-            return found;
-        throw BadArgument(position, function, $"{(type.IsSubclassOf(typeof(Delegate)) ? "function" : type.Name.ToLowerInvariant())} expected, got {TypeName(value)}");
+            return found ?? (type == typeof(handle) ? new handle { Id = h.Id, Key = h.Key } : null);
+        // The game's message names no type given for a handle or a function (probe arguments)
+        throw BadArgument(position, function, $"{(type.IsSubclassOf(typeof(Delegate)) ? "function" : type.Name)} expected");
     }
 
-    // A whole number held as a float is taken (facts, "Lua runtime").
-    static int Integer(object? value, int position, string function) => value switch
+    // A whole number held as a float is taken (facts, "Lua runtime"), and so is a string Lua reads as a number (probe
+    // arguments), as luaL_checkinteger and luaL_checknumber take them.
+    static object? Number(object? value) => value is string s ? LuaState.ToNumber(s) : value;
+
+    static int Integer(object? value, int position, string function) => Number(value) switch
     {
         int n => n,
         float f when f == MathF.Floor(f) && f >= int.MinValue && f < 2147483648f => (int)f,
@@ -69,6 +81,7 @@ public sealed partial class Simulation
     static string TypeName(object? value) => value switch
     {
         null => "nil",
+        _ when value == None => "no value",
         bool => "boolean",
         int or float => "number",
         string => "string",
