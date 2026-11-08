@@ -4,7 +4,7 @@ Plan sections: 4 (A1, A2, A6), 5 (script path, time and randomness), 6 (script h
 Needs wave 0. The facts' sections named below are in `C:\Users\mdlsvensson\Repo\wc3-cs\docs\game-facts.md`; every
 measured case there becomes a test, and a native it measures is Exact.
 
-Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-8 after W1-5; W1-7 last.
+Order: W1-1 first; then W1-2 to W1-6 at once (three at a time); W1-8 after W1-5; W1-9 after W1-2 and W1-4; W1-7 last.
 
 Parallel lanes, to keep merges painless:
 - Decision numbers by range: W1-2 D70-D79, W1-3 D80-D89, W1-4 D90-D99, W1-5 D100-D109, W1-6 D110-D119,
@@ -74,9 +74,28 @@ Needs W1-5 (the probes write through Preload) and W0-4's runner.
 - Also probe the order of timers due in the same step, and `TimerGetElapsed` at 3600 s (D45).
 - This closes wave 0's "one probe matches the game".
 
+## W1-9 Player and game events, filters, the game's end
+
+Needs W1-2 and W1-4. Decisions D140-D149. What W1-4 left for after the triggers (D94, D97):
+
+- The player events: `TriggerRegisterPlayerEvent` (victory, defeat, leave, the others it takes),
+  `TriggerRegisterPlayerStateEvent`, `TriggerRegisterPlayerAllianceChange`, and the time-of-day game-state events
+  (`TriggerRegisterGameStateEvent` on `GAME_STATE_TIME_OF_DAY`), with their event responses. `RemovePlayer`,
+  `SetPlayerAlliance` and `SetPlayerState` fire them as the facts measure ("Version and launching": `RemovePlayer`
+  fires the defeat or victory event inside the call), and then become Exact where measured.
+- Filters for the `ForceEnum*` natives and `GetFilterPlayer`.
+- `EndGame` (a run's end; the facts on `-loadfile` and the score screen).
+- The never-ending wait after a force was looped with `ForForce` and destroyed, then a trigger with
+  `TriggerSleepAction` ran (facts, "Errors and callbacks", 3 probes): model it, or make `ForForce` Close citing it.
+- The lobby before `config`: the game type and `MAP_LOCK_ALLIANCE_CHANGES` are already set inside `config` (the
+  players probe: `InitGenericPlayerSlots` saw melee); check the simulation's options before `config` runs.
+- A probe with a computer slot and a named slot, to settle D91-D93's inferred defaults (a computer's alliances, placed
+  state, handicaps, race when selectable, name from `war3map.w3i`, an empty slot's controller), and the time of day
+  read back at once against later (the facts' 11-05 "7 reads 6.999999" against the probe's exact 7).
+
 ## W1-7 JASS maps
 
-Needs W1-1 to W1-6.
+Needs W1-1 to W1-6 and W1-9.
 
 - A JASS map's `war3map.j` turned into Lua by War3Net's transpiler and run like a Lua map.
 - JASS behaviour the transpiled code must keep, each Close unless a probe measures it: integer overflow wrapping,

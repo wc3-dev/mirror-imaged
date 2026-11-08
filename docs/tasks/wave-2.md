@@ -16,6 +16,11 @@ Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time.
   buffs, upgrades, destructables, doodads, and the gameplay constants), merged with the map's changes as the game
   merges them (facts, "Object data", "World Editor and map files").
 - One data model the world reads: an object by its id, each field by its code and level.
+- Left by W1-4 for this task: an upgrade's level count (`GetPlayerTechMaxAllowed`'s default and the cap on
+  `AddPlayerTechResearched`, D93), the map's day length and hours (`DayHours`, `DayLength`; D96), and the player
+  names in `war3map.w3i` and `war3map.wts` (D93: a named slot reads its map name; the score screen showed "The Horde").
+- Like the W1-1 seam for `blizzard.j`: runtime tests and CI must be able to supply their own small data instead of
+  the install's (rule 5).
 - Tests with maps built in the tests; a `Needs=Game` test that the standard footman, Paladin and Holy Light read the
   values the game's data gives.
 
@@ -63,6 +68,7 @@ Needs W2-2.
   selected later), `ForGroup`, `FirstOfGroup` with removed units, rects, regions with their 32-cell rule, enter and
   leave events (including `SetUnitX`/`SetUnitY`), locations and `GetLocationZ` (facts, "Units", "Groups and
   performance").
+- Left by W1-4: `DefineStartLocationLoc` and `GetStartLocationLoc`.
 
 ## W2-7 Abilities on units, without casting
 
@@ -71,3 +77,4 @@ Needs W2-2.
 - `UnitAddAbility`, `UnitRemoveAbility`, levels, hiding and disabling, permanence, the ability field natives
   `BlzGetAbility*`/`BlzSetAbility*` and the unit's ability fields, tech and upgrades applied as data (facts, "Spells
   and abilities" for what needs no cast). The cast flow and effects are wave 4.
+- `SetPlayerAbilityAvailable` (facts, "Version and launching": false takes the ability off the command card).
