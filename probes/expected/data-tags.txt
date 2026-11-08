@@ -1,4 +1,4 @@
-# 3.0.1.24371, 11-08 (W2-1): the probe's lines as the game gave them, on DataProbeTests' map for it
+# 3.0.1.24371, 11-08 (W2-1): the probe's lines as the game gave them, on its map (ProbeComparison.Change)
 tags [plain] [plain]
 tags [<AHhb,DataA1>] [250]
 tags [heal <AHhb,DataA1> or <AHhb,DataA2>] [heal 250 or 400]

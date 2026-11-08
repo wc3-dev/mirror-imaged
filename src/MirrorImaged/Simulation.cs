@@ -53,6 +53,7 @@ public sealed partial class Simulation : IDisposable
         try
         {
             var (users, computers, others) = Lineup(info, options);
+            foreach (var file in data.Map.Unread) _game.Write("map", "left out, as it can't be read: " + file);
             foreach (var native in NativeMethods.OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())
@@ -138,6 +139,12 @@ public sealed partial class Simulation : IDisposable
     /// the game; until dialogs and input exist (waves 5 and 6), only what was due in the step it paused in still runs.
     /// </summary>
     public bool Paused => _game.Paused;
+
+    /// <summary>
+    /// The map's files left out as they can't be read (<see cref="MapArchive.Unread"/>), each also the run's first log
+    /// entries: <c>0.000 map: left out, as it can't be read: war3map.w3e: ...</c>.
+    /// </summary>
+    public IReadOnlyList<string> Unread => _natives.Data.Map!.Unread;
 
     /// <summary>
     /// Whether the map has ended the game (<c>EndGame</c>): the rest of that step ran, and the clock doesn't move again.

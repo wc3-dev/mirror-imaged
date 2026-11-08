@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using MirrorImaged.Data;
 using MirrorImaged.Lua;
 using MirrorImaged.Natives;
 using MirrorImaged.Probes;
@@ -57,14 +58,22 @@ public static class ProbeComparison
         Directory.GetFiles(Probes, "*.lua").Select(file => Path.GetFileNameWithoutExtension(file)).Order(StringComparer.Ordinal);
 
     /// <summary>Whether a probe runs on the map with a computer and named slots (decisions D140).</summary>
-    public static bool WithComputer(string name) => name is "events" or "lobby";
+    public static bool WithComputer(string name) => name is "events" or "lobby" or "data-names";
 
-    /// <summary>How a probe's map is changed, if it is: the data probes' info, strings and object data (decisions D214).</summary>
+    /// <summary>
+    /// Whether a probe reads the game's data: W2-1's probes, run in MirrorImaged with the install's standard data, so
+    /// only where the game is installed (decisions D213).
+    /// </summary>
+    public static bool ReadsData(string name) => name.StartsWith("data", StringComparison.Ordinal);
+
+    /// <summary>How a probe's map is changed, if it is: the data probes' info, strings and object data (decisions D213).</summary>
     public static Action<Map>? Change(string name) => name switch
     {
-        "data" or "data-tags" => DataProbeMaps.Data,
+        "data" or "data-objects" or "data-tags" => DataProbeMaps.Data,
         "data-sets-melee" => DataProbeMaps.Melee,
         "data-sets-tft" => DataProbeMaps.FrozenThroneMelee,
+        "data-sets-fk" => DataProbeMaps.ForsakenKingdom,
+        "data-names" => DataProbeMaps.Names,
         _ => null,
     };
 
@@ -86,7 +95,8 @@ public static class ProbeComparison
         {
             var map = Path.Combine(folder, name + ".w3x");
             ProbeMap.Build(name, ProbeMap.Source(name), map, WithComputer(name), Change(name));
-            using var simulation = Simulation.Load(map, Frame);
+            var data = ReadsData(name) ? StandardData.Installed(GameInstall.Require(), MapArchive.Read(map).Files.Info) : null;
+            using var simulation = Simulation.Load(map, Frame, data: data);
             var file = $@"{ProbeMap.Folder}\{name}.pld";
             for (var time = TimeSpan.Zero; time < Longest && simulation is { Stopped: null, Ended: false } && !simulation.Documents.CustomMapData.ContainsKey(file); time += TimeSpan.FromSeconds(1))
             {

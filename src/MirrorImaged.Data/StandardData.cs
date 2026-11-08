@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using War3Net.Build.Info;
@@ -102,7 +103,7 @@ public sealed partial class StandardData
     static readonly string[] StringFiles =
         ["ui/framedef/globalstrings.fdf", "ui/framedef/infopanelstrings.fdf", "ui/framedef/networkstrings.fdf", "ui/framedef/datestrings.fdf"];
 
-    static readonly Dictionary<(string Build, string? Values, string? Objects), StandardData> Cache = [];
+    static readonly Dictionary<(GameBuild Build, string Folder, string? Values, string? Objects), StandardData> Cache = [];
 
     internal Dictionary<(ObjectKind Kind, int Id), StandardObject> Objects { get; } = [];
 
@@ -199,19 +200,20 @@ public sealed partial class StandardData
 
     /// <summary>
     /// The standard data of the install in <paramref name="folder"/> for a map with <paramref name="info"/>, read from its
-    /// storage once a process for each build and pair of balance sets (<see cref="Sets"/>).
+    /// storage once a process for each folder, build (its locale too) and pair of balance sets (<see cref="Sets"/>).
     /// </summary>
     /// <exception cref="IOException">There is no install there, or its storage can't be read.</exception>
     public static StandardData Installed(string folder, MapInfo? info)
     {
         var build = GameInstall.Build(folder);
         var (values, objects) = Sets(info);
+        var key = (build, Path.GetFullPath(folder), values, objects);
         lock (Cache)
         {
-            if (!Cache.TryGetValue((build.Key, values, objects), out var data))
+            if (!Cache.TryGetValue(key, out var data))
             {
                 using var storage = CascStorage.Open(folder);
-                Cache[(build.Key, values, objects)] = data = Read(path => storage.Read("War3.w3mod:" + path.Replace(".w3mod/", ".w3mod:")), values, objects, build.Locale);
+                Cache[key] = data = Read(path => storage.Read("War3.w3mod:" + path.Replace(".w3mod/", ".w3mod:")), values, objects, build.Locale);
             }
             return data;
         }
@@ -248,7 +250,7 @@ public sealed partial class StandardData
         foreach (var (key, value) in values ?? new Dictionary<string, string>())
         {
             var parts = key.Split(':');
-            standard.Values[(Ids.Of(parts[0]), parts.Length > 1 ? int.Parse(parts[1]) : 0)] = value;
+            standard.Values[(Ids.Of(parts[0]), parts.Length > 1 ? int.Parse(parts[1], CultureInfo.InvariantCulture) : 0)] = value;
         }
         Objects[(kind, Ids.Of(id))] = standard;
         return this;
@@ -265,7 +267,7 @@ public sealed partial class StandardData
         foreach (var (id, cells) in rows)
         {
             string Cell(string name) => cells.GetValueOrDefault(name, "").Trim();
-            int Number(string name) => int.TryParse(Cell(name), out var number) ? number : 0;
+            int Number(string name) => int.TryParse(Cell(name), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) ? number : 0;
             var name = Cell("field");
             var column = Number("data") > 0 ? name + (char)('A' + Number("data") - 1) : name;
             var profile = Cell("slk") == "Profile";

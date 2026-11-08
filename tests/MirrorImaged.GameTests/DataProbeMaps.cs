@@ -24,6 +24,21 @@ public static class DataProbeMaps
         info.Players[0].EnemyHighPriorityFlags = new Bitmask32(0);
     }
 
+    /// <summary>The probe map in info format 31 with Forsaken Kingdom's data version, the base tables, not melee.</summary>
+    public static void ForsakenKingdom(Map map)
+    {
+        FrozenThroneMelee(map);
+        map.Info!.GameDataVersion = GameDataVersion.Unset;
+        map.Info.MapFlags &= ~MapFlags.MeleeMap;
+    }
+
+    /// <summary>W1-9's map with a computer (D140), its computer named <c>TRIGSTR_001</c>, string 1 "The Horde".</summary>
+    public static void Names(Map map)
+    {
+        map.Info!.Players.Single(player => player.Id == 1).Name = "TRIGSTR_001";
+        map.TriggerStrings = new TriggerStrings { Strings = { String(1, "The Horde") } };
+    }
+
     /// <summary>
     /// The data and tags probes' map: slot 0 named <c>TRIGSTR_001</c> and a computer slot 2 named <c>TRIGSTR_002</c> in
     /// <c>war3map.w3i</c>, the computer seated in <c>config</c>, four strings in <c>war3map.wts</c>, hfoo renamed
@@ -54,7 +69,11 @@ public static class DataProbeMaps
             """);
         map.TriggerStrings = new TriggerStrings
         {
-            Strings = { String(1, "Probe Alpha"), String(2, "The Horde"), String(3, "Probe Footman"), String(4, "Fourth string") },
+            Strings =
+            {
+                String(0, "Zero String"), String(1, "Probe Alpha"), String(2, "The Horde"), String(3, "Probe Footman"),
+                String(4, "Fourth string"), String(5, "42"),
+            },
         };
         map.UnitObjectData = new UnitObjectData(ObjectDataFormatVersion.v3)
         {

@@ -76,9 +76,19 @@ public sealed class InstalledDataTests
         Assert.Equal("Agility", Data.String("AGILITY"));
         Assert.Equal("January", Data.String("MONTH_01"));
         Assert.Equal("The parameters provided are invalid.", Data.String("ERROR_ID_INVALIDPARAMS"));
+        Assert.Null(Data.String("player"));
+        Assert.Equal("|CFFFFFFFFC|Rontinue", Data.String("GAMEOVER_CONTINUE"));
+        Assert.Equal("|CffffffffH|Rotkeys", Data.String("KEY_HOTKEYS"));
+        Assert.Null(Data.String("WESTRING_APPNAME"));
         Assert.Equal("C", Data.Hotkey("GAMEOVER_CONTINUE"));
+        Assert.Equal("C", Data.Hotkey("gameover_continue"));
+        Assert.Equal("Q", Data.Hotkey("GAMEOVER_QUIT_GAME"));
+        Assert.Equal("O", Data.Hotkey("GAMEOVER_OK"));
         Assert.Equal("D", Data.Hotkey("KEY_DELETE"));
         Assert.Null(Data.Hotkey("MinimapTerrain"));
+        Assert.Null(Data.Hotkey("ACCEPT"));
+        Assert.Null(Data.Hotkey("KEY_HOTKEYS"));
+        Assert.Null(Data.Hotkey("PLAYER"));
         Assert.Equal("480", Data.Constant("DayLength"));
         Assert.Equal("24", Data.Constant("DayHours"));
     }

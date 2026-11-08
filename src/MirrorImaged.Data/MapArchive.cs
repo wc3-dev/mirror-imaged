@@ -8,9 +8,10 @@ namespace MirrorImaged.Data;
 /// A map's files, read from its archive (a <c>.w3x</c> or <c>.w3m</c>) with War3Net into <see cref="Files"/>: the info
 /// (<c>war3map.w3i</c>), strings (<c>war3map.wts</c>), object data and its skin files, terrain (<c>w3e</c>), pathing
 /// (<c>wpm</c>), doodads and destructables (<c>war3map.doo</c>), placed units (<c>war3mapUnits.doo</c>), regions
-/// (<c>w3r</c>), cameras (<c>w3c</c>), sounds (<c>w3s</c>) and the import list (<c>imp</c>); a file the map lacks is null,
-/// and so is one War3Net can't read, which <see cref="Unread"/> names (decisions D209). <c>war3mapMisc.txt</c> is kept
-/// as it is, and any other file, such as an FDF or TOC file, is read by name.
+/// (<c>w3r</c>), cameras (<c>w3c</c>), sounds (<c>w3s</c>) and the import list (<c>imp</c>); a file the map lacks is null.
+/// The terrain, doodad and placed-unit files, which no wave reads yet, are null too when War3Net can't read them, and
+/// <see cref="Unread"/> names them (decisions D209). <c>war3mapMisc.txt</c> is kept as it is, and any other file, such
+/// as an FDF or TOC file, is read by name.
 /// </summary>
 public sealed class MapArchive
 {
@@ -36,10 +37,14 @@ public sealed class MapArchive
     /// <summary>The map's <c>war3mapMisc.txt</c>, its changes to the gameplay constants.</summary>
     public byte[]? Misc { get; }
 
-    /// <summary>The files the map has that War3Net can't read, each with why: <c>war3map.w3e: Value '0' is not ...</c>.</summary>
+    /// <summary>The files left out as War3Net can't read them, each with why: <c>war3map.w3e: Value '0' is not ...</c>.</summary>
     public IReadOnlyList<string> Unread { get; }
 
+    // The install's three maps War3Net can't read whole have one of these (D209), which no wave reads yet.
+    static readonly string[] LeftOut = ["war3map.w3e", "war3map.doo", "war3mapUnits.doo"];
+
     /// <summary>Reads the map at <paramref name="path"/>.</summary>
+    /// <exception cref="InvalidDataException">A file other than those <see cref="Unread"/> may name can't be read; the message names it.</exception>
     public static MapArchive Read(string path)
     {
         using var archive = MpqArchive.Open(path, false);
@@ -50,6 +55,7 @@ public sealed class MapArchive
             try { return read(new BinaryReader(new MemoryStream(bytes))); }
             catch (Exception e) when (e is not OutOfMemoryException)
             {
+                if (!LeftOut.Contains(name)) throw new InvalidDataException($"{name} in {path} can't be read: {e.Message}", e);
                 unread.Add($"{name}: {e.Message}");
                 return null;
             }

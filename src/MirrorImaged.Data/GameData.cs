@@ -73,10 +73,14 @@ public sealed class GameData
     /// <summary>The hotkey of <c>ui/miscui.txt</c> for <paramref name="key"/> (any case), as written (<c>C</c>); null when it has none.</summary>
     public string? Hotkey(string key) => Standard.Hotkeys.GetValueOrDefault(key);
 
-    // A number as its invariant text, a real as the shortest that reads back the same float.
+    // A number as its invariant text, a real as the shortest that reads back the same float, without an exponent, which
+    // Integer would read as atoi does (1E-05 as 1). shortcut: a real under 1e-28 is written 0, as decimal holds no less;
+    // write the digits by hand if a map ever stores one.
     static string Written(object? value) => value switch
     {
-        float real => real.ToString(CultureInfo.InvariantCulture),
+        float real when float.IsFinite(real) && Math.Abs(real) < 1e28f =>
+            decimal.Parse(real.ToString(CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
+        float real => ((double)real).ToString("F0", CultureInfo.InvariantCulture),
         IFormattable number => number.ToString(null, CultureInfo.InvariantCulture),
         _ => value?.ToString() ?? "",
     };
@@ -164,17 +168,21 @@ public sealed class GameObject
     };
 }
 
-/// <summary>Numbers in the tables' text, read as C's <c>atoi</c> and <c>atof</c> read them: the longest number at the start, else 0.</summary>
+/// <summary>
+/// Numbers in the tables' text, read as C's <c>atoi</c> and <c>atof</c> read them: the longest number at the start, else
+/// 0; a whole number past the integers' range is held at its end, as the C library's <c>strtol</c> holds it.
+/// </summary>
 static class Numbers
 {
     public static int Integer(string text)
     {
-        var start = text.Length - text.TrimStart().Length;
-        var end = start < text.Length && text[start] is '-' or '+' ? start + 1 : start;
-        while (end < text.Length && char.IsAsciiDigit(text[end])) end++;
-        return long.TryParse(text.AsSpan(start, end - start), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number)
-            ? (int)Math.Clamp(number, int.MinValue, int.MaxValue)
-            : 0;
+        var at = text.Length - text.TrimStart().Length;
+        var negative = at < text.Length && text[at] == '-';
+        if (at < text.Length && text[at] is '-' or '+') at++;
+        long number = 0;
+        for (; at < text.Length && char.IsAsciiDigit(text[at]); at++)
+            number = Math.Min(number * 10 + (text[at] - '0'), 1L << 31);
+        return (int)Math.Clamp(negative ? -number : number, int.MinValue, int.MaxValue);
     }
 
     public static float Real(string text)

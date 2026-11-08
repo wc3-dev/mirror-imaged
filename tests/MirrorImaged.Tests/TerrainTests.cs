@@ -71,6 +71,7 @@ public sealed class TerrainTests
         Assert.Equal(0, Ground((2, 2, corner => corner.IsRamp = true), (3, 2, corner => corner.CliffLevel = 3)).Height(0, 0));
     }
 
+    // Inferred, not measured (W2-6 measures it)
     [Fact]
     public void A_point_off_the_map_reads_its_nearest_edge()
     {

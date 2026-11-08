@@ -75,22 +75,43 @@ public sealed class MapArchiveTests : IDisposable
         Assert.Null(files.File("war3mapImported\\none.fdf"));
     }
 
-    // The install's (4)Roundabout, (10)DustwallowKeys and (1)SilverpineSprint each have one such file; the game loads them
-    [Fact]
-    public void A_file_that_cant_be_read_is_left_out_and_named()
+    // A map of a script and one file that isn't what its name says.
+    string Broken(string name)
     {
-        var path = Path.Combine(Path.GetDirectoryName(_maps.Build("function main() end"))!, "broken.w3x");
+        var path = Path.Combine(Path.GetDirectoryName(_maps.Build("function main() end"))!, Path.GetRandomFileName() + ".w3x");
         var archive = new MpqArchiveBuilder();
-        archive.AddFile(MpqFile.New(new MemoryStream(Encoding.UTF8.GetBytes("not regions")), "war3map.w3r"));
-        archive.AddFile(MpqFile.New(new MemoryStream(Encoding.UTF8.GetBytes("function main() end")), "war3map.lua"));
+        archive.AddFile(MpqFile.New(new MemoryStream(Encoding.UTF8.GetBytes("not what it says")), name));
+        archive.AddFile(MpqFile.New(new MemoryStream(Encoding.UTF8.GetBytes("function config() end function main() end")), "war3map.lua"));
         archive.SaveTo(path);
+        return path;
+    }
 
-        var map = MapArchive.Read(path);
+    // The install's (4)Roundabout, (10)DustwallowKeys and (1)SilverpineSprint each have one such file; the game loads them
+    [Theory]
+    [InlineData("war3map.w3e")]
+    [InlineData("war3map.doo")]
+    [InlineData("war3mapUnits.doo")]
+    public void A_terrain_doodad_or_unit_file_that_cant_be_read_is_left_out_and_named(string name)
+    {
+        var map = MapArchive.Read(Broken(name));
+        using var simulation = Simulation.Load(Broken(name), "");
 
-        Assert.Null(map.Files.Regions);
         Assert.NotNull(map.Script);
-        Assert.StartsWith("war3map.w3r: ", Assert.Single(map.Unread));
+        Assert.StartsWith(name + ": ", Assert.Single(map.Unread));
+        Assert.StartsWith(name + ": ", Assert.Single(simulation.Unread));
+        Assert.StartsWith($"0.000 map: left out, as it can't be read: {name}: ", Assert.Single(simulation.Log));
         Assert.Empty(MapArchive.Read(_maps.Build("function main() end")).Unread);
+    }
+
+    [Theory]
+    [InlineData("war3map.w3i")]
+    [InlineData("war3map.w3r")]
+    [InlineData("war3map.w3u")]
+    public void Any_other_file_that_cant_be_read_stops_the_read_naming_it(string name)
+    {
+        var error = Assert.Throws<InvalidDataException>(() => MapArchive.Read(Broken(name)));
+
+        Assert.Contains(name, error.Message);
     }
 
     // docs/facts.md, "The game's data": TRIGSTR_1, TRIGSTR_0001 and "TRIGSTR_001 " are string 1, trigstr_001 and a string

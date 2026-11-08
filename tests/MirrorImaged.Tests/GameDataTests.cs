@@ -144,4 +144,32 @@ public sealed class GameDataTests : IDisposable
         Assert.Equal("30", data.Constant("DayHours"));
         Assert.Equal(20, new GameData(new StandardData()).Constant("DayHours", 20));
     }
+
+    // A real written with an exponent would read as atoi reads it: 1E-05 as 1
+    [Fact]
+    public void A_changed_real_is_its_text_without_an_exponent()
+    {
+        var data = new GameData(Standard(), MapArchive.Read(_maps.Build("function main() end", map: map =>
+            map.UnitObjectData = new UnitObjectData(ObjectDataFormatVersion.v3) { BaseUnits = { Change("hfoo", ("usca", 0.00001f), ("ucol", 3e30f)) } })));
+        var footman = data.Object(ObjectKind.Unit, Id("hfoo"))!;
+
+        Assert.Equal("0.00001", footman.Text(Id("usca")));
+        Assert.Equal(0.00001f, footman.Real(Id("usca")));
+        Assert.Equal(0, footman.Integer(Id("usca")));
+        Assert.Equal(3e30f, footman.Real(Id("ucol")));
+        Assert.Equal(int.MaxValue, footman.Integer(Id("ucol")));
+    }
+
+    [Theory]
+    [InlineData("42", 42)]
+    [InlineData(" +42abc", 42)]
+    [InlineData("-7.9", -7)]
+    [InlineData("1E-05", 1)]
+    [InlineData("abc", 0)]
+    [InlineData("99999999999999999999", int.MaxValue)]
+    [InlineData("-99999999999", int.MinValue)]
+    public void A_whole_number_is_read_as_atoi_reads_it_held_in_the_integers_range(string text, int number)
+    {
+        Assert.Equal(number, Numbers.Integer(text));
+    }
 }

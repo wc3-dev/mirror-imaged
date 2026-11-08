@@ -1,4 +1,14 @@
-# 3.0.1.24371, 11-08 (W2-1): the probe's lines as the game gave them, on DataProbeTests' map for it
+# 3.0.1.24371, 11-08 (W2-1): the probe's lines as the game gave them, on its map (ProbeComparison.Change)
 oshm 350
 ebsh 1000
 fapo 0
+phea Potion of Healing
+ckdk |cffffff00Dungeon Key|r
+AHhb Holy Light
+AA12 Item Hero Stat Bonus
+fapo Apothecary
+phea item true Potion of Healing same
+ckdk item false  other
+AHhb added true level 1
+AA12 added false level 0
+pierce 80.36

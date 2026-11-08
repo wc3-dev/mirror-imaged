@@ -38,7 +38,10 @@ public sealed class Terrain
             }
     }
 
-    /// <summary>The ground's height at (<paramref name="x"/>, <paramref name="y"/>); a point off the map reads its nearest edge.</summary>
+    /// <summary>
+    /// The ground's height at (<paramref name="x"/>, <paramref name="y"/>); a point off the map reads its nearest edge
+    /// (inferred; W2-6 measures it).
+    /// </summary>
     public float Height(float x, float y)
     {
         var (column, u) = Cell((x - _left) / Tile, _width);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace MirrorImaged.Data;
@@ -17,9 +18,8 @@ static class Tables
         foreach (var raw in Text(file).Split('\n'))
         {
             if (!raw.StartsWith("C;", StringComparison.Ordinal)) continue;
-            // A semicolon in a value is written twice.
-            var line = raw.TrimEnd('\r');
-            var parts = line.Contains(";;", StringComparison.Ordinal) ? line.Replace(";;", "\u0001").Split(';') : line.Split(';');
+            // No game file has a semicolon or a doubled quote in a value, which SYLK writes as ;; and "" (decisions D201).
+            var parts = raw.TrimEnd('\r').Split(';');
             string? value = null;
             for (var i = 1; i < parts.Length; i++)
             {
@@ -27,9 +27,9 @@ static class Tables
                 if (part.Length == 0) continue;
                 switch (part[0])
                 {
-                    case 'X': x = int.Parse(part.AsSpan(1)); break;
-                    case 'Y': y = int.Parse(part.AsSpan(1)); break;
-                    case 'K': value = (part.Length >= 3 && part[1] == '"' && part[^1] == '"' ? part[2..^1] : part[1..]).Replace('\u0001', ';'); break;
+                    case 'X': x = int.Parse(part.AsSpan(1), NumberStyles.Integer, CultureInfo.InvariantCulture); break;
+                    case 'Y': y = int.Parse(part.AsSpan(1), NumberStyles.Integer, CultureInfo.InvariantCulture); break;
+                    case 'K': value = part.Length >= 3 && part[1] == '"' && part[^1] == '"' ? part[2..^1] : part[1..]; break;
                 }
             }
             if (value is null) continue;
@@ -54,8 +54,9 @@ static class Tables
 
     /// <summary>
     /// Profile text's sections in the order they first come, each with its keys (any case; a later one replaces an
-    /// earlier) and values as written, quotes kept. Blank lines, <c>//</c> comments and lines without <c>=</c> are
-    /// passed over; a section given twice is one.
+    /// earlier) and values as written, quotes kept. A section's name is what is between <c>[</c> and the first <c>]</c>,
+    /// as in <c>[Hleo] leonid</c>. Blank lines, <c>//</c> comments and lines without <c>=</c> are passed over; a section
+    /// given twice is one.
     /// </summary>
     public static List<(string Name, Dictionary<string, string> Keys)> Profile(byte[] file)
     {
@@ -66,9 +67,9 @@ static class Tables
         {
             var line = raw.Trim();
             if (line.Length == 0 || line.StartsWith("//", StringComparison.Ordinal)) continue;
-            if (line[0] == '[' && line[^1] == ']')
+            if (line[0] == '[' && line.IndexOf(']') is > 0 and var close)
             {
-                var name = line[1..^1].Trim();
+                var name = line[1..close].Trim();
                 if (!byName.TryGetValue(name, out section))
                 {
                     byName[name] = section = new(StringComparer.OrdinalIgnoreCase);
@@ -105,5 +106,5 @@ static class Tables
     public static string Unquoted(string value) =>
         value.Length >= 2 && value[0] == '"' && value[^1] == '"' && value.IndexOf('"', 1, value.Length - 2) < 0 ? value[1..^1] : value;
 
-    static string Text(byte[] file) => Encoding.UTF8.GetString(file).TrimStart('﻿');
+    static string Text(byte[] file) => Encoding.UTF8.GetString(file).TrimStart((char)0xFEFF);
 }

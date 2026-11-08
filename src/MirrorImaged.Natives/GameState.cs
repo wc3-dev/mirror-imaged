@@ -12,9 +12,12 @@ public sealed partial class GameNatives
 {
     double? _dayHours;
 
-    double DayHours => _dayHours ??= Data.Constant("DayHours", 24);
+    double DayHours => _dayHours ??= Positive(Data.Constant("DayHours", 24), 24);
 
-    double HoursPerSecond => DayHours / Data.Constant("DayLength", 480);
+    double HoursPerSecond => DayHours / Positive(Data.Constant("DayLength", 480), 480);
+
+    // A day of no hours or no length is the standard one (decisions D215, not measured).
+    static double Positive(float value, double standard) => float.IsFinite(value) && value > 0 ? value : standard;
 
     int _speed = 2, _difficulty; // MAP_SPEED_NORMAL, MAP_DIFFICULTY_EASY
     readonly Dictionary<int, int> _integerStates = [];

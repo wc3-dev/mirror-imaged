@@ -31,8 +31,6 @@ W2-1 started before wave 1 finished (11-08): it touches the data loading, which 
   the install's (rule 5).
 - Tests with maps built in the tests; a `Needs=Game` test that the standard footman, Paladin and Holy Light read the
   values the game's data gives.
-- Left by W2-1 for a follow-up (decisions D212): `ParseTags`, with the rules `docs/facts.md` ("The game's data")
-  measured; the length of a map's and the game's sound files (plan, section 6).
 
 ## W2-2 Units
 

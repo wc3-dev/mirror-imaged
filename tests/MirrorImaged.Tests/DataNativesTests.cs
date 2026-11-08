@@ -33,7 +33,14 @@ public sealed class DataNativesTests : IDisposable
     Simulation Run(string main, StandardData data, IReadOnlyDictionary<string, string>? files = null) =>
         Simulation.Load(_maps.Build($"function config() end\nfunction main()\n{main}\nend\n", map: map =>
         {
-            map.TriggerStrings = new TriggerStrings { Strings = { new TriggerString { Key = 1, Value = "Probe Alpha" }, new TriggerString { Key = 2, Value = "The Horde" } } };
+            map.TriggerStrings = new TriggerStrings
+            {
+                Strings =
+                {
+                    new TriggerString { Key = 0, Value = "Zero String" }, new TriggerString { Key = 1, Value = "Probe Alpha" },
+                    new TriggerString { Key = 2, Value = "The Horde" }, new TriggerString { Key = 5, Value = "42" },
+                },
+            };
             map.UpgradeObjectData = new UpgradeObjectData(ObjectDataFormatVersion.v3)
             {
                 BaseUpgrades =
@@ -89,16 +96,27 @@ public sealed class DataNativesTests : IDisposable
         Assert.Equal(["0.000 print: 67\t67\t0\t0"], simulation.Log);
     }
 
-    // The data probe: SetPlayerName(p, "TRIGSTR_002") reads "The Horde" and StringCase("TRIGSTR_001", false) "probe alpha"
+    // The data probe: SetPlayerName, StringCase and StringLength read a TRIGSTR_n as the map's string n (TRIGSTR_ and
+    // TRIGSTR_abc as string 0, as atoi reads them; TRIGSTR_-1 isn't one); StringHash, S2I, SubString and SaveStr don't
     [Fact]
-    public void A_trigstr_given_to_a_native_is_the_maps_string()
+    public void A_trigstr_is_the_maps_string_for_the_natives_that_read_it_so()
     {
         using var simulation = Run("""
             SetPlayerName(Player(5), "TRIGSTR_002")
-            print(GetPlayerName(Player(5)), StringCase("TRIGSTR_001", false), StringLength("TRIGSTR_1"))
+            print(GetPlayerName(Player(5)), StringCase("TRIGSTR_001", false), StringLength("TRIGSTR_"))
+            print(StringCase("TRIGSTR_abc", false), StringCase("TRIGSTR_-1", false))
+            print(StringHash("TRIGSTR_001") == StringHash("Probe Alpha"), S2I("TRIGSTR_005"), SubString("TRIGSTR_001", 0, 5))
+            local h = InitHashtable()
+            SaveStr(h, 0, 0, "TRIGSTR_001")
+            print(LoadStr(h, 0, 0))
             """, new StandardData());
 
-        Assert.Equal(["0.000 print: The Horde\tprobe alpha\t11"], simulation.Log);
+        Assert.Equal([
+            "0.000 print: The Horde\tprobe alpha\t11",
+            "0.000 print: zero string\ttrigstr_-1",
+            "0.000 print: false\t0\tTRIGS",
+            "0.000 print: TRIGSTR_001",
+        ], simulation.Log);
     }
 
     // The lobby probe: with fixed player settings a computer reads its war3map.w3i name; the data probe: without, it is
@@ -149,5 +167,20 @@ public sealed class DataNativesTests : IDisposable
         simulation.Advance(TimeSpan.FromSeconds(10));
 
         Assert.Equal(["10.000 print: 1.0"], simulation.Log);
+    }
+
+    // decisions D215, not measured: a day of no length or no hours is the standard one
+    [Theory]
+    [InlineData("DayLength=0")]
+    [InlineData("DayLength=-5")]
+    [InlineData("DayHours=0")]
+    public void A_day_of_no_length_or_hours_is_the_standard_one(string misc)
+    {
+        using var simulation = Run("""
+            TimerStart(CreateTimer(), 20, false, function() print(GetFloatGameState(GAME_STATE_TIME_OF_DAY)) end)
+            """, Standard, new Dictionary<string, string> { ["war3mapMisc.txt"] = "[Misc]\n" + misc + "\n" });
+        simulation.Advance(TimeSpan.FromSeconds(20));
+
+        Assert.Equal(["20.000 print: 1.0"], simulation.Log);
     }
 }
