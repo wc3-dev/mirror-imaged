@@ -153,9 +153,8 @@ Needs W2-2.
   `BlzGetAbility*`/`BlzSetAbility*` and the unit's ability fields, tech and upgrades applied as data (facts, "Spells
   and abilities" for what needs no cast). The cast flow and effects are wave 4.
 - `SetPlayerAbilityAvailable` (facts, "Version and launching": false takes the ability off the command card).
-- Left by W2-2 (D226): the `undefend` order (852056) a unit with Defend gets after an owner change (also a dead one,
-  on its old owner's order registration), on `RemoveUnit` (twice) and before its death (game-facts), and `Avul` with
-  `SetUnitInvulnerable` if `GetUnitAbilityLevel` reads it (`probes/differences/units.txt`).
+- Left by W2-2 (D226): `Avul` with `SetUnitInvulnerable`, if `GetUnitAbilityLevel` reads it. (W2-10 did the
+  `undefend` order events, D310.)
 - Left by W1-5 (with W2-1's data): the ability-tooltip carrier, `BlzSetAbilityTooltip`, `BlzGetAbilityTooltip`,
   `BlzSetAbilityExtendedTooltip` and its getter, with the "Files and Preload" cases: a tooltip is kept only for the
   ability's levels (3 on Blizzard; on a 100-level copy, levels above 2 read level 2's; with `Tooltip = "-"` levels
@@ -163,7 +162,9 @@ Needs W2-2.
   `probes/files.lua` its tooltip read back.
 - Left by W2-10 (D310, D317): the undefend order events (a Defend's) and a gold mine's gold are done, but read the
   unit type's abilities (`uabi`, `Abilities` in `UnitOrders.cs`): switch them to the unit's own, so an added copy of
-  `Adef` gives undefend (game-facts) and a removed one none. `BlzIsUnitSelectable` is to read false with Locust.
+  `Adef` gives undefend (game-facts) and a removed one none. Probe `BlzIsUnitSelectable` on a unit with Locust
+  (game-facts measured only `SelectUnit` doing nothing to one).
+- From W5-2: `GetAbilitySound` and `GetAbilitySoundById` (an ability's sound labels; D527).
 
 ## W2-8 Tooltip tags and ability columns
 
