@@ -1,4 +1,4 @@
-# probes/cameras-4.lua on 3.0.1.24371, single player, 11-08: the game's lines, three runs. Where a target or a field
+# probes/cameras-4.lua on 3.0.1.24371, single player, 11-08: the game's lines, four runs. Where a target or a field
 # is part way through a move, a few hundredths off where it lands, or shaken by the noise, its number varies with the
 # game's frames and is a {t}. In a line, each {t} stands for a number, the rest exact (decisions D71, D124). The first
 # run's numbers for them: rotate 1s 160.3088 -366.8922, eye 980.9630 -1126.7037; apply force with z 0.5s 402.3694
