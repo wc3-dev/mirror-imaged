@@ -63,6 +63,11 @@ Needs W2-2.
   calls `SaveGameCache`.
 - From W2-1's review: a fixed-order list of a kind's objects in the data model for `ChooseRandomItem`/`Ex` (the facts
   on `pickRandom` and levels), and for `ChooseRandomCreep` and `ChooseRandomNPBuilding` (melee creep drops, A4).
+- Left by W2-2 (D221, D227, D228; `probes/differences/units.txt`): a hero's attributes set through the field natives
+  change its life, mana and armour (the probe's strength 30 gave the Paladin 850 life); the permanent attribute
+  fields (read 1 after a set of 7 and of 0); a hero's proper name drawn at random from its type's and numbered once
+  taken ("Zann the Defender XII"), for `GetHeroProperName` and `UNIT_SF_PROPER_NAMES`; and a dead hero stays as
+  W2-2 leaves it, for revival.
 
 ## W2-4 Destructables, trees and doodads
 
@@ -84,6 +89,8 @@ Needs W2-2.
   `BlzGetEvent*`/`BlzSetEvent*` damage native, the attack and armour table and the armour formula from the constants,
   death inside the call (facts, "Damage"). Abilities that change damage (Hardened Skin, Divine Shield and the rest)
   come with wave 4; record them in that wave's file if you see them.
+- Left by W2-2 (D234): the weapon field natives `BlzGetUnitWeapon*Field`/`BlzSetUnitWeapon*Field` (the facts: `ua1t`
+  reads `ATTACK_TYPE_*`, `ua1g` the target flags, "air,enemies" 65540), and a killer for `GetKillingUnit`.
 
 ## W2-6 Groups, rects, regions and locations
 
@@ -94,6 +101,9 @@ Needs W2-2.
   leave events (including `SetUnitX`/`SetUnitY`), locations and `GetLocationZ` (facts, "Units", "Groups and
   performance").
 - Left by W1-4: `DefineStartLocationLoc` and `GetStartLocationLoc`.
+- Left by W2-2 (D223, D225): `GetFilterUnit` for the enumerations (a player-unit event's filter never runs), the map's
+  playable area for `SetUnitPosition` and for `CreateUnit` off the map (the game put one asked at (5000, -5000) on the
+  32 by 32 probe map at (2032, -2000)), and `GetUnitLoc`.
 - From W1-2's review (D70): every callback runs in a Lua thread of its own, measured only for timers, conditions,
   actions and `ExecuteFunc`. Probe `ForGroup`, `ForForce`, `Enum*` and filter callbacks: `coroutine.isyieldable`,
   `coroutine.running`, and a wait inside them (in the game a wait may suspend the whole calling action).
@@ -109,6 +119,9 @@ Needs W2-2.
   `BlzGetAbility*`/`BlzSetAbility*` and the unit's ability fields, tech and upgrades applied as data (facts, "Spells
   and abilities" for what needs no cast). The cast flow and effects are wave 4.
 - `SetPlayerAbilityAvailable` (facts, "Version and launching": false takes the ability off the command card).
+- Left by W2-2 (D226): the `undefend` order (852056) a unit with Defend gets after an owner change (also a dead one,
+  on its old owner's order registration), on `RemoveUnit` (twice) and before its death (game-facts), and `Avul` with
+  `SetUnitInvulnerable` if `GetUnitAbilityLevel` reads it (`probes/differences/units.txt`).
 - Left by W1-5 (with W2-1's data): the ability-tooltip carrier, `BlzSetAbilityTooltip`, `BlzGetAbilityTooltip`,
   `BlzSetAbilityExtendedTooltip` and its getter, with the "Files and Preload" cases: a tooltip is kept only for the
   ability's levels (3 on Blizzard; on a 100-level copy, levels above 2 read level 2's; with `Tooltip = "-"` levels

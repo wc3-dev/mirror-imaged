@@ -45,5 +45,13 @@ Each item names the wave whose file it goes into when that file is written.
   FDF/TOC string lists (D211, `BlzLoadTOCFile`) for `GetLocalizedString` (W2-1).
 - Wave 7 (AI): the balance sets hold their own AI scripts (`_Balance/Custom_V0.w3mod`, `Melee_V0.w3mod`:
   `Scripts/human.ai` etc. and `*Melee.pld`); take them from the set `StandardData.Sets` picks (W2-1).
+- Wave 3 (orders and movement): the game moves a unit made where others stand off them (D223); `SetUnitPosition`;
+  what `PauseUnit` and `BlzPauseUnitEx` hold back; `SetUnitFacing`'s turning eased into its end and on the game's
+  frames, and the facing of angles past a turn (D224); orders beyond `SetUnitOwner`'s stop (W2-2).
+- Later (units, W2-2's leftovers): `TriggerRegisterUnitStateEvent` and `TriggerRegisterFilterUnitEvent`; a player's
+  unit counts (`GetPlayerUnitCount`, `GetPlayerTypedUnitCount`, units in `GetPlayerTechCount`, D93);
+  `CreateUnitByName`, `UnitId` and `UnitId2String`; timed life, summons and sleep; when a body whose decay was
+  suspended goes once let go (D228).
+- Wave 5 (presentation): the unit animation natives and `SetUnitTimeScale` (W2-2).
 - Wave 10 (speed): a cross-process cache of the standard data (about 1.2-1.7 s a process) if the benchmark or the
   corpus runs need it; it must live outside the repo and packages (A15) (W2-1).

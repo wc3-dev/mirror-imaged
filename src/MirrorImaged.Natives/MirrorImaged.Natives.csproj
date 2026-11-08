@@ -11,9 +11,10 @@
     <ProjectReference Include="..\MirrorImaged.World\MirrorImaged.World.csproj" />
   </ItemGroup>
 
-  <!-- The binding gives GetHandleId a destroyed handle's id (decisions D110). -->
+  <!-- The binding gives GetHandleId a destroyed handle's id (decisions D110); the tests read what a unit keeps for the viewer. -->
   <ItemGroup>
     <InternalsVisibleTo Include="MirrorImaged" />
+    <InternalsVisibleTo Include="MirrorImaged.Tests" />
   </ItemGroup>
 
 </Project>

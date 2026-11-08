@@ -1,0 +1,3 @@
+# probes/units-attribute.lua on 3.0.1.24371, single player, 11-08 (W2-2): the game's lines. One run: the game exited by itself before any line,
+# as the units probe's first two runs did at the same read.
+! the game closes

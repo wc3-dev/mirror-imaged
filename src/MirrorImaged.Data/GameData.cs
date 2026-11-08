@@ -61,6 +61,20 @@ public sealed class GameData
     /// <summary>The object of <paramref name="kind"/> with <paramref name="id"/>; null when the game has none.</summary>
     public GameObject? Object(ObjectKind kind, int id) => _objects.GetValueOrDefault((kind, id));
 
+    /// <summary>
+    /// The name of the unit, item, ability or upgrade (its first level's) with <paramref name="id"/>, in that order, also
+    /// of one the balance set leaves out (probes units and data-sets-melee); null for any other id, a buff's and a
+    /// destructable's too.
+    /// </summary>
+    public string? Name(int id) =>
+        Named.Select(named => (Object(named.Kind, id) ?? Absent(named.Kind, id))?.Text(Ids.Of(named.Field), named.Level)).FirstOrDefault(name => name is not null);
+
+    static readonly (ObjectKind Kind, string Field, int Level)[] Named =
+        [(ObjectKind.Unit, "unam", 0), (ObjectKind.Item, "unam", 0), (ObjectKind.Ability, "anam", 0), (ObjectKind.Upgrade, "gnam", 1)];
+
+    GameObject? Absent(ObjectKind kind, int id) =>
+        Standard.Absent.TryGetValue((kind, id), out var absent) ? new GameObject(this, kind, id, id, absent) : null;
+
     /// <summary>A gameplay constant (<c>DayLength</c>) as written, the map's own over the game's; null when neither has it.</summary>
     public string? Constant(string key) => _constants.GetValueOrDefault(key);
 
@@ -74,16 +88,26 @@ public sealed class GameData
     public string? Hotkey(string key) => Standard.Hotkeys.GetValueOrDefault(key);
 
     // A number as its invariant text, a real as the shortest that reads back the same float, without an exponent, which
-    // Integer would read as atoi does (1E-05 as 1). shortcut: a real under 1e-28 is written 0, as decimal holds no less;
-    // write the digits by hand if a map ever stores one.
+    // Integer would read as atoi does (1E-05 as 1).
     static string Written(object? value) => value switch
     {
-        float real when float.IsFinite(real) && Math.Abs(real) < 1e28f =>
-            decimal.Parse(real.ToString(CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
-        float real => ((double)real).ToString("F0", CultureInfo.InvariantCulture),
+        float real when float.IsFinite(real) => Plain(real.ToString("R", CultureInfo.InvariantCulture)),
         IFormattable number => number.ToString(null, CultureInfo.InvariantCulture),
         _ => value?.ToString() ?? "",
     };
+
+    // 1.234567E-21 as 0.000000000000000000001234567: the same digits with the point moved by the exponent
+    static string Plain(string number)
+    {
+        if (number.IndexOf('E') is not (> 0 and var e)) return number;
+        var sign = number[0] == '-' ? "-" : "";
+        var mantissa = number[sign.Length..e];
+        var digits = mantissa.Replace(".", "");
+        var point = (mantissa.IndexOf('.') is >= 0 and var at ? at : mantissa.Length) + int.Parse(number[(e + 1)..], CultureInfo.InvariantCulture);
+        return sign + (point <= 0 ? "0." + new string('0', -point) + digits
+            : point >= digits.Length ? digits + new string('0', point - digits.Length)
+            : digits[..point] + "." + digits[point..]);
+    }
 
     // Every change of the main file, then of the skin file: the kind, the object it is based on, its own id (0 for a
     // change to a standard object), and each field's id, level (0 for a kind without levels) and value. War3Net keeps an

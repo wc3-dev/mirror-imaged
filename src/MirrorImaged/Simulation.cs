@@ -86,6 +86,10 @@ public sealed partial class Simulation : IDisposable
     /// <see cref="Stopped"/>.
     /// </summary>
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>.</exception>
+    /// <exception cref="InvalidDataException">
+    /// A file of the map can't be read, other than the terrain, doodad and placed-unit files, which are left out
+    /// (<see cref="Unread"/>); the message names it.
+    /// </exception>
     /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> and standard data every run needs.</exception>
     /// <exception cref="LuaException"><c>blizzard.j</c>'s Lua doesn't load or run (<c>blizzard.lua:N: ...</c>), so no map can.</exception>
     /// <exception cref="ArgumentException">

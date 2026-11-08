@@ -1,0 +1,86 @@
+# Where MirrorImaged differs from the game's lines in expected/units.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# A facing outside 0 to 360 is kept by fmod in degrees here; the game's reduction, off by a little more each turn and
+# 0 for 1e9, wasn't found (D224, Close).
+- face 400 40.00002
++ face 400 40.0
+- face 1e+09 0.0
++ face 1e+09 280.0
+- face 100000.0 280.0085
++ face 100000.0 280.0
+- face -100000.0 79.99146
++ face -100000.0 80.0
+- face 3600.5 0.5002212
++ face 3600.5 0.5
+
+# A unit made off the map is moved onto it by the game, which the pathing and the map's bounds (wave 3, W2-6) bring
+# (D223, Close).
+- far 2032.0 -2000.0
++ far 5000.0 -5000.0
+
+# The clock's 1/1024 s steps: 0.4 s is the step at 0.4004 (D45, Close).
+- killed at 0.4000
++ killed at 0.4004
+
+# A hero's attributes are W2-3's: a set changes only the field here, not life, and the permanent attribute isn't
+# modelled (D227, Close).
+- permanent 0 1 1
++ permanent 0 13 13
+- strength 30 850.0 850 30
++ strength 30 650.0 650 22
+
+# The footman's Defend gives it undefend (852056) after an owner change, which comes with abilities (W2-7; D226).
+- order 38 852056 true true owner 1 player 1
+- order 75 852056 true true owner 1 player 1
+- order 38 852056 true true owner 0 player 0
+- order 75 852056 true true owner 0 player 0
+- order 38 852056 false false owner 0 player 0
+
+# A hero's permanent attribute set (W2-3; D227, Close).
+- set Hpal true 1
++ set Hpal true 13
+- set Hpal true 1
++ set Hpal true 17
+- set Hpal true 1
++ set Hpal true 22
+
+# The decay events come their death time after the death, in the clock's steps (D45, Close).
+- decay 3.1400 21 false false 0 0.0
++ decay 3.1396 21 false false 0 0.0
+- decay 3.1400 21 false false 0 0.0
++ decay 3.1396 21 false false 0 0.0
+- decay 3.1400 21 false false 0 0.0
++ decay 3.1396 21 false false 0 0.0
+- decay 3.1400 21 false false 0 0.0
++ decay 3.1396 21 false false 0 0.0
+- decay 3.1400 21 false false 0 0.0
++ decay 3.1396 21 false false 0 0.0
+- decay 3.1900 21 false false 0 0.0
++ decay 3.1904 21 false false 0 0.0
+- decay 3.3400 21 false false 0 0.0
++ decay 3.3398 21 false false 0 0.0
+- decay 3.3400 21 false false 0 0.0
++ decay 3.3398 21 false false 0 0.0
+- decay 3.3400 21 false false 0 0.0
++ decay 3.3398 21 false false 0 0.0
+- decay 3.3400 21 false false 0 0.0
++ decay 3.3398 21 false false 0 0.0
+- decay 3.4400 21 true true 0 0.0
++ decay 3.4404 21 true true 0 0.0
+- decay 3.4400 54 true true 0 0.0
++ decay 3.4404 54 true true 0 0.0
+
+# Turning: here a steady pace from 1/32 s on, straight to the end; the game eases into its end (D224, Close).
+- turn hfoo 180 0.0 12.0 35.0 57.9 80.8 103.7 126.6 149.5 172.5 179.6 179.9 179.9 180.0 180.0 180.0 180.0 180.0
++ turn hfoo 180 0.0 11.5 34.4 57.3 80.2 103.1 126.1 149.0 171.9 180.0 180.0 180.0 180.0 180.0 180.0 180.0 180.0
+- turn hfoo 90 0.0 12.0 35.0 57.9 80.8 89.7 89.9 89.9 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0
++ turn hfoo 90 0.0 11.5 34.4 57.3 80.2 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0 90.0
+- turn hkni 180 0.0 6.9 22.3 39.5 56.7 73.9 91.1 108.3 125.0 139.4 151.4 161.0 171.4 175.3 176.9 177.7 178.3
++ turn hkni 180 0.0 8.6 25.8 43.0 60.2 77.3 94.5 111.7 128.9 146.1 163.3 180.0 180.0 180.0 180.0 180.0 180.0
+- turn hgry 180 0.0 5.2 16.0 27.5 39.0 50.4 61.9 73.3 84.8 96.3 107.7 119.2 136.4 147.8 159.3 170.7 179.1
++ turn hgry 180 0.0 5.7 17.2 28.6 40.1 51.6 63.0 74.5 85.9 97.4 108.9 120.3 131.8 143.2 154.7 166.2 177.6
+- turn hfoo -90 0.0 348.0 325.0 302.1 279.2 270.3 270.1 270.1 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0
++ turn hfoo -90 0.0 348.5 325.6 302.7 279.8 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0 270.0
+- turn hfoo slow 180 0.0 12.0 35.0 57.9 80.8 103.7 126.6 149.5 172.5 179.6 179.9 179.9 180.0 180.0 180.0 180.0 180.0
++ turn hfoo slow 180 0.0 11.5 34.4 57.3 80.2 103.1 126.1 149.0 171.9 180.0 180.0 180.0 180.0 180.0 180.0 180.0 180.0

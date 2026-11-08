@@ -150,14 +150,24 @@ public sealed class GameDataTests : IDisposable
     public void A_changed_real_is_its_text_without_an_exponent()
     {
         var data = new GameData(Standard(), MapArchive.Read(_maps.Build("function main() end", map: map =>
-            map.UnitObjectData = new UnitObjectData(ObjectDataFormatVersion.v3) { BaseUnits = { Change("hfoo", ("usca", 0.00001f), ("ucol", 3e30f)) } })));
+            map.UnitObjectData = new UnitObjectData(ObjectDataFormatVersion.v3)
+            {
+                BaseUnits = { Change("hfoo", ("usca", 0.00001f), ("ucol", 3e30f), ("uhpm", 1.234567e-21f), ("umpm", -2.5e-38f), ("usid", float.Epsilon), ("usin", -123.45f)) },
+            })));
         var footman = data.Object(ObjectKind.Unit, Id("hfoo"))!;
 
         Assert.Equal("0.00001", footman.Text(Id("usca")));
         Assert.Equal(0.00001f, footman.Real(Id("usca")));
         Assert.Equal(0, footman.Integer(Id("usca")));
+        Assert.Equal("3000000000000000000000000000000", footman.Text(Id("ucol")));
         Assert.Equal(3e30f, footman.Real(Id("ucol")));
         Assert.Equal(int.MaxValue, footman.Integer(Id("ucol")));
+        // every digit kept down to the smallest floats, which decimal text cut at 1e-21
+        Assert.Equal("0.000000000000000000001234567", footman.Text(Id("uhpm")));
+        Assert.Equal(1.234567e-21f, footman.Real(Id("uhpm")));
+        Assert.Equal(-2.5e-38f, footman.Real(Id("umpm")));
+        Assert.Equal(float.Epsilon, footman.Real(Id("usid")));
+        Assert.Equal("-123.45", footman.Text(Id("usin")));
     }
 
     [Theory]
