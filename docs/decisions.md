@@ -139,7 +139,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   `GetRandomInt` (fact), which the world provides (W0-5). `os.clock`, `os.time` and `os.date` read the real clock, as the
   game's do, until the world replaces them (done in W0-5, D44). Binary chunks are refused by every `load`, whatever its mode: Lua 5.3 never
   checks bytecode, so a map could crash the process with one. Whether the game loads them isn't measured;
-  `string.dump` stays, harmless without them.
+  `string.dump` stays, harmless without them (both measured since, D126: the game reads them and has no `string.dump`).
 - **D37. The native build** uses zig 0.17.0 (`native/build.ps1`) for win-x64 (MinGW), linux-x64 (glibc 2.17) and
   osx-arm64, with `-DLUA_USE_C89` (D33), `-ffp-contract=off` (arm64 would fuse multiply-adds and x64 not) and `-s`
   (without it the DLL holds a hash of the folder it was built in). The output is the same bytes from any folder and
@@ -523,7 +523,7 @@ functions before it was written.
   float as `inf`: there MirrorImaged writes the float's exact digits, unpadded, as the game's algorithm wasn't found
   (dividing by ten repeatedly or by a power of ten made by multiplying, then taking digits, matched none). Close too
   for a number below 0 whose text passes 255 bytes: the game closes (0xC0000409, twice), which a run can't copy, so
-  the text is cut as above 0.
+  the text is cut as above 0 (replaced by D122: the run stops there, as the game closes).
 - **D85. The hashtable natives** keep each key's integer, real, boolean, string and handle apart, as measured; a
   `Save*Handle` saves nothing and gives false for a null or destroyed handle, and saves a Convert native's value but
   gives false, as for `FOG_OF_WAR_MASKED` (a handle made by a native that makes objects gave true); a handle destroyed
@@ -729,3 +729,78 @@ measured and say so where not.
   unit natives (`StoreUnit`, `RestoreUnit`, `HaveStoredUnit`, `FlushStoredUnit`, `SyncStoredUnit`) wait for W2-3;
   the 255-cache limit (a claim) isn't modelled. `Documents` isn't thread-safe: one run at a time uses it.
 - **D105. After W1-5,** with W1-2, W1-3 and W1-4 merged first: 112 Exact, 276 Close, 11 Recorded, 1,436 Missing.
+
+### Probes compared with the game (W1-8)
+
+- **D120. The comparison** is `ProbeComparison` in `tests/MirrorImaged.GameTests`. Its test without the game runs every
+  probe in `probes/` in MirrorImaged and compares its lines with the game's in `probes/expected/<probe>.txt` (D71's
+  format), so CI does it on all three platforms. A probe's map runs through the seam without blizzard.j (D65), as rule
+  5 of `docs/tasks/how-tasks-run.md` asks, with the three blizzard.j functions the map's `config` and `main` call
+  (`SetPlayerSlotAvailable`, `InitGenericPlayerSlots`, `InitBlizzard`) given as functions that do nothing. With the
+  installed blizzard.j it would be no closer: `InitBlizzard` stops at `IsFogEnabled`, Missing, and the rest of it needs
+  sounds, rects and units (later waves). So a probe reading what those three set (players) or calling another blizzard.j
+  function (`PolledWait` in triggers and triggers-2, `GetPlayersAll` in players) differs there, recorded as below. The
+  run is advanced a second at a time, for at most the 2 minutes the game runner gives a probe (its hidden desktop runs
+  game time as real time), until the probe's Preload file is in the run's documents; the run stopping after it
+  (`EndGame` is Missing until W1-9) is the game ending there. The lines that differ are found by the longest common run
+  of lines, and those between the same two common lines are paired in order, so each difference names the expected
+  file's line and both values. The test with the game (`Needs=Game`) runs each probe in the game first and fails when the
+  game no longer gives the expected lines (a stale record), then runs it in MirrorImaged as above; one probe: `dotnet
+  test tests/MirrorImaged.GameTests --filter 'Needs=Game&DisplayName~name: \"triggers\"'` from PowerShell. It replaces
+  the four trigger probes' tests and `hello`'s, now that every probe has an expected file: `hello` and `game-time` were
+  recorded (11-08), `game-time`'s real seconds as `{t}`.
+- **D121. MirrorImaged's differences are recorded per probe** in `probes/differences/<probe>.txt`, in the comparison's
+  order: the game's line after `- `, MirrorImaged's after `+ `, or `! ` and the first line of the message when its run
+  stopped without lines, with notes (`# `) giving why and the decision that makes the native Close. The test holds the
+  file to the differences exactly, both ways, so a new difference fails and so does one that has gone; its message
+  lists every difference with its line and gives the file's lines without notes, to paste. A stop is one entry, not
+  every line, as a Missing native in a probe loses all its lines: `GetHandleId` stops players, triggers, triggers-2 and
+  triggers-3 (W1-6's), `Location` stops strings-2 (wave 2); the lane that brings the native updates the file. One file
+  a probe, so lanes changing different natives seldom touch the same file. Of the 24 probes, 5 stop so, 3 close the
+  game as the game does, and of the 16 that give lines 11 give the game's and 5 differ (strings, strings-4, game-time,
+  lua-config and timers), each where the native or the model is Close.
+- **D122. A game that closes is a line.** A probe whose game exits by itself after its map loaded, before the lines
+  came, ends `Closed` in the runner (new), and gives the one line `! the game closes`; so does a MirrorImaged run that
+  stops with a `GameClosedException` before its lines, and an expected file holds it as any line. `R2SW` of a number
+  below 0 whose text passes 255 bytes now throws it, replacing D84's cut, as the game closed on -1.5 at widths 254 and
+  1000. W1-3's six one-call `R2SW` probes are committed as `probes/r2sw-*.lua`, and W1-5's `files-text` (`Preloader` of
+  a file that isn't JASS) as `files-text.lua`; each was run again (11-08) and gave what the facts say, the two at -1.5
+  and files-text closing the game.
+- **D123. The runner copies the account's campaign files too:** before a run, each account's
+  `Campaigns\*\Campaigns.w3v` and `Campaigns\*\Classic.w3p`, as D59 copies `LastReplay.w3g`, to `Saved by
+  MirrorImaged\<name> <write time><extension>` beside it, never over a file, and not when its hash is one a probe run
+  made; after the run the hashes of those that changed join the same list, still `probe-replays.txt`, so the hashes
+  noted before stay. Every game rewrites `Classic.w3p` with the same bytes, so its write time changes each run: a file
+  is not copied when a copy in its folder has its content, whatever the copy's name (before, only a copy of the same
+  name counted, and this task's first runs left 34 copies of one `Classic.w3p`, the 33 extra ones since deleted).
+- **D124. A varying line can vary in a word too:** in D71's format, `{w}` stands for a word (letters, digits and
+  underscores) as `{t}` stands for a number. The players probe run again gave other races for slots 0 to 23, as the
+  lobby draws them at random (D92), so those 24 lines are `~ ` lines with `{w}` for the race; the two runs' races are
+  in the file's notes. Nothing else in it changed.
+- **D125. `SaveFogStateHandle` is Close:** its answer for `FOG_OF_WAR_MASKED`, a Convert native's value, was false in
+  W1-3's run of the hashtables probe and true in W1-8's, every other line the same; the value was saved and loaded back
+  both times. So the game's answer there isn't fixed (perhaps whatever its return register held; not known), and the
+  native still gives false (D85), with the line marked as varying.
+- **D126. The Lua build as the game's, probe lua-config** (two runs, the same lines): D33's Windows configuration holds
+  (`math.log(8, 2)` 3.00000024 and `math.log(1024, 2)` 10.000001 as here, `0x1.0000011p0` 1, `%a` of 0.1
+  `0xc.ccccdp-7`, `os.date` refusing `%F`, `%e` and `%Ey` and taking `%#x`), and so does D35's build without
+  `LUA_COMPAT_5_2` (no `math.pow`, `math.ldexp`, `math.log10`, `bit32`, `unpack`, `loadstring`, `table.maxn` or the
+  rest; `utf8`, `table.move`, `math.ult` and `rawlen` as here). D34's integer made a float by the C cast is now
+  measured: `i + 0.0` and `i / 1` round to nearest, ties to even (16777217 to 16777216, 16777219 and 16777221 to
+  16777220, 2147483647 to 2^31), and match here, where `I2R` cuts toward zero. Two differences are fixed or kept:
+  the game has no `string.dump`, so the sandbox drops it now (`sandbox.c`; the arena's addresses moved, so
+  `LuaDeterminismTests`' pins were taken again); and the game's `load` reads a binary chunk (the start of one gave
+  "truncated precompiled chunk", with mode `bt` and `b`), which stays refused here, D36's reason holding: without
+  `string.dump` a map can still write bytecode by hand. Left as differences, recorded: `math.log(3, 2)` and the
+  base-10 logs (D32's log), and `pairs` over 20 string keys, which visits them in the same order in both of the game's
+  runs but not in this one's, so the game's string hash seed is fixed but isn't 0 (D35); finding it is the number
+  model's follow-up.
+- **D127. Timers due at the same moment, probe timers** (two runs, the same lines): six timers due at 1.0 ran in the
+  game as resumed, first, periodic, second, late, restarted, which is neither the order they were made (late,
+  restarted, periodic, resumed, second, first), nor started, nor D45's order of queueing (first, second, resumed, late,
+  restarted, periodic, as here). A 3600 s timer read every 0.01 s by a periodic timer gave elapsed times as if read at
+  the hundredths themselves and cut toward zero as D45 cuts (0.01001, 0.02002, ...), but 0.25024 and 0.50024 where
+  0.25 and 0.5 would read whole, and whole at 0.75 and 1.0 (so the periodic timer's expiries are a hair past 0.25 and
+  0.5, perhaps summed timeouts); here the expiries run in the nearest 1/1024 s step, which the clock reads, so 0.00977,
+  0.01953, ... Both are recorded as differences for the timers' follow-up: D45's step and order are Close until a
+  model matches.

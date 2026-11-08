@@ -449,3 +449,46 @@ an outside program wrote and tried more paths (`files-paths`), and read a file t
   the committed probe doesn't; run 1 rewrote it once (it held no other cache afterwards). Runs 3 to 6 left it as run 1
   wrote it (still 177 bytes, written 07:24:50, after runs at 07:46, 08:11, 08:12 and 08:13). `Classic.w3p` in the same
   folder is rewritten by every game, saving or not.
+
+## Probes compared
+
+The probes run again by W1-8's comparison (`docs/decisions.md`, D120), 3.0.1.24371, single player, 11-08, by the game
+runner from the PowerShell tool. Each probe's lines are in `probes/expected`, and where MirrorImaged differs, in
+`probes/differences`.
+
+- `game-time`: a 100000 s timer and a 1 s periodic timer started in the same callback; at the periodic timer's first 7
+  ticks the clock's `TimerGetElapsed` printed with `%.2f` read 1.01 to 7.01, and from the 8th to the 20th 8.00 to 20.00
+  (1 run; W0-4's runs read 1.01 to 20.00 too). Near 99999 a float's step is 0.0078125, so 1.01 is 1.0078125: the
+  remaining time was a step under 99999, as if the tick came a little after the whole second, and from 8 s on it didn't.
+  Inferred, since the game's elapsed time is the timeout less the remaining time, cut toward zero (D45).
+- The six one-call `R2SW` probes of W1-3 (`probes/r2sw-*.lua`), each run once more, gave what the facts above say:
+  widths 2147483640 and 2147483644 255 bytes of spaces and the number cut off, precisions -100 and -2147483647 `1.5` and
+  `1.25`, and -1.5 at widths 254 and 1000 closed the game before the probe's line. So did `files-text`, `Preloader` of
+  a file whose line is `not jass` (now `probes/files-text.lua`).
+- `hashtables`: `SaveFogStateHandle(ht, 6, 6, FOG_OF_WAR_MASKED)` gave true, where W1-3's run gave false; the fogstate
+  loaded back with `==` holding both times, and every other line was the same. So that answer isn't the same every run.
+- `players`: slots 0 to 23 had other races than in W1-4's run (slot 0 human, where it was undead), every other line the
+  same: the lobby's races are random each game.
+
+Two new probes, each run twice with the same lines:
+
+- `lua-config`, the Lua build: `math.log(8, 2)` 3.00000024 (`40400001`), `math.log(3, 2)` 1.58496189 (`3fcae008`),
+  `math.log(1024, 2)` 10.000001, `math.log(100, 10)` 1.99999964 (`3ffffffd`), `math.log(1000, 10)` 2.99999189; the
+  numerals `0x1.0000011p0` 1, `0xA.8p0` 10.5, `0x.1p4` 1, `tonumber('0x1p-2')` 0.25; `%a` of 0.1 `0xc.ccccdp-7`, of 1.0
+  `0x8p-3`, `%A` of -2.5 `-0XAP-2`; `os.date` with `%F`, `%e` and `%Ey` raises "bad argument #1 to 'os.date' (invalid
+  conversion specifier '%F')" and the like, and `%#x` of time 0 is `Thursday, January 01, 1970`. None of `math.pow`,
+  `math.ldexp`, `math.frexp`, `math.cosh`, `math.sinh`, `math.tanh`, `math.log10`, `math.mod`, `bit32`, `unpack`,
+  `loadstring`, `table.maxn`, `table.getn`, `setfenv`, `module`, `string.gfind`, `string.dump` and `require` exists;
+  `utf8`, `table.move`, `math.ult` and `rawlen` do. `load` of the start of a binary chunk (`'\27Lua\83\0'`) gives
+  "truncated precompiled chunk", with mode `b` too: the game reads bytecode. An integer made a float (`i + 0.0`,
+  `i / 1`) rounds to nearest, ties to even: 16777217 is 16777216, 16777219 and 16777221 are 16777220, 16777223 is
+  16777224, 33554435 and 33554437 are 33554436, 2147483647 and -2^31 are ±2^31; `16777219 == 16777220.0` is false and
+  `16777219 < 16777220.0` true. `pairs` over the 20 string keys `a` to `h`, `one` to `five`, `alpha`, `beta`, `gamma`,
+  `x1`, `x2`, `x10` and `Footman`, set in that order, visits them as `three four one f e d c b a five x10 two Footman
+  x2 x1 beta gamma h g alpha` in both runs.
+- `timers`: six timers due at 1.0 ran as resumed (started at 0 for 1 s, paused and resumed at 0.25), first (started
+  at 0), periodic (0.25 s from 0, its fourth expiry), second (started at 0 after first), late (started at 0.5 for 0.5)
+  and restarted (started at 0 for 2 s, started again at 0.5 for 0.5); they were made in the order late, restarted,
+  periodic, resumed, second, first. A 3600 s timer read every 0.01 s from a 0.01 s periodic timer started with it gave
+  elapsed times 0.01001, 0.02002, ..., 0.24023, 0.25024, 0.26001, ..., 0.50024, ..., 0.75000, ..., 1.00000 (with
+  `%.5f`), and its remaining time after 100 reads 3599.00000.

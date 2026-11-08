@@ -1,0 +1,5 @@
+# Where MirrorImaged differs from the game's lines in expected/triggers-3.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# GetHandleId is W1-6's (D47).
+! war3map.lua:44: The native GetHandleId is Missing: MirrorImaged does not simulate it yet.

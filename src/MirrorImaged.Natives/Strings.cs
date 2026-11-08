@@ -194,10 +194,11 @@ public sealed partial class GameNatives
     /// one), rounded half up in the game's arithmetic, and spaces after the sign until the integer part and decimals fill
     /// <paramref name="width"/>; precision 0 writes ".0". At most 255 bytes, the rest cut; "" when the length the width
     /// asks for is past a 32-bit integer. The game's own formatting: R2SW(1.5, 8, 2) is "     1.50", R2SW(-1.5, 4, 2)
-    /// "- 1.50", R2SW(1.25, 0, -1) "1.25". Close from 2^31 up, where the game writes about ten digits of its own and then
-    /// zeros (R2S(1e20) is "100000057600000000000.000") and this writes the float's digits, for the largest floats, which
-    /// the game writes "inf", and for a number below 0 whose text passes 255 bytes, which closes the game.
+    /// "- 1.50", R2SW(1.25, 0, -1) "1.25". A number below 0 whose text passes 255 bytes closes the game. Close from 2^31
+    /// up, where the game writes about ten digits of its own and then zeros (R2S(1e20) is "100000057600000000000.000")
+    /// and this writes the float's digits, and for the largest floats, which the game writes "inf".
     /// </summary>
+    /// <exception cref="GameClosedException">The number is below 0 and its text passes 255 bytes.</exception>
     [Native(Level.Close)]
     public string? R2SW(float r, int width, int precision)
     {
@@ -229,6 +230,8 @@ public sealed partial class GameNatives
         // From 2^31 the game pads nothing; the pad and the length are 32-bit integers that wrap, as the game's.
         var pad = r >= 2147483648f ? 0 : Math.Max(0, unchecked(width - (precision == 0 ? 0 : fraction.Length) - digits.Length));
         var length = unchecked(sign.Length + pad + body.Length);
+        if (sign.Length > 0 && length > 255)
+            throw new GameClosedException($"The game closes: R2SW's text of {sign}{body} at width {width} passes 255 bytes");
         return length < 0 ? "" : (sign + new string(' ', Math.Min(pad, 255)) + body)[..Math.Min(length, 255)];
     }
 
