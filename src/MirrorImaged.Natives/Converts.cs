@@ -1,11 +1,13 @@
 namespace MirrorImaged.Natives;
 
 // A Convert native gives the handle standing for a value of its type: made once per type and value, so the same value
-// gives the same handle and Lua's == holds. Its id is the value; it takes none of the game's ids, and a key of its own
-// (decisions D64). ConvertPlayerColor and ConvertRace are Exact with their getters (decisions D90). ConvertAttackType,
+// gives the same userdata. Its id is the value, also one common.j doesn't name; it takes none of the game's ids, and a key
+// of its own (decisions D64; probe handles). Lua's == compares ids, so the same value of another type is equal, another
+// userdata (decisions D112). ConvertPlayerColor and ConvertRace are Exact with their getters (decisions D90),
+// ConvertGameEvent and ConvertLimitOp with GetTriggerEventId (probe triggers). ConvertAttackType,
 // ConvertDamageType and ConvertWeaponType become Exact once their getters are written, which the facts compare them
 // with (C# through CSharp.lua: every attack, damage and weapon type dealt from code reads back the same, through
-// Convert*Type handles made once and compared with ==). Not measured: a value common.j doesn't name.
+// Convert*Type handles made once and compared with ==).
 public sealed partial class GameNatives
 {
     readonly Dictionary<(Type, int), handle> _converted = [];
@@ -50,7 +52,7 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public frameeventtype? ConvertFrameEventType(int i) => Convert<frameeventtype>(i);
     [Native(Level.Close)] public framepointtype? ConvertFramePointType(int i) => Convert<framepointtype>(i);
     [Native(Level.Close)] public gamedifficulty? ConvertGameDifficulty(int i) => Convert<gamedifficulty>(i);
-    [Native(Level.Close)] public gameevent? ConvertGameEvent(int i) => Convert<gameevent>(i);
+    [Native(Level.Exact, Fact = Probe1 + "; " + Handles)] public gameevent? ConvertGameEvent(int i) => Convert<gameevent>(i);
     [Native(Level.Close)] public gamespeed? ConvertGameSpeed(int i) => Convert<gamespeed>(i);
     [Native(Level.Close)] public gametype? ConvertGameType(int i) => Convert<gametype>(i);
     [Native(Level.Close)] public heroattribute? ConvertHeroAttribute(int i) => Convert<heroattribute>(i);
@@ -61,7 +63,7 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public itemstringfield? ConvertItemStringField(int i) => Convert<itemstringfield>(i);
     [Native(Level.Close)] public itemTag? ConvertItemTag(int i) => Convert<itemTag>(i);
     [Native(Level.Close)] public itemtype? ConvertItemType(int i) => Convert<itemtype>(i);
-    [Native(Level.Close)] public limitop? ConvertLimitOp(int i) => Convert<limitop>(i);
+    [Native(Level.Exact, Fact = Probe1)] public limitop? ConvertLimitOp(int i) => Convert<limitop>(i);
     [Native(Level.Close)] public loadoutslot? ConvertLoadoutSlot(int i) => Convert<loadoutslot>(i);
     [Native(Level.Close)] public mapcontrol? ConvertMapControl(int i) => Convert<mapcontrol>(i);
     [Native(Level.Close)] public mapdensity? ConvertMapDensity(int i) => Convert<mapdensity>(i);

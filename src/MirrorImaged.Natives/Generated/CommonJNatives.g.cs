@@ -1954,9 +1954,6 @@ public sealed partial class GameNatives
     public int GetFoodUsed(int unitId) => throw new MissingNativeException("GetFoodUsed");
 
     [Native(Level.Missing)]
-    public int GetHandleId(handle? h) => throw new MissingNativeException("GetHandleId");
-
-    [Native(Level.Missing)]
     public int GetHeroAgi(unit? whichHero, bool includeBonuses) => throw new MissingNativeException("GetHeroAgi");
 
     [Native(Level.Missing)]

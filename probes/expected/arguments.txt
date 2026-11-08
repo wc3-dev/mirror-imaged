@@ -1,0 +1,65 @@
+# probes/arguments.lua on 3.0.1.24371, single player, 11-08: the game's lines.
+# Lines starting "# " are notes.
+TimerGetTimeout trigger error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout race error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout player error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout nil ok 0.0
+TimerGetTimeout none ok 0.0
+TimerGetTimeout number error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout string error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout boolean error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout table error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout function error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout thread error bad argument #1 to 'TimerGetTimeout' (timer expected)
+TimerGetTimeout named table error bad argument #1 to 'TimerGetTimeout' (timer expected)
+GetHandleId none ok 0
+GetHandleId number error bad argument #1 to 'GetHandleId' (handle expected)
+GetHandleId race ok 1
+variable event eventid error bad argument #3 to 'TriggerRegisterVariableEvent' (limitop expected)
+variable event limitop ok event
+I2S numeral ok 5
+I2S hex numeral ok 16
+I2S float numeral ok 2
+I2S fraction numeral error bad argument #1 to 'I2S' (number has no integer representation)
+I2S word error bad argument #1 to 'I2S' (number expected, got string)
+I2S fraction error bad argument #1 to 'I2S' (number has no integer representation)
+I2S whole float ok 2
+I2S 2^31 error bad argument #1 to 'I2S' (number has no integer representation)
+I2S nil error bad argument #1 to 'I2S' (number expected, got nil)
+I2S none error bad argument #1 to 'I2S' (number expected, got no value)
+I2S boolean error bad argument #1 to 'I2S' (number expected, got boolean)
+I2S table error bad argument #1 to 'I2S' (number expected, got table)
+I2S extra ok 7
+R2S numeral ok 1.500
+R2S word error bad argument #1 to 'R2S' (number expected, got string)
+R2S integer ok 2.000
+R2S nil error bad argument #1 to 'R2S' (number expected, got nil)
+R2S none error bad argument #1 to 'R2S' (number expected, got no value)
+R2S boolean error bad argument #1 to 'R2S' (number expected, got boolean)
+boolean true true
+boolean nil false
+boolean none false
+boolean 0 true
+boolean 1 true
+boolean string true
+boolean table true
+StringLength number ok 4
+StringLength none error bad argument #1 to 'StringLength' (string expected, got no value)
+TriggerAddAction number error bad argument #2 to 'TriggerAddAction' (function expected)
+TriggerAddAction string error bad argument #2 to 'TriggerAddAction' (function expected)
+TriggerAddAction table error bad argument #2 to 'TriggerAddAction' (function expected)
+TriggerAddAction nil ok triggeraction
+TriggerAddAction none ok triggeraction
+Condition number error bad argument #1 to 'Condition' (function expected)
+Condition none ok conditionfunc
+TimerStart number error bad argument #4 to 'TimerStart' (function expected)
+in a function error war3map.lua:119: bad argument #1 to 'I2S' (number expected, got string)
+in a function handle error war3map.lua:120: bad argument #1 to 'TimerGetTimeout' (timer expected)
+in a function tail call error war3map.lua:121: bad argument #1 to 'I2S' (number expected, got string)
+error error war3map.lua:122: raised
+error level 2 error war3map.lua:123: raised
+error level 0 error raised
+error table error table
+index nil error war3map.lua:126: attempt to index a nil value (local 'x')
+call nil global error war3map.lua:127: attempt to call a nil value (global 'MirrorProbeMissing')
+arithmetic error war3map.lua:128: attempt to perform arithmetic on a table value (local 's')

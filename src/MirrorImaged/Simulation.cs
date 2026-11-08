@@ -51,7 +51,7 @@ public sealed partial class Simulation : IDisposable
                          .OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())
-                _lua[name] = value is handle h ? new LuaHandle(h.GetType().Name, h.Key) : value;
+                _lua[name] = value is handle h ? ToLua(h, h.GetType()) : value;
             AddLuaExtras();
             _lua.Run(blizzard, "blizzard.lua");
             Protect(() => _lua.Run(script, "war3map.lua"));

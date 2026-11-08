@@ -1,0 +1,37 @@
+# probes/handles-3.lua on 3.0.1.24371, single player, 11-08: the game's lines. Two runs gave each new timer's id in
+# turn ("a new b new" both times); these lines twice since. Lines starting "# " are notes.
+players 1048584 0 2 3 4 5 6 7 8 9 10 11 12 13 14
+players 15 16 17 18 19 20 21 22 23 24 25 1 60 62
+order
+b collected true
+order a
+a collected true
+order after
+new a b, 2 other
+when
+c collected true at once new
+when 3.01
+made new
+when 3.05
+made new
+when 3.2
+made c
+when 3.5
+made new
+when 4.0
+made new
+callbacks
+TimerStart 0
+TimerStart nil 0
+ForForce 0
+ExecuteFunc 0
+TriggerExecute 0
+TriggerEvaluate 0
+nil boolexprs
+predicted false false true false true false false
+ran t1,f1,t2,f3,f5,t6,u6,t8,u8
+got
+I2S error bad argument #1 to 'I2S' (number expected, got timer)
+R2S error bad argument #1 to 'R2S' (number expected, got race)
+StringLength error bad argument #1 to 'StringLength' (string expected, got timer)
+I2S nil condition error bad argument #1 to 'I2S' (number expected, got conditionfunc)

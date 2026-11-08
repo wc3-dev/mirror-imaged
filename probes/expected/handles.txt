@@ -1,0 +1,52 @@
+# probes/handles.lua on 3.0.1.24371, single player, 11-08: the game's lines. Two runs, the same lines; the first ran an
+# older identity part, which stopped at t == ConvertPlayerColor(n) (an agent's == refuses a handle that isn't one).
+# Lines starting "# " are notes.
+first 1048690 players 1048584 1048586 1048646 1048584
+blizzard 1048577 1048578 1048579 1048580 1048581 1048582 1048583
+ids
+timer 1 1
+trigger 1 1
+group 1 1
+force 1 1
+hashtable 1 1
+condition 1 1
+filter 1 1
+and 1 1
+not 1 1
+action 1 1
+triggercondition 1 1
+event 1 1
+convert 5 100 -1 4 0 1 took 0
+outside 0 nil true 0
+identity
+rawequal true true true true true
+equal by id true false true true true false
+metatable false false false
+keys p0 r1 r1 nil nil
+tostring timer: hex 23, player: hex 24, race: hex 22, eventid: hex 25, conditionfunc: hex 31, filterfunc: hex 28, boolexpr: hex 26, triggeraction: hex 31
+expired true true
+destroyed and held
+timer again 1 old 0 false false timer
+timer then trigger 1 false
+condition again 1 old 0 false false
+trigger again 1
+force again 1
+hashtable again 1
+filter again 1
+and again 1
+three destroyed 3 4 5 6
+stale
+stale timer 0.0 0.0
+condition place 2 false false
+ran new
+collected
+collected true
+after collection 4 5 6 7 8 alive 3
+nil boolexprs
+nil handles true false conditionfunc filterfunc true
+after a pass false false false false false
+ran t1,t2,t3,f4,t4,f5
+across conditions true true
+ran t6,t7
+destroyed after a pass false
+ran t9

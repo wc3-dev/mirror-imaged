@@ -229,25 +229,25 @@ public sealed class SimulationTests : IDisposable
         var limitOp = simulation.Natives.ConvertLimitOp(0)!;
         var timer = simulation.Natives.CreateTimer()!;
 
-        Assert.Same(gameEvent, simulation.ToCSharp(new LuaHandle("eventid", gameEvent.Key), typeof(eventid), 1, "F"));
-        Assert.Same(limitOp, simulation.ToCSharp(new LuaHandle("eventid", limitOp.Key), typeof(eventid), 1, "F"));
-        Assert.Same(limitOp, simulation.ToCSharp(new LuaHandle("handle", limitOp.Key), typeof(handle), 1, "F"));
-        Assert.Same(timer, simulation.ToCSharp(new LuaHandle("handle", timer.Key), typeof(handle), 1, "F"));
-        var error = Assert.Throws<ArgumentException>(() => simulation.ToCSharp(new LuaHandle("eventid", timer.Key), typeof(eventid), 1, "F"));
-        Assert.Equal("bad argument #1 to 'F' (eventid expected, got eventid)", error.Message);
+        Assert.Same(gameEvent, simulation.ToCSharp(new LuaHandle("eventid", gameEvent.Key, gameEvent.Id, false), typeof(eventid), 1, "F"));
+        Assert.Same(limitOp, simulation.ToCSharp(new LuaHandle("eventid", limitOp.Key, limitOp.Id, false), typeof(eventid), 1, "F"));
+        Assert.Same(limitOp, simulation.ToCSharp(new LuaHandle("handle", limitOp.Key, limitOp.Id, false), typeof(handle), 1, "F"));
+        Assert.Same(timer, simulation.ToCSharp(new LuaHandle("handle", timer.Key, timer.Id, false), typeof(handle), 1, "F"));
+        var error = Assert.Throws<ArgumentException>(() => simulation.ToCSharp(new LuaHandle("eventid", timer.Key, timer.Id, false), typeof(eventid), 1, "F"));
+        Assert.Equal("bad argument #1 to 'F' (eventid expected)", error.Message);
     }
 
     [Fact]
     public void A_converted_handle_is_the_same_userdata_for_the_same_value_and_type_and_takes_no_game_id()
     {
         using var simulation = Load("""
-            print(PLAYER_COLOR_RED == ConvertPlayerColor(0), ConvertPlayerColor(0) == ConvertRace(0), ConvertGameEvent(0) == ConvertLimitOp(0))
+            print(PLAYER_COLOR_RED == ConvertPlayerColor(0), ConvertPlayerColor(0) == ConvertRace(0), ConvertGameEvent(0) == ConvertLimitOp(0), rawequal(ConvertPlayerColor(0), ConvertRace(0)))
             print(TimerGetTimeout(CreateTimer()), pcall(TimerStart, ConvertPlayerColor(0), 1, false, nil))
             """);
 
         Assert.Equal([
-            "0.000 print: true\tfalse\tfalse",
-            "0.000 print: 0.0\tfalse\tbad argument #1 to 'TimerStart' (timer expected, got playercolor)",
+            "0.000 print: true\ttrue\ttrue\tfalse",
+            "0.000 print: 0.0\tfalse\tbad argument #1 to 'TimerStart' (timer expected)",
         ], simulation.Log);
         Assert.Equal(0x10001D, simulation.Natives.CreateTimer()!.Id); // after the 28 players and the script's timer
     }
@@ -289,19 +289,19 @@ public sealed class SimulationTests : IDisposable
         using var simulation = Load("""
             print(pcall(TimerStart, Player(0), 1, false, nil))
             print(pcall(Player, 1.5))
-            print(pcall(Player, "1"))
+            print(pcall(Player, "x"))
             print(pcall(TimerStart, CreateTimer(), 1, false, 5))
             print(pcall(TimerStart, {}, 1, false, nil))
             print(pcall(TimerGetTimeout, coroutine.create(print)))
             """);
 
         Assert.Equal([
-            "0.000 print: false\tbad argument #1 to 'TimerStart' (timer expected, got player)",
+            "0.000 print: false\tbad argument #1 to 'TimerStart' (timer expected)",
             "0.000 print: false\tbad argument #1 to 'Player' (number has no integer representation)",
             "0.000 print: false\tbad argument #1 to 'Player' (number expected, got string)",
-            "0.000 print: false\tbad argument #4 to 'TimerStart' (function expected, got number)",
-            "0.000 print: false\tbad argument #1 to 'TimerStart' (timer expected, got table)",
-            "0.000 print: false\tbad argument #1 to 'TimerGetTimeout' (timer expected, got thread)",
+            "0.000 print: false\tbad argument #4 to 'TimerStart' (function expected)",
+            "0.000 print: false\tbad argument #1 to 'TimerStart' (timer expected)",
+            "0.000 print: false\tbad argument #1 to 'TimerGetTimeout' (timer expected)",
         ], simulation.Log);
     }
 

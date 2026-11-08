@@ -87,13 +87,13 @@ public sealed class TriggerTests : IDisposable
         using var simulation = Load("""
             local f = function() return true end
             local cn = Condition(nil)
-            print(Condition(f) == Condition(f), Filter(f) == Filter(f), rawequal(cn, Condition(nil)), rawequal(Filter(nil), Filter(nil)))
+            print(Condition(f) == Condition(f), Filter(f) == Filter(f), rawequal(cn, Condition(nil)), rawequal(Filter(nil), Filter(nil)), cn == Filter(nil), rawequal(cn, Filter(nil)))
             print(tostring(cn):match("^%a+"), tostring(Filter(nil)):match("^%a+"), pcall(Condition, 5))
             """);
 
         Assert.Equal([
-            "0.000 false\tfalse\ttrue\ttrue",
-            "0.000 conditionfunc\tfilterfunc\tfalse\tbad argument #1 to 'Condition' (function expected, got number)",
+            "0.000 false\tfalse\ttrue\ttrue\ttrue\tfalse",
+            "0.000 conditionfunc\tfilterfunc\tfalse\tbad argument #1 to 'Condition' (function expected)",
         ], Printed(simulation));
     }
 
@@ -181,6 +181,59 @@ public sealed class TriggerTests : IDisposable
             "0.000 destroyed operand\ttrue\t",
             "0.000 self-removing\tfalse\tself,next",
             "0.000 after\ttrue\tnext",
+        ], Printed(simulation));
+    }
+
+    // probes triggers, handles and handles-2: a Condition or Filter made after one was destroyed takes its place, the first
+    // destroyed first, and what still holds the destroyed one runs the new one; other handles don't take it, and a new
+    // boolexpr doesn't take a destroyed And's, which still runs its own operands
+    [Fact]
+    public void A_condition_made_after_one_was_destroyed_runs_in_its_place()
+    {
+        using var simulation = Load(Cond + """
+            local function trig(...) local t = CreateTrigger() for _, c in ipairs({...}) do TriggerAddCondition(t, c) end return t end
+            local dc = cond("d1", true)
+            local t = trig(dc)
+            DestroyCondition(dc)
+            local before = TriggerEvaluate(t)
+            local nc = cond("n1", false)
+            print("new", before, TriggerEvaluate(t), done(), dc == nc)
+            dc = cond("d2", true) t = trig(dc) DestroyCondition(dc)
+            Filter(function() ran[#ran + 1] = "filter2" return false end)
+            print("filter", TriggerEvaluate(t), done())
+            local df = Filter(function() ran[#ran + 1] = "d3" return true end) t = trig(df) DestroyFilter(df)
+            cond("n3", false)
+            print("filter then condition", TriggerEvaluate(t), done())
+            local a, b = cond("a4", true), cond("b4", true) t = trig(a, b) DestroyCondition(a) DestroyCondition(b)
+            cond("x4", true) cond("y4", true)
+            print("two", TriggerEvaluate(t), done())
+            dc = cond("d5", true) t = trig(dc) DestroyCondition(dc)
+            CreateTimer() CreateTrigger() Condition(nil)
+            cond("n5", true)
+            print("after other handles", TriggerEvaluate(t), done())
+            dc = cond("d6", true) t = trig(Not(dc)) DestroyCondition(dc)
+            cond("n6", true)
+            print("in a not", TriggerEvaluate(t), done())
+            local de = And(cond("a7", true), cond("b7", true)) t = trig(de) DestroyBoolExpr(de)
+            Or(cond("x7", true), cond("y7", true))
+            print("and then or", TriggerEvaluate(t), done())
+            t = CreateTrigger()
+            dc = cond("destroyed", true)
+            TriggerAddCondition(t, dc)
+            DestroyCondition(dc)
+            TriggerRemoveCondition(t, TriggerAddCondition(t, cond("removed", false)))
+            print("removed", TriggerEvaluate(t), done())
+            """);
+
+        Assert.Equal([
+            "0.000 new\tfalse\tfalse\tn1\tfalse",
+            "0.000 filter\tfalse\tfilter2",
+            "0.000 filter then condition\tfalse\tn3",
+            "0.000 two\ttrue\tx4,y4",
+            "0.000 after other handles\ttrue\tn5",
+            "0.000 in a not\tfalse\tn6",
+            "0.000 and then or\ttrue\ta7,b7",
+            "0.000 removed\tfalse\tremoved",
         ], Printed(simulation));
     }
 
@@ -793,7 +846,7 @@ public sealed class TriggerTests : IDisposable
 
         natives.DestroyTrigger(t);
 
-        Assert.All(events, e => Assert.Null(simulation.ToCSharp(new LuaHandle("event", e!.Key), typeof(@event), 1, "F")));
+        Assert.All(events, e => Assert.Null(simulation.ToCSharp(new LuaHandle("event", e!.Key, e.Id, true), typeof(@event), 1, "F")));
     }
 
     // a function a trigger no longer has is let go of, so Lua collects it, once no running thread can still run it
