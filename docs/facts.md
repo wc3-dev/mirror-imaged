@@ -35,7 +35,8 @@ maths probe (11-01, `moonwell-maths-numbers.txt`, printed with `%.9g`). 3.0.1.24
   50.0000038, 10000 100.000008, 40000 200.000015, 1000000 1000.00006, 0.00999999978 0.100000001, 0.0001 0.00999999978,
   and the exact root for 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 144, 1024, 2^24 and 0.25.
 - By octave, `math.sqrt`'s worst is 1.92854142 parts in 100,000 high and 0.0773249492 low in the even octaves (2^0, 2^2,
-  ...) and 1.92324328 high and 0.087634936 low in the odd ones, the same in every octave from 2^-6 to 2^26.
+  ...) and 1.92324328 high and 0.087634936 low in the odd ones, the same in every octave from 2^-6 to 2^26. That sweep
+  was coarser than every float: `numbers-fine` ("The number model's probes") measured 2.04 high just above 1.
 - Sums of a float added to 0 again and again: 0.001 10,000 times is 9.99838257, 100,000 times 99.9489441, 1,000,000
   times 981.466797; 0.01: 99.971489, 996.854736, 9799.05859; 0.03: 299.988312, 2989.46997, 29441.9434; 0.1: 999.804871,
   9973.49512, 97000.0703; 0.37: 3699.40674, 36906.2461, 357990.594; 1.7: 16995.1406, 169506.906, 1664565. 0.03 added
@@ -667,13 +668,14 @@ Two new probes, each run twice with the same lines:
   `loadstring`, `table.maxn`, `table.getn`, `setfenv`, `module`, `string.gfind`, `string.dump` and `require` exists;
   `utf8`, `table.move`, `math.ult` and `rawlen` do. `load` of the start of a binary chunk (`'\27Lua\83\0'`) gives
   "truncated precompiled chunk", with mode `b` too: the chunk reached Lua's bytecode reader, so the game reads
-  bytecode (inferred; no whole chunk was loaded, as without `string.dump` none can be made). An integer made a float (`i + 0.0`,
-  `i / 1`) rounds to nearest, ties to even: 16777217 is 16777216, 16777219 and 16777221 are 16777220, 16777223 is
-  16777224, 33554435 and 33554437 are 33554436, 2147483647 and -2^31 are ±2^31; `16777219 == 16777220.0` is false and
-  `16777219 < 16777220.0` true. `pairs` over the 20 string keys `a` to `h`, `one` to `five`, `alpha`, `beta`, `gamma`,
+  bytecode (inferred; no whole chunk was loaded: none was made, though a map can write one by hand without
+  `string.dump`). An integer made a float (`i + 0.0`, `i / 1`) rounds to nearest, ties to even: 16777217 is 16777216,
+  16777219 and 16777221 are 16777220, 16777223 is 16777224, 33554435 and 33554437 are 33554436, 2147483647 and -2^31 are
+  ±2^31; `16777219 == 16777220.0` is false and `16777219 < 16777220.0` true. `pairs` over the 20 string keys `a` to `h`, `one` to `five`, `alpha`, `beta`, `gamma`,
   `x1`, `x2`, `x10` and `Footman`, set in that order, visits them as `three four one f e d c b a five x10 two Footman
   x2 x1 beta gamma h g alpha` in both runs; Lua 5.3 with string hash seed 0 visits them otherwise. Inferred: the
-  game's seed is fixed and isn't 0 (another hash function or table growth would change the order too).
+  game's seed is fixed and isn't 0 (another hash function or table growth would change the order too); W1-10's
+  `string-order` found it, `0x1c46318e` (below).
 - The three closing probes (`r2sw-negative-254`, `r2sw-negative-1000`, `files-text`), run again: each wrote its
   `started.pld` before the game closed (on disk after two of the runs; the runner's check after the third).
 - `timers`: six timers due at 1.0 ran as resumed (started at 0 for 1 s, paused and resumed at 0.25), first (started
@@ -757,3 +759,145 @@ lines they kept the same each time.
   base tables (Forsaken Kingdom's data) and 2 `custom_v1`. Read 11-08.
 - The install's text files have sections with words after the bracket (`[Hleo] leonid`, `[Scth] Scarlet Crusade
   Captain Hero`, `[AHw2] - T2 - Spell Blade`). Read 11-08.
+
+## The number model's probes
+
+Eleven probes run twice each by the game runner from the PowerShell tool, with the same lines, 3.0.1.24371, single
+player, 11-08 (W1-10), their lines in `probes/expected`. Floats are given by their bits.
+
+- Subtraction (`numbers-ops`): a - b for a in [1, 2) and b 1 to 22 octaves smaller, both with every mantissa bit
+  varied, 72 cases: always the exact difference cut toward zero. With b 23 to 25 octaves smaller, a. a - b for b 1, 2,
+  3, 5, 100 and 2^23 - 1 float steps under a: exact. Additions of the same 96 pairs: the exact sum cut toward zero.
+- Signed zeros (`numbers-fine`): `0 - 0`, `-0 - 0`, `0 + -0` and `-0 + -0` are -0. `0/0` and `-0/-0` are 1, `-0/0` and
+  `0/-0` are +0, as are `0/1`, `-0/1`, `0/-1`, `-0/-1` and every product with a zero. `1/-0` and `-1/0` are -2^127.
+  2^-149 / 0 and a subnormal (`00400000`) / 1 are 0; 1 / `00400000` is `7eaaaaab` (the subnormal read as 1.5 * 2^-127).
+- The range's ends (`numbers-ops`): `MaxValue + MaxValue` is `7fffffff`, `2^127 + 2^127` `7f800000`, `2^-126 -
+  (2^-126 + 2^-149)` `f5000000` and its negative the same, `2^-125 - (2^-126 + 2^-149)` `007ffffe`, `inf + 1` inf,
+  `inf + -inf` 0, `inf + inf` -0. Products: `2^127 * 2` `7f800000`, `* 4` `80000000`, `* 8` and up 0; `1.5 * 2^127 *
+  6` `80900000`, `* 12` 0; `-2^127 * 4` `80000000`; `2^-126 * 0.99999994` 0, `* 1.0000001` `00800001`; `2^-125 * 0.5`
+  `00800000`. Quotients: `2^127 / 0.5` `7f800000`, `/ 0.25` `80000000`, `/ 0.125` 0; `MaxValue / 0.99999994`
+  `7f800000`; `2 / 0` `7f800000`, `4 / 0` `80000000`, `8 / 0` 0, `0.5 / 0` `7e800000`.
+- Division (`numbers-div`, `numbers-fine`): 1/d for the 1024 divisors 1 + k/1024 is `floor(2^47 / (m - 1))` of the
+  divisor's mantissa m, each one (1/1 is 1). Between them, by the 312 random divisors and the runs of 1 + j * 2^-16
+  and 1 + j * 2^-23: up to 5 steps above the exact reciprocal near 1 and 0.5 near 2, near straight lines between the
+  knots; the lines MirrorImaged draws are a fit, a step off for about 1 in 5 of the random divisors (decisions D151). n/d is n times that reciprocal: 240 of the 244 grid quotients equal n times the
+  game's 1/d.
+- `math.sqrt` (`numbers-sqrt`, `numbers-fine`), over 1 + k/512, 2 + k/128, 4 + k/64 and 260 random mantissas, and every
+  float from 1 to 1 + 263 steps: the root is the same over runs of inputs (1 for inputs up to 1 + 18 steps, then
+  `3f8000b5` up to 1 + 263 steps and beyond) and steps by 2.16e-5, and the error depends on the mantissa only, the
+  same in [1, 2), [2, 4) and [4, 8). Every one of these is one more than the integer root of the mantissa times 2^8,
+  mapped to 1 + 46341 (r - 46341) / 2^31, times `3fb504f3` for an odd exponent. `numbers-squares`, the roots of n * n
+  for n 1 to 4096 in plain Lua: `math.floor` takes 64 of them below n, as the facts' C# probe found; that rule gives
+  4090 of the 4096 and 70 below n, the game's integer root being a step higher for n 181, 362, 724, 1448, 2896 and 2327
+  (m * 2^8 49 and 68 below a square; at 1 + 18 float steps, 25 below, it isn't).
+- `math.sin` and `math.cos` (`numbers-trig`, `numbers-fine-2`), over k/64 for k -64 to 447, 2^-1 to 2^-40, k * 2^-14,
+  40 large inputs, and runs of j * 2^-20, 1 + j * 2^-20 and 0.5 + j * 2^-21: the sine of j * 2^-20 stays the same over
+  runs of six or seven inputs (0, then 12918, 25836, 38755, ... in 2^-31), a step of 2^-20 turns. A model fits 2,333
+  of the 2,336 and 716 of the facts' 720 whole degrees (decisions D152): the angle is x times `3e22f983` in the game's
+  arithmetic, cut toward zero to 2^-20 turns; the sine is a table of sin(pi k / 2048) in 2^-31
+  (cut), each 256 steps of the turn between two values on a straight line divided into 255, negated past half a turn,
+  the cosine a quarter turn on. sin(pi) is 2^-31 and sin(2 pi) -2^-31 (the table's last is 1); cos(0) is 1 - 2^-24.
+  `sin(-x)` isn't `-sin(x)`, as the angle is cut toward zero. 1e6 is 0.921875 turns past whole ones, so its sine is
+  -0.4714. `math.tan` is the sine over the cosine in the game's division.
+- `math.rad(x)` is `x * pi / 180` and `math.deg(x)` `x * 180 / pi` in the game's arithmetic, all 130 measured
+  (`numbers-functions`): `math.deg(pi)` is 180 and `math.deg(1)` `42652ee3`.
+- `math.asin` of 1.0000001, 2, 5e9 and MaxValue is pi/2 (`3fc90fdb`), of their negatives -pi/2; `math.acos` of them 0
+  and pi. `math.atan(0, 0)` is pi/2, `math.atan(0, x)` pi for x below 0 and 0 above, `math.atan(y, 0)` +-pi/2.
+  `math.atan` near 0 is x (1 - 2^-20) (`377ffff0` for 2^-16).
+- `math.exp` (`numbers-functions`, `numbers-fine-2`): exp(-x) is 1 over exp(x) in the game's division (k/16, k 1 to
+  160: 135 of 160 to the bit, the rest a step off as the division model is); `exp(-103)`, `-104` and `-110` are 2^127,
+  `exp(88)` `7ef881f1`, `exp(88.7228)` `7f7fff35`, `exp(89)` `7fa8e0dd` (packed past the range), `exp(100)` 0. Over
+  1 + j * 2^-20, exp steps by 11 float steps but every 8th by 10 (a slope of 87/8), and is 1.4 to 2.4 steps low.
+- `math.log`: right near 1 (`log(1 + 2^-16)` is `377fff80`), but off from 1.5 up: `log(1.5 + j * 2^-20)` about 5e-7
+  low, `log(3)` 5, `log(100)` 3, `log(1000)` 41 (6.9077358), `log(1e6)` 16, `log(MaxValue)` 4. `log(0)` and `log(-0)`
+  are -88.0296860 (`c2b00f33`, 2^-127's), `log(-1)` 0. `math.log(x, 10)` is `log10`, so `math.log(1000, 10)` 2.99999189.
+- `^` (`numbers-functions`, 13 bases by 11 powers): a whole power from 1 up is exact as far as squaring as it goes in the
+  game's arithmetic gives (`1000^10` `7149f2c9`, `(-8)^3` -512, `(-2)^3` -8, `25^10` `56ad78ea`); any other goes through
+  exp and log, the sign dropped (`(-8)^-1` 0.125000045, `(-8)^0.5` 2.82842636, `(-8)^(1/3)` 1.99999964, `2^-1`
+  0.500000119, `0.25^-2` 15.9999933); 0 to any power but 0 is 0, `x^0` 1.
+- `pairs` (`string-order`): 24 keys of 8, 14, 22, 30, 38 and 60 letters, set in order, came in an order that, with
+  `lua-config`'s 20 keys, only Lua 5.3.6's string hash and table code with the seed `0x1c46318e` give, of all 2^32.
+- Timers (`timers-2`): read in the instant they were started, a 2 s timer's elapsed time is 2^-23 and its remaining
+  time 2 - 2^-23, a 3600 s timer's elapsed 2^-12 and a 100000 s timer's 2^-7: each one float step of its timeout. At
+  each of 96 expiries of a 0.01 s periodic timer started with them, the 2 s timer's elapsed and remaining time add up
+  to 2, and the elapsed time is 0.01 times the count but for a drift of up to 2.2e-7 (exactly 0.25 at the 25th);
+  the 3600 s timer reads a step past 0.25 at the 25th. At each whole second up to 6 the 3600 and 100000 s timers read a
+  float step past it. Due at 2.0: a1 (started at 0), a2 (every 1 s from 0, its second), a3 (at 0, after a2), a4 (at
+  1.0 for 1 s) and a5 (at 1.5 for 0.5 s) ran in that order; due at 4.0: b1 (at 0), b4 (at 0, after b3), b2 (at 0,
+  paused and resumed at 1.0), b3 (at 0 for 3 s, paused at 1.0 and resumed at 2.0), b5 (at 3.0); due at 6.0: c2, c3 (at
+  0), c1 (at 0, started again at 3.0 for 3 s).
+- A condition's place taken twice (`condition-places`): c1 destroyed and taken by c2, c2 destroyed and taken by c3:
+  the triggers holding c1, c2 and c3 each ran c3; destroying the stale c1 freed the place (all three ran nothing and
+  failed), the next condition c4 took it (all three ran c4), destroying the stale c2 freed it again and c5 took it.
+  `And(nil, nil)`, `Or(nil, nil)`, `Not(nil)`, `Condition(nil)` and `Filter(nil)` made after a destroy took no place;
+  the next `Condition` did.
+
+## JASS maps
+
+Thirteen JASS probes and one Lua probe on 3.0.1.24371, 11-08 (W1-7), single player, `-loadfile`: the
+`probes/jass-*.j` maps, whose `war3map.j` the game runs in its JASS machine (`ProbeMap.BuildJass`, decisions D130),
+and `probes/blizzard-numbers.lua`, two runs each with the same lines, but `jass-integers` and
+`jass-executefunc-null` and `jass-threads`' later loops, one run each (after the code review); and a JASS map with a
+backslash in a rawcode, which never loaded. Their lines are
+in `probes/expected`. A real is written as its IEEE bits, worked out in JASS with exact steps (halving, doubling,
+subtracting 1 in [1, 2), `R2I` of a whole number).
+
+- Integers wrap at 32 bits: 2147483647 + 1 is -2147483648, -2147483648 - 1 is 2147483647, 2147483647 × 2 is -2,
+  65536 × 65536 is 0, 46341 × 46341 is -2147479015, 2147483647 × 2147483647 is 1, -(-2147483648) is -2147483648.
+  Division cuts toward zero: 7 / 2 = 3, -7 / 2 = -3, 7 / -2 = -3, -7 / -2 = 3, -1 / 3 = 0; blizzard.j's
+  `ModuloInteger` body gives 1 for (7, -3), 2 for (-7, 3), -4 for (-7, -3). An integer divided by zero (in a thread
+  `ExecuteFunc` started) ended that thread, and its caller went on; -2147483648 / -1 closed the game (exit code 1,
+  `BlizzardError`, no lines). A decimal literal past 32 bits wraps: 4294967295 is -1, 2147483648 and -2147483648 are
+  -2147483648, 4294967296 is 0, 99999999999 is 1215752191; the map loaded.
+- An integer given to a real is cut toward zero: 16777219 is 16777218, -16777219 is -16777218, 2147483647 is
+  2147483520, 33554435 is 33554432, alike set to a real variable, given to a real parameter, passed to `I2R`, added to
+  0.0 and written out as a literal (`set r = 16777219`). A function `returns real` that returns an integer gives the
+  integer's bits: 16777219 gave 0x01000003, -16777219 0xfefffffd, `i + 1` 0x01000004, a literal 16777219 0x01000003;
+  `return 1` gave a value that, doubled, never reached 1 (the thread stopped at the operation limit), so a denormal.
+  `return i + 0.5` gave 16777218 (a real sum).
+- A real literal: 0.1 reads 0x3dccccce, 0.2 0x3e4cccce, 0.7 0x3f333334 and 0.9 0x3f666667, each a float step above
+  the nearest, as `S2R` of the same text; 0.3 0x3e99999a and 0.001 0x3a83126f, the nearest; 16777217.0 16777216; a
+  literal of 39 digits 0. With a whole part it can differ from `S2R`: 1.001 0x3f8020c4 (`S2R` c5), 1.0001 0x3f800346
+  (47), 1.0000001 0x3f800000 (`S2R` 0x3f800002), 2.9 0x40399999 (9a), 1000000.0625 0x49742400 (01), 3.14159
+  0x40490fcf (d1), 123456.789 0x47f12064 (65); 0.123456789 0x3dfcd6ea both. All fit the whole part plus the decimals,
+  each read as `S2R` reads it, added in the game's float arithmetic (inferred from MirrorImaged's model of both,
+  decisions D134). A first version of the probe with exponent literals (`3.4e38`, `1.0e-3`, `3.0e9`) never loaded.
+- Real arithmetic: 1.0 / 3.0 gave 0x3eaaaaab, 2.0 / 3.0 0x3f2aaaab, the literals above summed and multiplied as the
+  game's Lua does (0.1 + 0.2 0x3e99999a, 3 × 0.1 0x3e99999a, 10 × 0.7 0x40e00001, 1 - 0.9 0x3dccccc8). 1.0 - 0.001
+  gave 0x3f7fbe76 and 1000.0 - 0.001 0x4479ffef, the exact differences cut toward zero; MirrorImaged's model of the
+  game's Lua gives 0x3f7fbe77 and 0x4479fff0. 1 - 2^-30, 1 - 2^-25, 1 - 2^-24 - 2^-26 and 2^24 - 1.5 gave the larger
+  number, and 1 + 0.001 0x3f8020c4. A real divided by zero (7.0 / 0) ended the thread.
+- `==` on reals holds within a margin. With a the base and the largest k for which a == a + k × u held, u a float step
+  there: a = 0, u = 2^-30: 1073741 both ways (so |a - b| up to 0.00099999923 equal, 0.00100000016 not); a = 1: 8388
+  steps of 2^-23 above, 16777 of 2^-24 below; 0.25: 33554 of 2^-25, 67108 of 2^-26; 4: 2097 of 2^-21, 4194 of 2^-22;
+  ±1000: 16 of 2^-14 both ways; 2^20: 1 of 2^-3 above, 3 of 2^-4 below; and for a from 2^n to 1.875 × 2^n in eighths:
+  n = 12, 2 steps of 2^-11 above (4 of 2^-12 below 2^12, else 2), n = 20 and 23, 1 step above (3 half steps below 2^n,
+  else 1). The same with the operands swapped. So |a - b| < 0.001, or under two float steps of the larger number,
+  holds. `!=` compares exactly (1.0 == 1.0001 and 1.0 != 1.0001 both true), and so do `<`, `>`, `<=` and `>=`; an
+  integer 1 == 1.0005 held, 1 == 1.002 didn't.
+- The operation limit: a thread ran `loop set n = n + 1 endloop` 428571 times before it stopped, with a call of an
+  empty function or of `GetHandleId(null)` each time 300000, `set k = k + 1` and `set n = k` with a local 333333, and
+  `exitwhen n > m` then `set n = n + 1` 230769 times: 3,000,000 operations of 7, 10, 10, 9 and 13. With `set n = n +
+  1` and `set q = n / 3` it ran 230769 times (13), with an `if r == 0.5 then endif` 250000 (12), with `set s = t + "a"`
+  230769 (13), with `set r = 1.0 + n` 214286 (14), and `set n = n + k` after an `if` that sets k, without an else and
+  with one, 187499 each (16). A thread that ran
+  six tenths of the limit, then `ExecuteFunc` of one that ran six tenths, then three tenths more, finished both; a
+  trigger action that ran six tenths, waited `TriggerSleepAction(0)`, and ran six tenths again finished.
+- A variable never set, read, ended its thread: a local integer added to, given to `I2S` or copied, a local real
+  added to, a local string joined or given to `StringLength`, a local boolean as a condition, a local timer compared
+  with null or given to `GetHandleId`, a global integer added to and a global timer compared with null; one set first
+  read 5. An integer array's unset element read 0 (global and local), a string array's null (`== null` true, `== ""`
+  false, length 0) and a timer array's null.
+- Null strings: `StringLength(null)` 0, `"a" + null` "a", `null + "b"` "b", `null + null` null (not ""),
+  `null == null` true, `null == ""` false, `"" == null` false, `StringCase(null, true)` and `SubString(null, 0, 1)`
+  null, `S2I(null)` 0, `S2R(null)` 0.000, `StringHash(null)` 0, `SaveStr(t, 1, 2, null)` true, then
+  `HaveSavedString` true and `LoadStr` null; `LoadStr` of a key never saved null too (`== null` true, `== ""` false).
+  None ended its thread. `ExecuteFunc(null)` and `ExecuteFunc("NoSuchFunction")` ran nothing and ended nothing: the
+  lines after each and the caller's came.
+- A `debug` statement (`debug call out(...)`, `debug set n = 2`) didn't run.
+- Rawcodes: 'hfoo' 1751543663, 'A0z~' 1093696126, 'a' 97; four bytes holding a UTF-8 letter read each byte after the
+  first as signed: 'éab' -1029086878, 'aéb' 1623370082, 'abé' 1633796777 (their bytes unsigned would give
+  -1012309662, 1640212834, 1633862569); 'ab"c' 1633821283. A map with `'a\bc'` never loaded.
+- `blizzard-numbers` (a Lua map): `ModuloInteger(7, -3)` -5, `(-7, 3)` 2, `(-7, -3)` -4, `(7, 3)` 1, so the game's own
+  Lua blizzard.j floors as Lua's `//`; `bj_MELEE_MINE_SEARCH_RADIUS` is the float 2000.0, `bj_cineFadeContinueRed` and
+  `bj_MELEE_CLEAR_UNITS_RADIUS` floats; `ModuloInteger(1, 0)` raised.

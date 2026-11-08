@@ -64,6 +64,8 @@ internal static unsafe partial class Native
     [LibraryImport(Lib)] public static partial int mirror_pcall(nint l, int args, int results);
     [LibraryImport(Lib)] public static partial int mirror_unref(nint l, int reference);
     [LibraryImport(Lib)] public static partial int mirror_resume(nint l, int thread, int* yielded);
+    [LibraryImport(Lib)] public static partial int mirror_limit(nint l, int thread, int count);
+    [LibraryImport(Lib)] public static partial int mirror_jass(nint l);
 
     [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
     public static partial int mirror_start(nint l, string? name, int reference, int* thread);

@@ -1,0 +1,4 @@
+# probes/jass-rawcodes.j on 3.0.1.24371, single player, 11-08 (W1-7), in the game's JASS machine: the game's lines.
+# Two runs, the same (the second by the game probe tests).
+ascii 1751543663 1093696126 97
+high -1029086878 1623370082 1633796777

@@ -1,0 +1,7 @@
+# Where MirrorImaged differs from the game's lines in expected/jass-numbers.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# A real literal of 39 digits reads 0 in the game and the largest float here: S2R past the float range is D83's
+# extrapolation (D134).
+- literal 3dccccce 3e99999a 4b800000 00000000 3a83126f
++ literal 3dccccce 3e99999a 4b800000 7f7fc98c 3a83126f

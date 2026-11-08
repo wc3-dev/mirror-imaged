@@ -1,0 +1,27 @@
+# Where MirrorImaged differs from the game's lines in expected/jass-threads.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# The operation limit counts Lua instructions, 2,100,100 a thread, set so that no loop measured stops before the
+# game's does: each runs from 1.00 to 2.10 times as often as in the game (D135, Close).
+- limit Spin 428571
++ limit Spin 525025
+- limit SpinCalling 300000
++ limit SpinCalling 300014
+- limit SpinNative 300000
++ limit SpinNative 300014
+- limit SpinLocal 333333
++ limit SpinLocal 700033
+- limit SpinExit 230769
++ limit SpinExit 300014
+- limit SpinDivide 230769
++ limit SpinDivide 233345
+- limit SpinEqual 250000
++ limit SpinEqual 262513
+- limit SpinJoin 230769
++ limit SpinJoin 233345
+- limit SpinMixed 214286
++ limit SpinMixed 233345
+- limit SpinChecked 187499
++ limit SpinChecked 190918
+- limit SpinBranches 187499
++ limit SpinBranches 262512

@@ -1,0 +1,10 @@
+# probes/condition-places.lua on 3.0.1.24371, single player, 11-08 (W1-10): the game's lines. One run.
+c2 took c1's place true c2 true c2
+c2 destroyed false - false -
+c3 took it true c3 true c3 true c3
+stale c1 destroyed false - false - false -
+c4 made true c4 true c4 true c4
+stale c2 destroyed false - false - false -
+c5 made true c5 true c5 true c5
+boolexprs and nil made false -
+e made true e

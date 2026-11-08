@@ -16,8 +16,9 @@ transpiling (decisions D65).
 
 Draft, not posted. `constant real bj_MELEE_MINE_SEARCH_RADIUS = 2000` in `blizzard.j` becomes
 `bj_MELEE_MINE_SEARCH_RADIUS = 2000`, a Lua integer, where JASS holds the real 2000.0. So `math.type` reads
-`integer`, and arithmetic on it in the game's 32-bit Lua can wrap where JASS's real wouldn't. Expected: `2000.0`. Left
-as it is in MirrorImaged for now (decisions D68).
+`integer`, and arithmetic on it in the game's 32-bit Lua can wrap where JASS's real wouldn't. Expected: `2000.0`, as the
+game's own Lua blizzard.j has it (probe blizzard-numbers). MirrorImaged writes such a number as a real before
+transpiling (decisions D131).
 
 ## War3Net.Build.Core: three of the install's maps have a file its readers refuse
 
@@ -34,3 +35,11 @@ Not a bug, a trap, noted for whoever reads War3Net's object data: `SimpleObjectM
 keep an id's first letter in the lowest byte (`"hfoo".FromRawcode()`), where the game's `FourCC` keeps it in the
 highest. A map built with ids in the game's order (`'h' << 24 | ...`) loads without error, but its objects are
 `oofh` and none of its changes act (probe `data`'s first runs, 11-08). MirrorImaged reverses them as it reads (D204).
+
+## War3Net.CodeAnalysis.Transpilers: statements after a return
+
+Draft, not posted. In `War3Net.CodeAnalysis.Transpilers` 6.1.1, `JassToLuaTranspiler` writes the statements that follow
+a `return` in a block after Lua's `return`, which must end its block, so Lua can't load the file (`'end' expected`).
+JASS allows such dead code; a downloaded map, WotLK RPG 17.11b, has a function ending `return` and then a loop. Expected:
+the return written as `do return end`, or the dead statements left out. MirrorImaged leaves them out before transpiling
+(decisions D139).

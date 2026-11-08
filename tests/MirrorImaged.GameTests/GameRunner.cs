@@ -91,7 +91,8 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// <exception cref="TimeoutException">Another run kept the game longer than five minutes.</exception>
     /// <param name="withComputer">The probe map with a computer and named slots (<see cref="ProbeMap.Build"/>).</param>
     /// <param name="change">Changes the probe's map before it is written (<see cref="ProbeMap.Build"/>).</param>
-    public ProbeRun Run(string name, string lua, TimeSpan timeout, bool withComputer = false, Action<War3Net.Build.Map>? change = null)
+    /// <param name="jass">The probe is JASS (<see cref="ProbeMap.BuildJass"/>), <paramref name="lua"/> its script.</param>
+    public ProbeRun Run(string name, string lua, TimeSpan timeout, bool withComputer = false, Action<War3Net.Build.Map>? change = null, bool jass = false)
     {
         using var one = new Mutex(false, OneRunAtATime);
         bool mine;
@@ -112,7 +113,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         {
             if (Process.GetProcessesByName("Warcraft III").Length > 0)
                 throw new InvalidOperationException("Warcraft III is already running; the runner uses only a game it starts itself");
-            return RunAlone(name, lua, timeout, withComputer, change);
+            return RunAlone(name, lua, timeout, withComputer, change, jass);
         }
         finally
         {
@@ -120,7 +121,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         }
     }
 
-    ProbeRun RunAlone(string name, string lua, TimeSpan timeout, bool withComputer, Action<War3Net.Build.Map>? change)
+    ProbeRun RunAlone(string name, string lua, TimeSpan timeout, bool withComputer, Action<War3Net.Build.Map>? change, bool jass)
     {
         var map = MapPath(maps, name);
         var output = Path.Combine(Data, name + ".pld");
@@ -146,7 +147,8 @@ public sealed class GameRunner(string game, string documents, string maps)
         GameProcess? running = null;
         try
         {
-            ProbeMap.Build(name, lua, map, withComputer, change);
+            if (jass) ProbeMap.BuildJass(name, lua, map);
+            else ProbeMap.Build(name, lua, map, withComputer, change);
             Directory.CreateDirectory(Data);
             File.Delete(output);
             File.Delete(loaded);

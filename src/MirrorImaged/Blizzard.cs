@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Text;
 using CSharpLua;
@@ -15,27 +14,49 @@ static class Blizzard
     const string CommonJ = "War3.w3mod:scripts/common.j", BlizzardJ = "War3.w3mod:scripts/blizzard.j";
 
     static readonly Dictionary<string, string> Transpiled = [];
+    static readonly Dictionary<string, JassCompilationUnitSyntax> Parsed = [];
 
     /// <summary>
-    /// blizzard.j as Lua, transpiled once a process for each build of the game, and kept between processes in the
-    /// user's cache: a transpile takes about 1.6 s in a new process.
+    /// blizzard.j as Lua, as the game's own Lua runs it in a Lua map, or with <paramref name="jass"/> JASS's rules, as
+    /// the game runs it in a JASS map (decisions D131): transpiled once a process for each build of the game, and kept
+    /// between processes in the user's cache: a transpile takes about 1.6 s in a new process.
     /// </summary>
     /// <exception cref="DirectoryNotFoundException">No game is installed.</exception>
-    public static string Lua()
+    public static string Lua(bool jass = false)
     {
-        var folder = GameInstall.Find() ?? throw new DirectoryNotFoundException(
-            $"A run needs blizzard.j from an installed Warcraft III, and there is none in {GameInstall.Place()}. Set {GameInstall.Variable} to the game's folder.");
-        var build = GameInstall.Build(folder).Key;
+        var folder = Folder();
+        var build = GameInstall.Build(folder).Key + (jass ? " jass" : "");
         lock (Transpiled)
         {
             if (!Transpiled.TryGetValue(build, out var lua))
-                Transpiled[build] = lua = Cached(CacheFile(build), () => Transpile(folder));
+                Transpiled[build] = lua = Cached(CacheFile(build), () => Transpile(folder, jass));
             return lua;
         }
     }
 
-    // Named by a hash of the game's build and of the assemblies that make the Lua, so a change to any of them makes a
-    // new file; null when there is no folder for it or no assembly file to hash (a single-file app).
+    /// <summary>blizzard.j as War3Net parses it, which a JASS map's script is transpiled against; once a process.</summary>
+    /// <exception cref="DirectoryNotFoundException">No game is installed.</exception>
+    public static JassCompilationUnitSyntax Syntax()
+    {
+        var folder = Folder();
+        var build = GameInstall.Build(folder).Key;
+        lock (Parsed)
+        {
+            if (!Parsed.TryGetValue(build, out var syntax))
+            {
+                using var storage = CascStorage.Open(folder);
+                Parsed[build] = syntax = JassSyntaxFactory.ParseCompilationUnit(Read(storage, BlizzardJ));
+            }
+            return syntax;
+        }
+    }
+
+    static string Folder() => GameInstall.Find() ?? throw new DirectoryNotFoundException(
+        $"A run needs blizzard.j from an installed Warcraft III, and there is none in {GameInstall.Place()}. Set {GameInstall.Variable} to the game's folder.");
+
+    // Named by a hash of the game's build (with " jass" for JASS's rules) and of the assemblies that make the Lua, so a
+    // change to any of them makes a new file; null when there is no folder for it or no assembly file to hash (a
+    // single-file app).
     internal static string? CacheFile(string build)
     {
         var cache = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -80,77 +101,21 @@ static class Blizzard
         return lua;
     }
 
-    static string Transpile(string folder)
+    static string Transpile(string folder, bool jass)
     {
         using var storage = CascStorage.Open(folder);
-        return ToLua(Read(storage, CommonJ), Read(storage, BlizzardJ));
+        return Jass.ToLua([JassSyntaxFactory.ParseCompilationUnit(Read(storage, CommonJ))], Read(storage, BlizzardJ), jass);
     }
 
     static string Read(CascStorage storage, string path) =>
         Encoding.UTF8.GetString(storage.Read(path) ?? throw new FileNotFoundException($"{path} is not stored in the install", path));
 
     /// <summary>
-    /// <paramref name="jass"/> as Lua. <paramref name="commonJ"/> gives the natives' return types, by which the
-    /// transpiler tells joining strings from adding numbers.
+    /// <paramref name="jass"/> as Lua, as the game's own Lua runs blizzard.j. <paramref name="commonJ"/> gives the
+    /// natives' return types, by which the transpiler tells joining strings from adding numbers.
     /// </summary>
     internal static string ToLua(string commonJ, string jass) => ToLua(JassSyntaxFactory.ParseCompilationUnit(commonJ), jass);
 
     /// <inheritdoc cref="ToLua(string, string)"/>
-    internal static string ToLua(JassCompilationUnitSyntax commonJ, string jass)
-    {
-        var transpiler = new JassToLuaTranspiler();
-        transpiler.RegisterJassFile(commonJ);
-        var lua = new StringWriter();
-        new LuaRenderer(new LuaSyntaxGenerator.SettingInfo(), lua)
-            .RenderCompilationUnit(transpiler.Transpile(Rewriter.Rewrite(JassSyntaxFactory.ParseCompilationUnit(jass))));
-        return lua.ToString();
-    }
-
-    // What the JASS needs before War3Net transpiles it (decisions D65).
-    sealed class Rewriter : JassSyntaxRewriter
-    {
-        static readonly HashSet<string> LuaKeywords = ["break", "do", "end", "for", "goto", "in", "nil", "repeat", "until", "while"];
-
-        public static JassCompilationUnitSyntax Rewrite(JassCompilationUnitSyntax jass) =>
-            new Rewriter().RewriteCompilationUnit(jass, out var rewritten) ? rewritten : jass;
-
-        // War3Net writes a JASS name that is a Lua keyword as it is (SubStringBJ's parameter end), which Lua can't load,
-        // so it gets _lua after it; JASS refuses the plainer end_. shortcut: a JASS name end_lua beside end would clash.
-        protected override bool RewriteIdentifierName(JassIdentifierNameSyntax name, out JassIdentifierNameSyntax result)
-        {
-            if (!LuaKeywords.Contains(name.Token.Text)) return base.RewriteIdentifierName(name, out result);
-            result = JassSyntaxFactory.IdentifierName(name.Token.Text + "_lua");
-            return true;
-        }
-
-        protected override bool RewriteIdentifierNameAsExpression(JassIdentifierNameSyntax name, out JassExpressionSyntax result)
-        {
-            if (!RewriteIdentifierName(name, out var renamed)) return base.RewriteIdentifierNameAsExpression(name, out result);
-            result = renamed;
-            return true;
-        }
-
-        // War3Net writes a rawcode as FourCC("...") with its text as it is, so a quote in it breaks out of the string and
-        // a backslash starts a Lua escape; its value is written instead (decisions D102), a negative one in parentheses,
-        // since -'éab' would otherwise read --1029086878, a Lua comment.
-        protected override bool RewriteLiteralExpression(JassLiteralExpressionSyntax literal, out JassExpressionSyntax result)
-        {
-            if (literal.SyntaxKind != JassSyntaxKind.FourCCLiteralExpression) return base.RewriteLiteralExpression(literal, out result);
-            var value = JassLiteral.ParseFourCC(literal.Token.Text);
-            result = JassSyntaxFactory.LiteralExpression(JassSyntaxFactory.Literal(value));
-            if (value < 0) result = JassSyntaxFactory.ParenthesizedExpression(result);
-            return true;
-        }
-
-        // War3Net transpiles a debug statement as if it had no debug; the game never runs one (claim: the JASS manual).
-        protected override bool RewriteStatementList(ImmutableArray<JassStatementSyntax> statements, out ImmutableArray<JassStatementSyntax> result)
-        {
-            var rewritten = base.RewriteStatementList(statements, out result);
-            if (!rewritten) result = statements;
-            var kept = result.RemoveAll(statement => statement is JassDebugStatementSyntax);
-            if (kept.Length == result.Length) return rewritten;
-            result = kept;
-            return true;
-        }
-    }
+    internal static string ToLua(JassCompilationUnitSyntax commonJ, string jass) => Jass.ToLua([commonJ], jass, rules: false);
 }

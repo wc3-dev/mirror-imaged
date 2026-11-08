@@ -43,19 +43,88 @@ public static class ProbeComparison
     /// <summary>The most simulated time a probe runs in MirrorImaged, as the game runner gives a probe two minutes.</summary>
     public static readonly TimeSpan Longest = TimeSpan.FromMinutes(2);
 
-    // The blizzard.j functions the probe map's config and main call, in place of the game's blizzard.j, which the
-    // comparison runs without (decisions D120).
+    // In place of the game's blizzard.j, which the comparison runs without (decisions D120, D150): what blizzard.j does
+    // that the probe maps and the probes read, as blizzard.j does it. Its handle globals, the slot functions config
+    // calls, InitBlizzard's ConfigureNeutralVictim and bj_FORCE_ALL_PLAYERS, GetPlayersAll and PolledWait. InitBlizzard's
+    // sounds, rects and units wait for their natives (later waves), so the handles they make are missing here.
     const string Frame = """
-        function SetPlayerSlotAvailable() end
-        function InitGenericPlayerSlots() end
-        function InitBlizzard() end
+        bj_volumeGroupsTimer = CreateTimer()
+        bj_queuedExecTimeoutTimer = CreateTimer()
+        bj_suspendDecayFleshGroup = CreateGroup()
+        bj_suspendDecayBoneGroup = CreateGroup()
+        bj_delayedSuspendDecayTimer = CreateTimer()
+        bj_lastCreatedGroup = CreateGroup()
+        bj_lastStartedTimer = CreateTimer()
+
+        local used = {}
+
+        function SetPlayerSlotAvailable(p, control)
+            used[GetPlayerId(p)] = true
+        end
+
+        local function TeamInitPlayerSlots(count)
+            SetTeams(count)
+            local team = 0
+            for i = 0, GetBJMaxPlayers() - 1 do
+                if used[i] then
+                    SetPlayerTeam(Player(i), team)
+                    team = (team + 1) % count
+                end
+            end
+        end
+
+        function InitGenericPlayerSlots()
+            local type = GetGameTypeSelected()
+            if type == GAME_TYPE_MELEE or type == GAME_TYPE_FFA then TeamInitPlayerSlots(GetBJMaxPlayers())
+            elseif type == GAME_TYPE_ONE_ON_ONE then SetTeams(2) SetPlayers(2) TeamInitPlayerSlots(2)
+            elseif type == GAME_TYPE_TWO_TEAM_PLAY then TeamInitPlayerSlots(2)
+            elseif type == GAME_TYPE_THREE_TEAM_PLAY then TeamInitPlayerSlots(3)
+            elseif type == GAME_TYPE_FOUR_TEAM_PLAY then TeamInitPlayerSlots(4)
+            end
+        end
+
+        function InitBlizzard()
+            local victim = Player(GetBJPlayerNeutralVictim())
+            for i = 0, GetBJMaxPlayers() - 1 do
+                SetPlayerAlliance(victim, Player(i), ALLIANCE_PASSIVE, true)
+                SetPlayerAlliance(Player(i), victim, ALLIANCE_PASSIVE, false)
+            end
+            SetPlayerAlliance(victim, Player(PLAYER_NEUTRAL_AGGRESSIVE), ALLIANCE_PASSIVE, true)
+            SetPlayerAlliance(Player(PLAYER_NEUTRAL_AGGRESSIVE), victim, ALLIANCE_PASSIVE, true)
+            SetPlayerState(victim, PLAYER_STATE_GIVES_BOUNTY, 0)
+            bj_FORCE_ALL_PLAYERS = CreateForce()
+            ForceEnumPlayers(bj_FORCE_ALL_PLAYERS, nil)
+        end
+
+        function GetPlayersAll()
+            return bj_FORCE_ALL_PLAYERS
+        end
+
+        function PolledWait(duration)
+            if duration > 0 then
+                local t = CreateTimer()
+                TimerStart(t, duration, false, nil)
+                while true do
+                    local remaining = TimerGetRemaining(t)
+                    if remaining <= 0 then break end
+                    TriggerSleepAction(remaining > 2.0 and 0.1 * remaining or 0.1)
+                end
+                DestroyTimer(t)
+            end
+        end
         """;
 
     static string Probes => Path.Combine(AppContext.BaseDirectory, "probes");
 
-    /// <summary>Every probe in <c>probes/</c>, by name.</summary>
+    /// <summary>Every probe in <c>probes/</c>, Lua and JASS, by name.</summary>
     public static IEnumerable<string> Names =>
-        Directory.GetFiles(Probes, "*.lua").Select(file => Path.GetFileNameWithoutExtension(file)).Order(StringComparer.Ordinal);
+        Directory.GetFiles(Probes, "*.lua").Concat(Directory.GetFiles(Probes, "*.j")).Select(file => Path.GetFileNameWithoutExtension(file)).Order(StringComparer.Ordinal);
+
+    /// <summary>Whether a probe is JASS, <c>probes/&lt;name&gt;.j</c>, which the game runs in its JASS machine (decisions D130).</summary>
+    public static bool IsJass(string name) => File.Exists(Path.Combine(Probes, name + ".j"));
+
+    /// <summary>A probe's script, Lua or JASS.</summary>
+    public static string Source(string name) => IsJass(name) ? ProbeMap.JassSource(name) : ProbeMap.Source(name);
 
     /// <summary>Whether a probe runs on the map with a computer and named slots (decisions D140).</summary>
     public static bool WithComputer(string name) => name is "events" or "lobby" or "data-names";
@@ -94,7 +163,8 @@ public static class ProbeComparison
         try
         {
             var map = Path.Combine(folder, name + ".w3x");
-            ProbeMap.Build(name, ProbeMap.Source(name), map, WithComputer(name), Change(name));
+            if (IsJass(name)) ProbeMap.BuildJass(name, ProbeMap.JassSource(name), map);
+            else ProbeMap.Build(name, ProbeMap.Source(name), map, WithComputer(name), Change(name));
             var data = ReadsData(name) ? StandardData.Installed(GameInstall.Require(), MapArchive.Read(map).Files.Info) : null;
             using var simulation = Simulation.Load(map, Frame, data: data);
             var file = $@"{ProbeMap.Folder}\{name}.pld";

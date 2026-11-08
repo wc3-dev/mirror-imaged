@@ -286,12 +286,13 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Runs the script's global function in a new thread with the caller's trigger and event; the caller goes on when it
-    /// ends or waits. A name that isn't a function raises in that thread (not measured).
+    /// ends or waits. Null, which a JASS map can give, runs nothing (probe jass-executefunc-null). A name that isn't a
+    /// function raises in that thread, which logs it; the game's JASS runs nothing and says nothing (the same probe).
     /// </summary>
     [Native(Level.Exact, Fact = Probe2)]
     public void ExecuteFunc(string? funcName)
     {
-        if (Threads is { } threads) RunThread(Current, null, [() => threads.Start(funcName!)]);
+        if (funcName is not null && Threads is { } threads) RunThread(Current, null, [() => threads.Start(funcName)]);
     }
 
     /// <summary>
