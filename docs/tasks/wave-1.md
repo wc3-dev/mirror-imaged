@@ -159,6 +159,23 @@ Needs W1-8 (part 1, the comparison). Decisions D150-D159. W1-8 split off this pa
 - W1-2's `TriggerRegisterTimerEvent` cases and the trigger probes, once W1-6's `GetHandleId` lets them run; refresh
   their `probes/differences` files.
 - Keep the native library reproducible and the cross-platform pins honest (re-pin on all three platforms through CI).
+- Also from W1-8's review: `lua-config.txt`'s `math.log(3, 2)`, `math.log(100, 10)`, `math.log(1000, 10)`;
+  `game-time.txt`'s `TimerGetElapsed` (1.01 to 7.01 in the game, 1.00 here); the seed is inferred, not certain (another
+  hash function or table growth would also change `pairs` order).
+- The BJ stand-ins in `ProbeComparison` (no-op `SetPlayerSlotAvailable`, `InitGenericPlayerSlots`, `InitBlizzard`):
+  once `GetHandleId` lands, players and triggers 1-3 hit them (`PolledWait` and `GetPlayersAll` nil, no
+  `TeamInitPlayerSlots`/`SetTeams(24)`, no `ConfigureNeutralVictim`/`InitSummonableCaps`, about 40 handles missing so
+  ids shift). Those lines involve Exact natives, so they can't just be recorded as differences: run the comparison
+  with the installed `blizzard.j` under `Needs=Game` once `InitBlizzard` gets past `IsFogEnabled`, or give the
+  stand-ins what those lines need.
+- The comparison needs a per-probe build option (`withComputer` for lobby and events, D140) and to read side files
+  (`EndGame`'s `events-after.pld`/`events-timer.pld`/`events-end.pld`). W1-9's `TriggerRegisterGameStateEvent` frame
+  effects (D144) and the time-of-day read-back drift (D149) are in W1-8's list above; settle them here if W1-8 didn't.
+- W1-6's differing-by-decision lines (listed under W1-8) go in `probes/differences/<probe>.txt` (D121), not the
+  expected files, which stay the game's raw lines.
+- Differences with no task yet, to accept against A6 or plan, in `docs/tasks/later.md` (wave 10): R2S/R2SW from 2^31
+  (D84), S2R past the float range (D83), StringHash/SubString on non-UTF-8 bytes (D82, D38), the random generator
+  (D46, D86) incl. `GetRandomReal(3e38, -3e38)`'s tiny negatives.
 
 ## W1-7 JASS maps
 
