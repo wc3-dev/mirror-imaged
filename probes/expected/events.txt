@@ -1,4 +1,4 @@
-# probes/events.lua on 3.0.1.24371, single player, 11-08, on the probe map with a computer: the game's lines. Three
+# probes/events.lua on 3.0.1.24371, single player, 11-08, on the probe map with a computer: the game's lines. Four
 # runs of this probe, the first two the same to the last digit; the times of the day's passes are marked to vary all
 # the same. A first run with RemovePlayer's results in another order is in docs/facts.md. EndGame's evidence is in side
 # files, which the events game test checks (decisions D147).

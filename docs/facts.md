@@ -390,7 +390,7 @@ are in `probes/expected/players.txt`, as the game gave them.
   6.999999, where here 7 read back exactly; that read may have come later, after the game had moved the time on, while
   here it came at once. W1-9's lobby probe separated them (below): neither read gives 6.999999.
 
-Probe `probes/lobby.lua`, four runs on 3.0.1.24371, 11-08 (W1-9), on the probe map with a computer (decisions D140:
+Probe `probes/lobby.lua`, five runs on 3.0.1.24371, 11-08 (W1-9), on the probe map with a computer (decisions D140:
 a user in slot 0, a computer in 1 and a user slot 2 no one plays, named "Probe User", "Probe Computer" and "Probe
 Empty" in `war3map.w3i`, human and selectable, custom forces with fixed player settings, placement teams together),
 single player, `-loadfile`. The second run without `war3map.w3i`'s selectable-race flag gave the same lines. The lines
@@ -567,8 +567,8 @@ difference from a timer made just before. The tests are `tests/MirrorImaged.Test
 ## Player and game events
 
 Two probes on 3.0.1.24371, 11-08 (W1-9), single player, `-loadfile`: `probes/events.lua` on the probe map with a
-computer (decisions D140), four runs, and `probes/forforce-wait.lua` on the usual probe map, five runs (its last two
-cases in the last three). Their lines are
+computer (decisions D140), five runs, and `probes/forforce-wait.lua` on the usual probe map, six runs (its last two
+cases in the last four). Their lines are
 in `probes/expected`; the first run of `events` called RemovePlayer in another order, as below. Each part ran in the
 probe's zero-second timer unless timed; times are a 1000 s timer's elapsed time.
 
@@ -625,13 +625,13 @@ probe's zero-second timer unless timed; times are a 1000 s timer's elapsed time.
 - `TriggerRegisterGameEvent` for every `gameevent` (0 to 10, 256 to 259, 310): none fired in the whole probe, through
   its timers, state sets, the victories and `EndGame` (no `EVENT_GAME_VICTORY` either).
 - `EndGame(false)`, the last call of the probe's `done`: the code after the call ran (`events-after.pld`) and so did a
-  0 s timer started before it (`events-timer.pld`), in all four runs (the fourth's files deleted before it and checked
-  after by the events game test). That no `EVENT_GAME_END_LEVEL` fired is inferred: its action would have written
-  `events-end.pld`, which never came.
+  0 s timer started before it (`events-timer.pld`), in all five runs (the last two's files deleted before them and
+  checked after by the events game test). That no `EVENT_GAME_END_LEVEL` fired is inferred: its action would have
+  written `events-end.pld`, which never came.
 - `forforce-wait`: steps 1.5 s apart, each then executing a trigger whose action waits 0.5 s: none, a force made and
   destroyed, `ForForce` over a new empty force, over one holding player 0, each ended; `ForForce` over an empty force
   then destroyed, and over one holding 0 then destroyed, each never ended; the next step's wait (no force) and a
   `PolledWait(0.5)` after it ended. The force destroyed had id 1048708, the trigger made after it 1048709, the timer
-  1048711. Then, in the last three runs: after `ForForce` over a force holding 0 and its destroy, a trigger's wait
+  1048711. Then, in the last four runs: after `ForForce` over a force holding 0 and its destroy, a trigger's wait
   started 1 s later ended, and so did the next step's; a trigger waiting 1.5 s, started 0.5 s before such a destroy,
   ended, while a new trigger's wait started beside the destroy in the same instant never did; the next step's ended.
