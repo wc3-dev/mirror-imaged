@@ -93,10 +93,13 @@ static class Blizzard
     /// <paramref name="jass"/> as Lua. <paramref name="commonJ"/> gives the natives' return types, by which the
     /// transpiler tells joining strings from adding numbers.
     /// </summary>
-    internal static string ToLua(string commonJ, string jass)
+    internal static string ToLua(string commonJ, string jass) => ToLua(JassSyntaxFactory.ParseCompilationUnit(commonJ), jass);
+
+    /// <inheritdoc cref="ToLua(string, string)"/>
+    internal static string ToLua(JassCompilationUnitSyntax commonJ, string jass)
     {
         var transpiler = new JassToLuaTranspiler();
-        transpiler.RegisterJassFile(JassSyntaxFactory.ParseCompilationUnit(commonJ));
+        transpiler.RegisterJassFile(commonJ);
         var lua = new StringWriter();
         new LuaRenderer(new LuaSyntaxGenerator.SettingInfo(), lua)
             .RenderCompilationUnit(transpiler.Transpile(Rewriter.Rewrite(JassSyntaxFactory.ParseCompilationUnit(jass))));
@@ -124,6 +127,18 @@ static class Blizzard
         {
             if (!RewriteIdentifierName(name, out var renamed)) return base.RewriteIdentifierNameAsExpression(name, out result);
             result = renamed;
+            return true;
+        }
+
+        // War3Net writes a rawcode as FourCC("...") with its text as it is, so a quote in it breaks out of the string and
+        // a backslash starts a Lua escape; its value is written instead (decisions D102), a negative one in parentheses,
+        // since -'éab' would otherwise read --1029086878, a Lua comment.
+        protected override bool RewriteLiteralExpression(JassLiteralExpressionSyntax literal, out JassExpressionSyntax result)
+        {
+            if (literal.SyntaxKind != JassSyntaxKind.FourCCLiteralExpression) return base.RewriteLiteralExpression(literal, out result);
+            var value = JassLiteral.ParseFourCC(literal.Token.Text);
+            result = JassSyntaxFactory.LiteralExpression(JassSyntaxFactory.Literal(value));
+            if (value < 0) result = JassSyntaxFactory.ParenthesizedExpression(result);
             return true;
         }
 
