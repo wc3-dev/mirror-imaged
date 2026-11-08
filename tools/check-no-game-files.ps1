@@ -34,8 +34,9 @@ function Read-Start([string]$id) {
         if ($byte -lt 0) { throw 'git cat-file ended early' }
         $header.Add($byte)
     }
+    # "<id> missing" has no content; "<id> <type> <size>" is followed by the content, read even when it isn't a blob's.
     $fields = [Text.Encoding]::ASCII.GetString($header.ToArray()) -split ' '
-    if ($fields[1] -ne 'blob') { return $null }
+    if ($fields.Count -lt 3) { return $null }
 
     $start = [IO.MemoryStream]::new()
     $remaining = [long]$fields[2] + 1 # git writes a newline after the content
@@ -46,6 +47,7 @@ function Read-Start([string]$id) {
         $start.Write($buffer, 0, [Math]::Min($count, $keep - $start.Length))
         $remaining -= $count
     }
+    if ($fields[1] -ne 'blob') { return $null }
     [Text.Encoding]::Latin1.GetString($start.ToArray())
 }
 
