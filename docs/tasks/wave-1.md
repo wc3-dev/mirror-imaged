@@ -94,6 +94,14 @@ Needs W1-5 (the probes write through Preload) and W0-4's runner.
   before the timer; `triggers-2`: `periodic zero in 0.1 s` gave 10, MirrorImaged 9) settle its level and the two unit
   tests that stepped around them (`TriggerTests.cs` 1.1 s and 0.105 s). The trigger probes' 1000 s clock reads
   (game 0.6000, 0.5001, 1.2501) are evidence for D45's elapsed model.
+- The runner also saves a copy of each account's `Campaigns\*\Campaigns.w3v` and `Campaigns\*\Classic.w3p` before a run,
+  by the same never-overwrite rule as replays (D59): every game rewrites `Classic.w3p`, and `SaveGameCache` rewrites
+  `Campaigns.w3v`.
+- W1-3's six single-call `R2SW` probes (widths 2147483640 and 2147483644, precisions -100 and -2147483647, and -1.5
+  at widths 254 and 1000, which close the game) live only as facts prose and test rows: commit them as one-call probes
+  with expected files. Also rename `S2R_is_a_float_step_off_the_game_on_these`, which now holds two far-off rows.
+- Optional: count the game closing (exit code 1, `BlizzardError`, no lines) as equal to MirrorImaged's
+  `GameClosedException`, so W1-5's `files-text` case can be compared.
 - This closes wave 0's "one probe matches the game".
 
 ## W1-9 Player and game events, filters, the game's end
