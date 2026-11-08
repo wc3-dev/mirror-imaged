@@ -59,3 +59,5 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
   is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
 - Wave 10 (JASS): a rawcode with a backslash (`'a\bc'`) loads here but the game refuses the map (D137) (W1-7).
+- Wave 2 (W2-7, abilities): `GetAbilitySound` and `GetAbilitySoundById` read an ability's sound labels (its
+  `Effectsound` and `Effectsoundlooped`); not probed, Missing (W5-2, D527).

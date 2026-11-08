@@ -13,6 +13,7 @@ public sealed class GameData
 {
     readonly Dictionary<(ObjectKind, int), GameObject> _objects = [];
     readonly Dictionary<string, string> _constants;
+    readonly Dictionary<string, int> _soundLengths = [];
 
     /// <summary>
     /// The standard data with the map's changes: a change to a standard object changes it; a new object starts from
@@ -72,6 +73,35 @@ public sealed class GameData
 
     /// <summary>The hotkey of <c>ui/miscui.txt</c> for <paramref name="key"/> (any case), as written (<c>C</c>); null when it has none.</summary>
     public string? Hotkey(string key) => Standard.Hotkeys.GetValueOrDefault(key);
+
+    /// <summary>The first file of a sound label of the game's sound tables (<c>QuestNew</c>, any case) as written; null for a label they don't have.</summary>
+    public string? SoundLabelFile(string label) => Standard.Sounds.TryGetValue(label, out var files) ? Tables.Entries(files)[0] : null;
+
+    static readonly string[] SoundExtensions = [".wav", ".flac", ".ogg", ".mp3"];
+
+    /// <summary>
+    /// The length in milliseconds of the sound file at <paramref name="path"/> (<c>Units\Human\Footman\FootmanYes1.wav</c>,
+    /// <c>/</c> or <c>\</c>, any case), as GetSoundFileDuration reads it (probes sounds, sounds-2): the map's own file, else
+    /// the install's classic one, its language's then the base's, else its Definitive Edition one, else its HD one; under
+    /// the path as given, then with each of the four extensions in place of its own or none, so a <c>.wav</c> asked for
+    /// reads the <c>.ogg</c> stored. 0 for none, one that isn't a sound, and a path with a letter outside ASCII in the
+    /// map, which the game doesn't find (game-facts, a War3Net-packed <c>Sound\ProbeÅska.wav</c>).
+    /// </summary>
+    public int SoundLength(string path)
+    {
+        if (_soundLengths.TryGetValue(path, out var known)) return known;
+        var name = path.Replace('/', '\\');
+        var dot = name.LastIndexOf('.');
+        var stem = dot > name.LastIndexOf('\\') && SoundExtensions.Contains(name[dot..], StringComparer.OrdinalIgnoreCase) ? name[..dot] : name;
+        var names = SoundExtensions.Select(extension => stem + extension).Prepend(name).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var locale = $"_Locales/{Standard.Locale}.w3mod:";
+        string[] layers = [locale, "", "_DE.w3mod:" + locale, "_DE.w3mod:", "_HD.w3mod:" + locale, "_HD.w3mod:"];
+        var bytes = (Map is not null && name.All(char.IsAscii) ? names.Select(Map.File).FirstOrDefault(file => file is not null) : null)
+            ?? (Standard.Storage is { } storage
+                ? layers.SelectMany(layer => names.Select(file => storage("War3.w3mod:" + layer + file.Replace('\\', '/')))).FirstOrDefault(file => file is not null)
+                : null);
+        return _soundLengths[path] = bytes is null ? 0 : SoundFiles.Duration(bytes) ?? 0;
+    }
 
     // A number as its invariant text, a real as the shortest that reads back the same float, without an exponent, which
     // Integer would read as atoi does (1E-05 as 1). shortcut: a real under 1e-28 is written 0, as decimal holds no less;

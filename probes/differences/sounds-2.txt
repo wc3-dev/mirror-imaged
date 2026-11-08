@@ -1,0 +1,88 @@
+# Where MirrorImaged differs from the game's lines in expected/sounds-2.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# An mp3's length is its frames and one more, which the game reads for 29 of the 61 mp3s measured; for the rest it
+# reads 1 to 32 frames fewer, or one more, by a rule not found (D520, Close).
+- music Comradeship 124865
++ music Comradeship 124943
+- music Credits 82991
++ music Credits 83043
+- music DarkAgents 64940
++ music DarkAgents 64966
+- music DarkVictory 75102
++ music DarkVictory 75128
+- music Doom 66115
++ music Doom 66142
+- music HeroicVictory 53446
++ music HeroicVictory 53472
+- music Human1 272848
++ music Human1 273057
+- music Human2 236826
++ music Human2 237008
+- music Human3 287817
++ music Human3 288026
+- music HumanDefeat 46654
++ music HumanDefeat 46680
+- music LichKingTheme 79229
++ music LichKingTheme 79203
+- music Mainscreen 69172
++ music Mainscreen 69328
+- music NightElf1 248555
++ music NightElf1 248737
+- music NightElf2 279301
++ music NightElf2 279510
+- music NightElf3 260388
++ music NightElf3 260571
+- music NightElfDefeat 143960
++ music NightElfDefeat 144039
+- music Orc1 311745
++ music Orc1 312581
+- music Orc2 313286
++ music Orc2 313521
+- music Orc3 282514
++ music Orc3 282723
+- music SadMystery 84480
++ music SadMystery 84532
+- music TragicConfrontation 72254
++ music TragicConfrontation 72280
+- music Undead1 303307
++ music Undead1 304117
+- music Undead2 309028
++ music Undead2 309864
+- music Undead3 290873
++ music Undead3 291657
+- music UndeadDefeat 24058
++ music UndeadDefeat 24111
+- music UndeadVictory 39810
++ music UndeadVictory 39888
+- music War2IntroMusic 81110
++ music War2IntroMusic 81162
+- music War3XMainScreen 80117
++ music War3XMainScreen 80169
+- dialogue HumanCampaign\Human01\H01VillagerF27 9430
++ dialogue HumanCampaign\Human01\H01VillagerF27 9456
+- dialogue HumanCampaign\Human01\H01VillagerM28 12225
++ dialogue HumanCampaign\Human01\H01VillagerM28 12251
+- dialogue HumanCampaign\Human02\H02Blademaster11 10919
++ dialogue HumanCampaign\Human02\H02Blademaster11 10945
+- dialogue HumanExpCamp\Human01x\A01Garithos05 12251
++ dialogue HumanExpCamp\Human01x\A01Garithos05 12277
+- dialogue NightElfExpCamp\NightElf02x\S02Goblin40 12695
++ dialogue NightElfExpCamp\NightElf02x\S02Goblin40 12721
+- dialogue HumanExpCamp\Human02xInterlude\A02Garithos38 14733
++ dialogue HumanExpCamp\Human02xInterlude\A02Garithos38 14759
+
+# A unit's labels name their files without their folder; the game found them and took one at random, the same draws in
+# both runs (D523, Close).
+- label HeroPaladinWhat 1184 1288 1184 1184 1288 1288
++ label HeroPaladinWhat 0 0 0 0 0 0
+- label HeroPaladinPissed 2536
++ label HeroPaladinPissed 0
+
+# The game never read the 3D sound playing (at the origin, stopping out of range, with no distances set), and read the
+# others a while past their length (D522, Close): here pitch 0.5's 2.576 s and QuestNew's 3.75 s end before 6 s.
+- pitch 0.5 plays at 6
++ 3D stops at 1.30
+- label QuestNew plays at 6
++ pitch 0.5 stops at 2.60
++ label QuestNew stops at 3.75

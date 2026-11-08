@@ -1,0 +1,88 @@
+# 3.0.1.24371, 11-08 (W5-2): the probe's lines as the game gave them, every volume group muted. Two runs, the same lines but
+# when the sounds stopped reading playing: 3.70 and 4.05 s, 4.30 and 4.45, 4.90 and 5.05, the rest 4.95 and 5.05, so those
+# lines move (~) and read {t}; see docs/facts.md, "Sounds".
+music ArthasTheme 122305
+music BloodElfTheme 144561
+music Comradeship 124865
+music Credits 82991
+music DarkAgents 64940
+music DarkVictory 75102
+music Doom 66115
+music HeroicVictory 53446
+music Human1 272848
+music Human2 236826
+music Human3 287817
+music HumanDefeat 46654
+music HumanVictory 30249
+music HumanX1 284656
+music IllidansTheme 108016
+music LichKingTheme 79229
+music Mainscreen 69172
+music NagaTheme 87196
+music NightElf1 248555
+music NightElf2 279301
+music NightElf3 260388
+music NightElfDefeat 143960
+music NightElfVictory 22021
+music NightElfX1 293773
+music Orc1 311745
+music Orc2 313286
+music Orc3 282514
+music OrcDefeat 39262
+music OrcTheme 112509
+music OrcVictory 44512
+music OrcX1 324963
+music PH1 281600
+music PursuitTheme 82546
+music SadMystery 84480
+music Tension 19565
+music TragicConfrontation 72254
+music Undead1 303307
+music Undead2 309028
+music Undead3 290873
+music UndeadDefeat 24058
+music UndeadVictory 39810
+music UndeadX1 270680
+music War2IntroMusic 81110
+music War3XMainScreen 80117
+dialogue HumanCampaign\Human01\H01VillagerF27 9430
+dialogue HumanCampaign\Human01\H01VillagerM28 12225
+dialogue HumanCampaign\Human02\H02Blademaster11 10919
+dialogue HumanCampaign\Human01\H01Arthas04 4101
+dialogue HumanCampaign\Human01\H01Arthas06 7497
+dialogue HumanCampaign\Human01\H01Arthas08 7784
+dialogue HumanCampaign\Human01\H01Arthas24 3422
+dialogue HumanCampaign\Human01\H01Grunt21 1071
+dialogue HumanExpCamp\Human07x\A07Illidan14 5198
+dialogue HumanCampaign\Human08\H08Captain01 6060
+dialogue HumanExpCamp\Human01x\A01Garithos05 12251
+dialogue NightElfExpCamp\NightElf02x\S02Goblin40 12695
+dialogue HumanCampaign\Human05\H05VillagerM47 1593
+dialogue HumanExpCamp\Human01x\A01Kael11 6452
+dialogue HumanCampaign\Human06Interlude\H06Uther51 914
+dialogue HumanExpCamp\Human02x\A02Kael06 4754
+dialogue HumanExpCamp\Human02xInterlude\A02Garithos38 14733
+label HeroPaladinWhat 1184 1288 1184 1184 1288 1288
+label HeroPaladinPissed 2536
+~ position 1000 stops at {t}
+~ pitch 2 stops at {t}
+~ faded 0.5 stops at {t}
+~ plain stops at {t}
+~ set 3000 stops at {t}
+~ set 500 stops at {t}
+~ set 0 stops at {t}
+~ set -5 stops at {t}
+~ twice stops at {t}
+~ again 0.6 stops at {t}
+~ position first 1000 stops at {t}
+pitch 0.5 plays at 6
+label QuestNew plays at 6
+loop plays at 6
+wait 0 1.5
+wait ended 0.2
+wait 0.5 1.0
+wait set 3000 1.5
+wait idle 0.2
+wait idle 2 0.2
+wait nil 0.1
+wait label -1 0.2
