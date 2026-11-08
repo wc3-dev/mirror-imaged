@@ -64,6 +64,9 @@ commit, push. Report what you changed.
   nothing copied out of the game's storage. Generated C# that names the natives and their signatures is allowed.
 - Never type a password or log in to anything. If the game asks for a login, stop that step and report it.
 - You may launch Warcraft III for probes and stop the game processes you started. Never stop one you didn't start.
+- Run anything that launches the game (the `Needs=Game` tests of `tests/MirrorImaged.GameTests`, probes) from the
+  PowerShell tool, never from the Bash tool: a game started under the Bash tool's sandbox never logs in to Battle.net
+  and the run ends `AtLogin` (0 of 15 from Bash, every run from PowerShell; D50 onwards).
 - Nothing public outside this repository: no issues or comments on other projects, no posts. A bug found in a library
   goes into `docs/upstream.md` as a draft.
 - Install tools only through `winget` or the tool's official site, and say what you installed.
