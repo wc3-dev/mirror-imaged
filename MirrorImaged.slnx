@@ -7,7 +7,11 @@
     <Project Path="src/MirrorImaged.World/MirrorImaged.World.csproj" />
     <Project Path="src/MirrorImaged/MirrorImaged.csproj" />
   </Folder>
+  <Folder Name="/probes/">
+    <Project Path="probes/MirrorImaged.Probes.csproj" />
+  </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/MirrorImaged.GameTests/MirrorImaged.GameTests.csproj" />
     <Project Path="tests/MirrorImaged.Tests/MirrorImaged.Tests.csproj" />
   </Folder>
 </Solution>
