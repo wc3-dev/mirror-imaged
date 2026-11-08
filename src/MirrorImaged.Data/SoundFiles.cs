@@ -5,7 +5,10 @@ namespace MirrorImaged.Data;
 /// <summary>A sound file's length, read from its headers, not its sound: WAV, FLAC, Ogg Vorbis and MP3.</summary>
 public static class SoundFiles
 {
-    /// <summary>The file's length in whole milliseconds, cut toward zero; null when it is none of the four or is cut short.</summary>
+    /// <summary>
+    /// The file's length in whole milliseconds, cut toward zero; null when it is none of the four, is cut short, or
+    /// gives a length past an <c>int</c>'s milliseconds.
+    /// </summary>
     public static int? Duration(ReadOnlySpan<byte> file)
     {
         try
@@ -19,20 +22,23 @@ public static class SoundFiles
         catch (ArgumentOutOfRangeException) { return null; }
     }
 
-    // Units over units a second, in milliseconds
-    static long? Milliseconds(long units, long rate) => rate > 0 && units >= 0 ? units * 1000 / rate : null;
+    // Units over units a second, in milliseconds; a count too large to multiply reads as the most there is
+    static long? Milliseconds(long units, long rate) =>
+        rate <= 0 || units < 0 ? null : units <= long.MaxValue / 1000 ? units * 1000 / rate : long.MaxValue;
 
-    // RIFF chunks: fmt's bytes a second, then data's size
+    // RIFF chunks: fmt's bytes a second, then data's size; a chunk said to run past the file ends the walk
     static long? Wave(ReadOnlySpan<byte> file)
     {
         if (!file[8..12].SequenceEqual("WAVE"u8)) return null;
         uint rate = 0;
-        for (var at = 12; at + 8 <= file.Length;)
+        for (long at = 12; at + 8 <= file.Length;)
         {
-            var size = BinaryPrimitives.ReadUInt32LittleEndian(file[(at + 4)..]);
-            if (file[at..(at + 4)].SequenceEqual("fmt "u8)) rate = BinaryPrimitives.ReadUInt32LittleEndian(file[(at + 16)..]);
-            else if (file[at..(at + 4)].SequenceEqual("data"u8)) return Milliseconds(size, rate);
-            at += 8 + (int)size + (int)(size & 1);
+            var chunk = file[(int)at..];
+            var size = BinaryPrimitives.ReadUInt32LittleEndian(chunk[4..]);
+            if (chunk[..4].SequenceEqual("data"u8)) return Milliseconds(size, rate);
+            if (size > file.Length - at - 8) return null;
+            if (chunk[..4].SequenceEqual("fmt "u8)) rate = BinaryPrimitives.ReadUInt32LittleEndian(chunk[16..]);
+            at += 8 + size + (size & 1);
         }
         return null;
     }
@@ -56,10 +62,10 @@ public static class SoundFiles
     static readonly int[] Mpeg2Rates = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
 
     // Layer III frames of one sample rate counted one by one, after any ID3v2 tag, until one doesn't follow; then one
-    // frame more, which the game reads for 29 of the 61 mp3s measured, as a decoder's delay would give (Close: D520)
+    // frame more, which the game reads for 27 of the 61 mp3s measured, as a decoder's delay would give (Close: D520)
     static long? Mp3(ReadOnlySpan<byte> file)
     {
-        var at = file.StartsWith("ID3"u8) ? 10 + (file[6] << 21 | file[7] << 14 | file[8] << 7 | file[9]) : 0;
+        var at = file.Length >= 10 && file.StartsWith("ID3"u8) ? 10 + (file[6] << 21 | file[7] << 14 | file[8] << 7 | file[9]) : 0;
         long samples = 0;
         int frame = 0, rate = 0;
         while (at + 4 <= file.Length && file[at] == 0xFF && (file[at + 1] & 0xE6) == 0xE2)

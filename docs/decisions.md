@@ -1656,50 +1656,58 @@ in `probes/expected`, and the workspace's facts' "Presentation" and "Files" soun
   before HD is inferred from one file. A length is read from the file's headers, never its sound, in whole milliseconds
   cut toward zero: a WAV's data over its bytes a second, a FLAC's STREAMINFO samples, an Ogg Vorbis's last granule
   position over its rate, an MP3's Layer III frames counted (`SoundFiles`). Nothing is committed (A15): the install's
-  storage stays open in the process for the files a run reads (`StandardData.Storage`), and a run reads a path once.
-  Exact on every ogg measured (no wav or flac is the classic file of a measured path; their headers are as simple);
-  an mp3 is Close: its frames and one more, which the game reads for 29 of the 61 measured, where 10 read the frames
-  the file holds and 22 fewer (Orc1 and Undead1 to Undead3 by about 30 frames, 0.8 s). The frames alone matched 10, a
-  length from the first frames' average size no more than 12; the game's rule wasn't found.
+  storage stays open in the process for the files a run reads (`StandardData.Storage`), one a folder, its tables about
+  58 MB, a new build of the install closing the old one's; a run reads a path once. Exact on every ogg measured (no wav
+  or flac is the classic file of a measured path; their headers are as simple); an mp3 is Close: its frames and one
+  more, which the game reads for 27 of the 61 measured; of the rest it reads 21 fewer, up to 32 (836 ms, Orc1 and
+  Undead2), and 1 more (LichKingTheme). The frames alone matched 12, a length from the first frames' average size no
+  more than 12; the game's rule wasn't found.
 - **D521. A sound is its file and its play state.** It takes the next handle id (probe: a timer made before and one
   after are 1 and 1 off). Its length is its file's from when it is made: `CreateSound`'s file, also
   `CreateSoundFilenameWithLabel`'s (not the label's), the label's for `CreateSoundFromLabel` and `CreateMIDISound`; a
-  label the tables don't have still makes a sound, of length 0. `SetSoundDuration` and `SetSoundParamsFromLabel`
-  change neither its length (3000 and -5 still read 1288) nor how long it plays (sounds-2). Nothing is played: the
-  natives setting what a sound sounds like (volume, channel, distances, cone, position, velocity, its unit, stacking,
-  the environment, the label's parameters) keep nothing, as no native reads them back, and are Recorded; what wave 8's
+  label the tables don't have still makes a sound, of length 0. `SetSoundDuration` and `SetSoundParamsFromLabel` change
+  neither its length (3000 and -5 still read 1288) nor how long it plays (sounds-2). Nothing is played: the natives
+  setting what a sound sounds like (volume, channel, distances, cone, position, velocity, its unit, stacking, the
+  environment, the label's parameters) keep nothing, as no native reads them back, and are Recorded; what wave 8's
   record of Recorded calls keeps is its own. The facial animation sets give true for a sound and false for nil, and the
-  dialogue keys read back as set, "" before and for nil: Exact. World Editor's `InitSounds` calls only these.
+  dialogue keys read back as set, "" before and for nil: Exact. The natives whose effects the getters read (making a
+  sound, `StartSound`, `StopSound`, `KillSoundWhenDone`, the play position, the pitch) are Close, the play model's
+  (D522). World Editor's `InitSounds` calls only these.
 - **D522. A sound reads playing from StartSound for its length over its pitch** (`GetSoundIsPlaying`, Close): a looping
-  one until stopped, one of length 0 never; a second `StartSound` while it plays leaves its end, one after it starts it
-  again; `SetSoundPlayPosition` while it plays ends it that much sooner, and before `StartSound` does nothing;
-  `StopSound` stops it at once, with a fade too, and destroys nothing; `KillSoundWhenDone` stops a sound playing at
-  once and keeps it (its length reads 4.5 s later), and destroys one not playing. Each is measured as the probes saw
-  it. Not matched: the game's start waits a varying while (about 1 s in `sounds`, 3.7 to 4 s in `sounds-2`), so its sounds
-  read playing that much longer; a stop with a fade read playing in its instant; and a 3D sound at the origin with no
-  distances set never read playing, where here it plays as a 2D one, as who hears isn't simulated. A pitch of 0 or
-  below plays at its own speed (not measured). `GetSoundIsLoading` is false, Exact: every read was.
+  one until stopped, one of length 0 never; a second `StartSound` while it plays leaves its end (read so in every run,
+  where the workspace's facts heard it cut the sound off, 09-29, by ear), one after it starts it again;
+  `SetSoundPlayPosition` while it plays ends it that much sooner, and before `StartSound` does nothing; `StopSound`
+  stops it at once, with a fade too, and destroys nothing; `KillSoundWhenDone` stops a sound playing at once and keeps
+  it (its length reads 4.5 s later), and destroys one not playing. Each is measured as the probes saw it. Not matched:
+  the game's start waits a varying while (about 1 s in `sounds`, 3.7 to 4 s in `sounds-2`), so its sounds read playing
+  that much longer; a stop with a fade read playing in its instant; and a 3D sound at the origin with no distances set
+  never read playing, where here it plays as a 2D one, as who hears isn't simulated. A pitch of 0 or below plays at its
+  own speed (not measured). `GetSoundIsLoading` is false, Exact: every read was.
 - **D523. A label is its first file.** `CreateSoundFromLabel` and `CreateMIDISound` take the label's `FileNames` from
   the install's sound tables in `UI\SoundInfo` (the ability, ambience, anim, cinematic, dialog, UI, unit ack and unit
   combat sounds, `AmbientMusic` and `Music`, the first naming a label kept), read with the standard data, and its first
   file. Close: the game takes one of a label's files at random (`HeroPaladinWhat` 1184 or 1288, the same six draws in
-  both runs, so its own generator, seeded the same, not the map's), and a unit's acknowledgement labels name their files
-  without a folder, which the game finds and MirrorImaged doesn't: they read 0. A map's own sound tables aren't read.
-- **D524. TriggerWaitForSound** waits as `TriggerSleepAction` (D71) for the time the sound has left less the offset,
-  and 0.15 s more: a sound not playing, or a negative offset, 0.15 s, so 0.2 s; nil 0, so 0.1 s. Fitted to the 44 waits
-  measured, 38 match: 30 of `sounds-2`'s 32 (offset 0.5 once 0.9 s, here 1.0; nil once 0.2 s, here 0.1); in `sounds`
-  a sound never started waited 0.3 s in three runs of four (here 0.2) and offset 1.0 once 0.6 s (here 0.5). The wait follows the sound's length, not when it stops reading playing
-  (D522): a 1.288 s sound waited 1.5 s in both probes, and one with `SetSoundDuration(s, 3000)` too. A looping sound's
-  wait never ends (not measured). Close.
-- **D525. Music and the volume groups change nothing a native reads back,** so their natives keep nothing. `PlayMusic`
-  and `PlayMusicEx` are Close, as the task asks for music lists: where the game starts in a list isn't steady
-  (workspace facts, "Presentation"), and nothing here reads it; the rest are Recorded. The sound probes mute every volume
-  group and stop the music first, so a probe makes no sound on Sven's PC; muted sounds still read playing.
+  all five runs, so its own generator, seeded the same, not the map's), and a unit's acknowledgement labels name their
+  files without a folder, which the game finds and MirrorImaged doesn't: they read 0. A map's own sound tables aren't
+  read.
+- **D524. TriggerWaitForSound** waits as `TriggerSleepAction` (D71) for the time the sound has left less the offset, and
+  0.15 s more: a sound not playing, or a negative offset, 0.15 s, so 0.2 s; nil 0, so 0.1 s. Fitted to the 56 waits
+  read, 47 match: 36 of `sounds-2`'s 40 (the first once 1.4 s, here 1.5; offset 0.5 twice 0.9 s, here 1.0; nil once 0.2
+  s, here 0.1) and 11 of `sounds`' 16 (the first once 1.4 s; a sound never started 0.3 s in three runs, here 0.2; offset
+  1.0 once 0.6 s, here 0.5). The wait follows the sound's length, not when it stops reading playing (D522): a 1.288 s
+  sound waited 1.5 s in both probes (1.4 s in one run of each), and one with `SetSoundDuration(s, 3000)` too. A looping
+  sound's wait never ends (not measured). Close.
+- **D525. Music and the volume groups change nothing a native reads back,** so their natives keep nothing and are
+  Recorded, `PlayMusic` and `PlayMusicEx` too: where the game starts in a list isn't steady (workspace facts,
+  "Presentation"), but no native reads it, so there is no model to be Close (the code review's call, where the task
+  named music lists Close). The sound probes mute every volume group and stop the music first, so a probe makes no sound
+  on Sven's PC; muted sounds still read playing.
 - **D526. The sound probes are compared with the install's data** and sound files, as the data probes are (D213):
-  `ProbeComparison.ReadsData` takes `sounds` and `sounds-2`, so their comparison in MirrorImaged is `Needs=Game`.
-  Their lines that vary from run to run read `{t}` or `{w}`: in `sounds` the waits after the first and whether a sound
-  reads playing after its instant (the stable ones, never or always, kept); in `sounds-2` the waits after the first and
-  when each sound stopped reading playing, as lines that move (`~`).
+  `ProbeComparison.ReadsData` takes `sounds` and `sounds-2`, so their comparison in MirrorImaged is `Needs=Game`. Only
+  their lines that varied from run to run read `{t}` or `{w}`: in `sounds` the waits and, at 2.0 s, the sounds played
+  from 1000 ms and at pitch 2; in `sounds-2` the waits after the first and when each sound stopped reading playing, as
+  lines that move (`~`). The reads the same in every run stay as the game gave them, so where the play model differs (a
+  sound read playing longer, D522) the difference is recorded.
 - **D527. The shipped maps get through their sounds.** With the natives `main` calls before `InitSounds` stood in for in
   a local run only (11-08, not committed; W5-1 brings them), `ShippedMapTests` took 432 of the 466 maps through their
   `NewSoundEnvironment`, `SetAmbientDaySound` and `SetAmbientNightSound` (blizzard.j: `CreateMIDISound`, `StartSound`),
@@ -1708,6 +1716,6 @@ in `probes/expected`, and the workspace's facts' "Presentation" and "Files" soun
   (`SetTerrainFogExV` 32, `IsFogEnabled` 1, `Location` 1). None stopped at a sound or music native or logged a script
   error. As committed, the maps still stop at `GetCameraMargin` (D302). blizzard.j's sound functions run on the natives
   (`InstalledSoundTests`: `InitBlizzardGlobals`' quest sounds made as it makes them, as the rest of it needs
-  `IsFogEnabled`; `InitDNCSounds`; the ambient, volume group and music BJ functions; `PlaySound`). `GetAbilitySound`
-  and `GetAbilitySoundById`, which read an ability's sound labels, stay Missing (`later.md`). After W5-2, with W2-2 merged
-  first: 212 Exact, 295 Close, 52 Recorded, 1,276 Missing.
+  `IsFogEnabled`; `InitDNCSounds`; the ambient, volume group and music BJ functions; `PlaySound`). `GetAbilitySound` and
+  `GetAbilitySoundById`, which read an ability's sound labels, stay Missing for W2-7 (`wave-2.md`). After W5-2, with
+  W2-2 and W2-4 merged first: 229 Exact, 343 Close, 56 Recorded, 1,207 Missing.

@@ -1,21 +1,21 @@
 namespace MirrorImaged.Natives;
 
-// Music and the volume groups: nothing is played, and no native reads any of it back, so a run's state doesn't change
-// (decisions D525). GetSoundFileDuration reads a music file's length (Sounds.cs).
+// Music and the volume groups: nothing is played, and no native reads any of it back, so they keep nothing (decisions
+// D525). GetSoundFileDuration reads a music file's length (Sounds.cs).
 public sealed partial class GameNatives
 {
     const string NotHeard = "nothing is played; no native reads music or a volume back";
 
     /// <summary>
-    /// Plays a file, or a list of files split by <c>;</c>, once, then the map's music. Close: nothing is played, and the
-    /// game's own start in a list isn't steady (facts, "Presentation": the first file, then the second and third when
-    /// played again).
+    /// A file, or a list of files split by <c>;</c>, to play once, then the map's music. Where the game starts in a list
+    /// isn't steady (facts, "Presentation": the first file, then the second and third when played again); nothing here
+    /// reads it.
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Recorded, Reason = NotHeard)]
     public void PlayMusic(string? musicName) { }
 
     /// <summary>As PlayMusic, from a place and with a fade in.</summary>
-    [Native(Level.Close)]
+    [Native(Level.Recorded, Reason = NotHeard)]
     public void PlayMusicEx(string? musicName, int frommsecs, int fadeinmsecs) { }
 
     [Native(Level.Recorded, Reason = NotHeard)]

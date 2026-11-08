@@ -1125,58 +1125,62 @@ same. The two closing probes each closed the game once, as the units probe's run
 
 ## Sounds
 
-Probes `probes/sounds.lua` (five runs) and `sounds-2.lua` (four runs), on 3.0.1.24371, 11-08 (W5-2): MirrorImaged's
-probe map started with `-loadfile` on a hidden desktop from the PowerShell tool, single player, every volume group set to
-0 first (`VolumeGroupSetVolume`) and the music stopped, so nothing was heard. The lines are in `probes/expected`; the
-runs gave the same lines but where each says. The paths are the install's (W5-2 read them from its storage): most
-sounds are stored three times, a classic file under the language's folder or none (`_Locales/enUS.w3mod:`, `.ogg` or
-`.mp3`), a Definitive Edition one (`_DE.w3mod:`, `.flac`) and an HD one (`_HD.w3mod:`, `.ogg`), of other lengths.
+Probes `probes/sounds.lua` (six runs, and a seventh that matched the expected lines) and `sounds-2.lua` (five runs, and
+a sixth that matched), on 3.0.1.24371, 11-08 (W5-2): MirrorImaged's probe map started with `-loadfile` on a hidden
+desktop from the PowerShell tool, single player, every volume group set to 0 first (`VolumeGroupSetVolume`) and the
+music stopped, so nothing was heard. The lines are in `probes/expected`; the runs gave the same lines but where each
+says. The paths are the install's (W5-2 read them from its storage): most sounds are stored three times, a classic file
+under the language's folder or none (`_Locales/enUS.w3mod:`, `.ogg` or `.mp3`), a Definitive Edition one (`_DE.w3mod:`,
+`.flac`) and an HD one (`_HD.w3mod:`, `.ogg`), of other lengths.
 
 - `GetSoundFileDuration` reads the classic file: `Units\Human\HeroPaladin\HeroPaladinWhat1` 1288 (the classic ogg's
   length; the DE flac and HD ogg are 1788) asked for as `.wav`, `.flac`, `.ogg`, `.mp3` and with no extension, and as
-  `units/human/heropaladin/heropaladinwhat1.wav`; `HeroPaladinWhat2.flac` 1184 (DE 1684); `Sound\Interface\
-  MouseClick1.flac` 239 (DE 238); `Sound\Interface\QuestNew.wav` 3750 and `Sound\Music\mp3Music\Combat1.ogg` 107050
-  (only a classic ogg); `Abilities\Spells\Human\HeroicSlash\HeroicSlash0.ogg`, stored only for DE and HD, 1291, the DE
-  file's. 0 for `Sound\NoSuchFile.wav`, `""`, and the labels `QuestNew` and `Comradeship`. An ogg's length is its last
-  page's granule position over its sample rate, in whole milliseconds cut toward zero: every ogg read matches.
-- An mp3 (the classic music and the classic English speech): `PH1.mp3`, stored only as one, and `PH1.flac` 281600,
-  10780 frames, where the file holds 10779; `H01Arthas02` (asked as `.flac`) 4493, 172 frames, the file 171. Of the 44
-  music mp3s and 17 speech mp3s read in `sounds-2`, 29 read one frame more than the file holds, 10 the frames it holds,
-  and 22 another count: 1 frame fewer (5 files), 2 fewer (3), 5 fewer (Mainscreen), 6 to 8 fewer (Human1 to Human3,
-  NightElf1 to NightElf3, Orc2, Orc3), 29 to 31 fewer (Orc1, Undead1 to Undead3), 2 more (LichKingTheme). Every file
-  walks frame to frame to its end (or to an ID3v1 tag), at one bit rate; why the game's counts differ isn't found.
+  `units/human/heropaladin/heropaladinwhat1.wav`; `HeroPaladinWhat2.flac` 1184 (DE 1684);
+  `Sound\Interface\MouseClick1.flac` 239 (DE 238); `Sound\Interface\QuestNew.wav` 3750 and
+  `Sound\Music\mp3Music\Combat1.ogg` 107050 (only a classic ogg); `Abilities\Spells\Human\HeroicSlash\HeroicSlash0.ogg`,
+  stored only for DE and HD, 1291, the DE file's. 0 for `Sound\NoSuchFile.wav`, `""`, and the labels `QuestNew` and
+  `Comradeship`. An ogg's length is its last page's granule position over its sample rate, in whole milliseconds cut
+  toward zero: every ogg read matches.
+- An mp3 (the classic music and the classic English speech): `PH1.mp3`, stored only as one, and `PH1.flac` 281600, 10780
+  frames, where the file holds 10779; `H01Arthas02` (asked as `.flac`) 4493, 172 frames, the file 171. Of the 44 music
+  mp3s and 17 speech mp3s read in `sounds-2`, 27 read one frame more than the file holds, 12 the frames it holds, and 22
+  another count: 1 frame fewer (5 files), 2 fewer (3), 5 fewer (Mainscreen), 6 to 8 fewer (Human1 to Human3, NightElf1
+  to NightElf3, Orc2, Orc3), 29 to 31 fewer (Orc1, Undead1 to Undead3), 2 more (LichKingTheme). Every file walks frame
+  to frame to its end (or to an ID3v1 tag), at one bit rate; why the game's counts differ isn't found.
 - A sound takes the next handle id (a timer made before it and one after: 1 and 1). `GetSoundDuration` is its file's
-  `GetSoundFileDuration` from when it is made, and stays so after `SetSoundDuration(s, 3000)`, `SetSoundDuration(s,
-  -5)` and `SetSoundParamsFromLabel(s, "QuestNew")`, and while and after it plays. `CreateSoundFilenameWithLabel(path,
-  ..., "QuestNew")` reads the file's 1288. `CreateSoundFromLabel("QuestNew", ...)` 3750 and `CreateMIDISound
-  ("RoosterSound", 20, 20)` 2935 and `("LordaeronSummerDay", 20, 20)` 117210, their labels' files; a label the tables
-  don't have gives a sound of 0, not nil. `HeroPaladinWhat`, whose files are named without their folder in
-  `UnitAckSounds.slk` (`HeroPaladinWhat1,...,HeroPaladinWhat4`), read 1184 or 1288 at random, the same six draws in
-  both runs (1184 1288 1184 1184 1288 1288); `HeroPaladinPissed` 2536. A nil sound: 0, not playing, not loading.
+  `GetSoundFileDuration` from when it is made, and stays so after `SetSoundDuration(s, 3000)`, `SetSoundDuration(s, -5)`
+  and `SetSoundParamsFromLabel(s, "QuestNew")`, and while and after it plays. `CreateSoundFilenameWithLabel(path, ...,
+  "QuestNew")` reads the file's 1288. `CreateSoundFromLabel("QuestNew", ...)` 3750 and `CreateMIDISound("RoosterSound",
+  20, 20)` 2935 and `("LordaeronSummerDay", 20, 20)` 117210, their labels' files; a label the tables don't have gives a
+  sound of 0, not nil. `HeroPaladinWhat`, whose files are named without their folder in `UnitAckSounds.slk`
+  (`HeroPaladinWhat1,...,HeroPaladinWhat4`), read 1184 or 1288 at random, the same six draws in all five runs (1184 1288
+  1184 1184 1288 1288); `HeroPaladinPissed` 2536. A nil sound: 0, not playing, not loading.
 - `GetSoundIsLoading` was false in every read, also in the instant of `StartSound`.
-- `GetSoundIsPlaying` is false before `StartSound` and true in its instant; never for a sound of a missing file;
-  false at once after `StopSound` without a fade, true in the instant of one with a fade and false 0.6 s later. A
-  looping sound played on. `KillSoundWhenDone` on a sound playing made it read not playing at once, and its length
-  still read 1288 4.5 s later; on a sound not started it destroyed it (length 0). `StopSound(s, true, false)` kept
-  the length. A second `StartSound` in the same instant, or 0.6 s in, didn't change when it stopped reading playing;
-  one after it had stopped played it again. A 3D sound at the origin, stopping out of range, with no distances set,
-  never read playing.
-- How long a sound reads playing isn't steady: a 1.288 s sound read playing at 2.0 s and not at 4.5 s in all four
-  runs of `sounds` (in the fourth, those played from 1000 ms and at pitch 2 too); polled every 0.05 s in `sounds-2`,
-  the same sounds stopped all together at 4.95, 5.05, 5.25 and 4.90 s in its four runs,
-  QuestNew's 3.75 s still read playing at 6 s, a sound played from 1000 ms (`SetSoundPlayPosition` after
-  `StartSound`) stopped about 1 s sooner (3.70, 4.05, 4.30, 3.65 s), one at pitch 2 0.65 s sooner (4.30, 4.45, 4.65, 4.30) and one at pitch
-  0.5 still played at 6 s; a play position set before `StartSound` changed nothing. So a sound's start waits a varying
-  while (about 1 s in `sounds`, 3.7 to 4 s in `sounds-2`), and it then plays its length over its pitch; `SetSoundDuration`
-  (3000, 500, 0, -5) changed nothing.
-- `TriggerWaitForSound` in a trigger action, from an action started at 6.5 s: a 1.288 s sound started in the same
-  instant waited 1.5 s (twice; 1.5 in all three runs of `sounds`), once it had stopped 0.2 s, with offset 0.5 1.0 s,
-  with `SetSoundDuration(s, 3000)` 1.5 s, a sound never started 0.2 s, with offset 2 0.2 s, nil 0.1 s, and QuestNew
-  started then waited with offset -1 0.2 s; the same in its four runs but offset 0.5's 0.9 s in the third and nil's 0.2 s
-  in the fourth. In `sounds`,
-  from 5.0 s: a 1.288 s sound 1.5 s, then offset 1.0 on a new one 0.5, 0.6, 0.5 and 0.5 s in its first four runs, and a
-  sound never started 0.3, 0.3, 0.3 and 0.2 s.
-- `GetDialogueSpeakerNameKey` and `GetDialogueTextKey` read "" on a new sound and, after `SetDialogueSpeakerNameKey
-  (s, "TRIGSTR_70")` and `SetDialogueTextKey(s, "Some text")`, which give true, what was set; on nil they read "" and
-  the sets give false. `SetSoundFacialAnimationLabel`, `SetSoundFacialAnimationGroupLabel` and
+- `GetSoundIsPlaying` is false before `StartSound` and true in its instant; never for a sound of a missing file; false
+  at once after `StopSound` without a fade, true in the instant of one with a fade and false 0.6 s later. A looping
+  sound played on. `KillSoundWhenDone` on a sound playing made it read not playing at once, and its length still read
+  1288 4.5 s later; on a sound not started it destroyed it (length 0). `StopSound(s, true, false)` kept the length. A
+  second `StartSound` in the same instant, or 0.6 s in, didn't change when it stopped reading playing; one after it had
+  stopped played it again. The workspace's facts heard otherwise (09-29, by ear): `StartSound` on a playing sound cut it
+  off and nothing played. Read here, it plays on to its first end; what is heard then (muted here) isn't separated. A 3D
+  sound at the origin, stopping out of range, with no distances set, never read playing.
+- How long a sound reads playing isn't steady. In every run of `sounds` whose lines were kept (not the second's before
+  2.0 s, nor the fifth's timed reads), a 1.288 s sound read playing at 2.0 s and not at 4.5 s, and one played from 1000
+  ms (`SetSoundPlayPosition` after `StartSound`) at 0.6 s; at 2.0 s the one played from 1000 ms read playing in the
+  fourth run, the one at pitch 2 in the fourth and sixth, and neither in the rest. Polled every 0.05 s in `sounds-2`,
+  the same sounds stopped all together at 4.95, 5.05, 5.25, 4.90 and 4.85 s in its five runs, the one played from 1000
+  ms about 1 s sooner (3.70, 4.05, 4.30, 3.65 and 3.65 s), the one at pitch 2 0.65 s sooner (4.30, 4.45, 4.65, 4.30 and
+  4.30 s), and QuestNew's 3.75 s and one at pitch 0.5 still played at 6 s; a play position set before `StartSound`
+  changed nothing. So a sound's start waits a varying while (about 1 s in `sounds`, 3.7 to 4 s in `sounds-2`), and it
+  then plays its length over its pitch; `SetSoundDuration` (3000, 500, 0, -5) changed nothing.
+- `TriggerWaitForSound` in a trigger action, from an action started at 6.5 s (`sounds-2`): a 1.288 s sound started in
+  the same instant waited 1.5 s, once it had stopped 0.2 s, with offset 0.5 1.0 s, with `SetSoundDuration(s, 3000)` 1.5
+  s, a sound never started 0.2 s, with offset 2 0.2 s, nil 0.1 s, and QuestNew started then waited with offset -1 0.2 s;
+  the same in its five runs but offset 0.5's 0.9 s in the third and fifth, nil's 0.2 s in the fourth, and the first 1.4
+  s in the fifth. In `sounds`, from 5.0 s: a 1.288 s sound 1.5 s (1.4 in the sixth run), then offset 1.0 on a new one
+  0.5, 0.6, 0.5, 0.5 and 0.5 s, and a sound never started 0.3, 0.3, 0.3, 0.2 and 0.2 s, in runs one to four and six (the
+  fifth run's first wait read 1.5 s and its others weren't read).
+- `GetDialogueSpeakerNameKey` and `GetDialogueTextKey` read "" on a new sound and, after `SetDialogueSpeakerNameKey(s,
+  "TRIGSTR_70")` and `SetDialogueTextKey(s, "Some text")`, which give true, what was set; on nil they read "" and the
+  sets give false. `SetSoundFacialAnimationLabel`, `SetSoundFacialAnimationGroupLabel` and
   `SetSoundFacialAnimationSetFilepath` give true on a sound and false on nil.

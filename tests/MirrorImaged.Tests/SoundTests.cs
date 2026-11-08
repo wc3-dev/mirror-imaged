@@ -99,11 +99,41 @@ public sealed class SoundTests : IDisposable
     [Theory]
     [InlineData("")]
     [InlineData("not a sound at all")]
+    [InlineData("RIFF")]
     [InlineData("RIFF\0\0\0\0WAVEfmt ")]
     [InlineData("fLaC")]
     [InlineData("OggS")]
+    [InlineData("ID3")]
+    [InlineData("ID3\u0003\0\0\0\0\0")]
+    [InlineData("ID3\u0003\0\0\0\0\u007f")]
     public void A_file_of_no_format_known_or_cut_short_has_no_length(string text) =>
-        Assert.Null(SoundFiles.Duration(System.Text.Encoding.ASCII.GetBytes(text)));
+        Assert.Null(SoundFiles.Duration(System.Text.Encoding.Latin1.GetBytes(text)));
+
+    static byte[] Chunk(string id, uint size, int bytes = 0) => [.. System.Text.Encoding.ASCII.GetBytes(id), .. BitConverter.GetBytes(size), .. new byte[bytes]];
+
+    static byte[] Riff(params byte[][] chunks) => [.. "RIFF\0\0\0\0WAVE"u8, .. chunks.SelectMany(chunk => chunk)];
+
+    // A hostile file neither hangs nor throws: a chunk said to run past the file (0xFFFFFFF8 once made the walk stand
+    // still), a rate of 0, a granule position too large to make milliseconds of or below 0, a cut header
+    [Fact]
+    public void A_hostile_file_has_no_length()
+    {
+        byte[][] files =
+        [
+            Riff(Chunk("junk", 0xFFFFFFF8)),
+            Riff(Chunk("junk", 0xFFFFFFF7)),
+            Riff(Chunk("junk", 0xFFFFFFF8), Chunk("data", 100, 100)),
+            Riff(Chunk("fmt ", 16, 16), Chunk("data", 100, 100)),
+            Riff(Chunk("junk", 0), Chunk("junk", 0)),
+            Vorbis(22050, long.MaxValue),
+            Vorbis(22050, -1),
+            Flac(44100, 100)[..20],
+            Mp3(3, true)[..12],
+        ];
+
+        Assert.All(files, file => Assert.Null(SoundFiles.Duration(file)));
+        Assert.Equal(1000, SoundFiles.Duration(Riff(Chunk("junk", 0), Chunk("fmt ", 16, 16)[..8], [.. Wave(22050, 22050)[20..36]], Chunk("data", 44100))));
+    }
 
     // The install as the storage names its files: a classic file under the language's folder, its Definitive Edition
     // and HD files of other lengths, a classic one with no language, and one only of the Definitive Edition and HD
@@ -501,30 +531,27 @@ public sealed class InstalledSoundTests : IDisposable
         Assert.Equal(["0.000 print: 3.75\t2.935\t5.0\t3.75", "0.000 print: false\ttrue\t117210", "0.000 print: true"], simulation.Log);
     }
 
-    // Each the game's GetSoundFileDuration, and for an mp3 the game's beside the model's frame count (decisions D520)
+    // The game's GetSoundFileDuration (probes sounds and sounds-2); for the mp3s that differ, the game's after the line
+    // (decisions D520: the frames and one more, 27 of 61)
     [InstallTheory]
-    [InlineData(@"Units\Human\HeroPaladin\HeroPaladinWhat1.wav", 1288, 1288)]
-    [InlineData(@"Units\Human\HeroPaladin\HeroPaladinWhat1", 1288, 1288)]
-    [InlineData("units/human/heropaladin/heropaladinwhat1.mp3", 1288, 1288)]
-    [InlineData(@"Units\Human\HeroPaladin\HeroPaladinWhat2.flac", 1184, 1184)]
-    [InlineData(@"Sound\Music\mp3Music\Combat1.ogg", 107050, 107050)]
-    [InlineData(@"Sound\Interface\MouseClick1.flac", 239, 239)]
-    [InlineData(@"Sound\Interface\QuestNew.wav", 3750, 3750)]
-    [InlineData(@"Abilities\Spells\Human\HeroicSlash\HeroicSlash0.ogg", 1291, 1291)]
-    [InlineData(@"Sound\NoSuchFile.wav", 0, 0)]
-    [InlineData("Comradeship", 0, 0)]
-    [InlineData(@"Sound\Music\mp3Music\DarkAgents.mp3", 64940, 64966)]
-    [InlineData(@"Sound\Dialogue\HumanCampaign\Human01\H01VillagerF27.flac", 9430, 9456)]
-    [InlineData(@"Sound\Dialogue\HumanCampaign\Human01\H01Arthas02.flac", 4493, 4493)]
-    [InlineData(@"Sound\Music\mp3Music\PH1.flac", 281600, 281600)]
-    [InlineData(@"Sound\Music\mp3Music\Human1.mp3", 272848, 273057)]
-    [InlineData(@"Sound\Music\mp3Music\Orc1.mp3", 311745, 312581)]
-    public void A_sound_files_length_is_the_classic_files_as_the_game_reads_it(string path, int game, int model)
-    {
-        Assert.Equal(model, Data.SoundLength(path));
-        Assert.InRange(model - game, -26, 836);
-    }
-
+    [InlineData(@"Units\Human\HeroPaladin\HeroPaladinWhat1.wav", 1288)]
+    [InlineData(@"Units\Human\HeroPaladin\HeroPaladinWhat1", 1288)]
+    [InlineData("units/human/heropaladin/heropaladinwhat1.mp3", 1288)]
+    [InlineData(@"Units\Human\HeroPaladin\HeroPaladinWhat2.flac", 1184)]
+    [InlineData(@"Sound\Music\mp3Music\Combat1.ogg", 107050)]
+    [InlineData(@"Sound\Interface\MouseClick1.flac", 239)]
+    [InlineData(@"Sound\Interface\QuestNew.wav", 3750)]
+    [InlineData(@"Abilities\Spells\Human\HeroicSlash\HeroicSlash0.ogg", 1291)]
+    [InlineData(@"Sound\NoSuchFile.wav", 0)]
+    [InlineData("Comradeship", 0)]
+    [InlineData(@"Sound\Dialogue\HumanCampaign\Human01\H01Arthas02.flac", 4493)]
+    [InlineData(@"Sound\Music\mp3Music\PH1.flac", 281600)]
+    [InlineData(@"Sound\Music\mp3Music\DarkAgents.mp3", 64966)] // the game 64940, the frames the file holds
+    [InlineData(@"Sound\Dialogue\HumanCampaign\Human01\H01VillagerF27.flac", 9456)] // the game 9430, the same
+    [InlineData(@"Sound\Music\mp3Music\Human1.mp3", 273057)] // the game 272848, 8 frames fewer
+    [InlineData(@"Sound\Music\mp3Music\Orc1.mp3", 312581)] // the game 311745, 32 frames fewer
+    public void A_sound_files_length_is_the_classic_files(string path, int length) =>
+        Assert.Equal(length, Data.SoundLength(path));
     // probe sounds: QuestNew 3750, RoosterSound 2935, LordaeronSummerDay (an ambient label) 117210
     [InstallTheory]
     [InlineData("QuestNew", 3750)]

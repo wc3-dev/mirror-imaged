@@ -111,8 +111,9 @@ public sealed partial class StandardData
 
     static readonly Dictionary<(GameBuild Build, string Folder, string? Values, string? Objects), StandardData> Cache = [];
 
-    // One open storage an install, kept for the sound files a run reads
-    static readonly Dictionary<(GameBuild Build, string Folder), CascStorage> Storages = [];
+    // The storage of each install folder, kept open for the process for the sound files runs read (its tables hold about
+    // 58 MB); a new build of the install closes the old build's (decisions D520)
+    static readonly Dictionary<string, CascStorage> Storages = [];
 
     internal Dictionary<(ObjectKind Kind, int Id), StandardObject> Objects { get; } = [];
 
@@ -251,7 +252,7 @@ public sealed partial class StandardData
     /// <summary>
     /// The standard data of the install in <paramref name="folder"/> for a map with <paramref name="info"/>, read from its
     /// storage once a process for each folder, build (its locale too) and pair of balance sets (<see cref="Sets"/>). The
-    /// storage stays open for the sound files a run reads.
+    /// storage stays open for the process, one a folder, for the sound files a run reads (about 58 MB).
     /// </summary>
     /// <exception cref="IOException">There is no install there, or its storage can't be read.</exception>
     public static StandardData Installed(string folder, MapInfo? info)
@@ -264,7 +265,11 @@ public sealed partial class StandardData
         {
             if (!Cache.TryGetValue(key, out var data))
             {
-                if (!Storages.TryGetValue((build, place), out var storage)) Storages[(build, place)] = storage = CascStorage.Open(folder);
+                if (!Storages.TryGetValue(place, out var storage) || storage.Build != build)
+                {
+                    storage?.Dispose();
+                    Storages[place] = storage = CascStorage.Open(folder);
+                }
                 byte[]? Stored(string path) { lock (storage) return storage.Read(path); }
                 Cache[key] = data = Read(path => Stored("War3.w3mod:" + path.Replace(".w3mod/", ".w3mod:")), values, objects, build.Locale);
                 data.Storage = Stored;
