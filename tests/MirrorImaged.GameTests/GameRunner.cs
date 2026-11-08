@@ -15,6 +15,12 @@ public enum ProbeState
     /// <summary>The map never loaded: the game didn't get that far. It waits for Sven.</summary>
     Queued,
 
+    /// <summary>
+    /// The game never got past its Battle.net login: it didn't open the account (rewrite <c>War3Preferences.txt</c>). It
+    /// needs Sven to look at the game; the detail says what it is known to show then.
+    /// </summary>
+    AtLogin,
+
     /// <summary>The map loaded, but the probe's Preload file didn't come in time.</summary>
     NoOutput,
 }
@@ -44,12 +50,25 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// <summary>The longest map path the game loads from <c>-loadfile</c>; with a longer one it stalls (docs/facts.md).</summary>
     public const int LongestMapPath = 173;
 
+    /// <summary>The game version the runner's facts were measured on.</summary>
+    public const string MeasuredOn = "3.0.1.24371";
+
+    /// <summary>The name of the mutex a run holds, so runs on one computer take turns.</summary>
+    public const string OneRunAtATime = "MirrorImaged.GameRunner";
+
     static readonly TimeSpan Patience = TimeSpan.FromSeconds(3);
+
+    static readonly TimeSpan LongestTurnWait = TimeSpan.FromMinutes(10);
+
+    const string AtLoginSays = "needs Sven: the game never got past its Battle.net login (it didn't open the account)";
 
     /// <summary>The game's executable.</summary>
     public string Game => game;
 
     string Data => Path.Combine(documents, "CustomMapData", ProbeMap.Folder);
+
+    // Beside the maps' folder, so a run's keep outlives its test host.
+    string KeptFolder => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(maps))!, "kept");
 
     /// <summary>
     /// Runs a probe in a game started on its map with <c>-loadfile</c>, and ends that game. One run at a time on this
@@ -57,17 +76,23 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// </summary>
     /// <exception cref="InvalidOperationException">A Warcraft III that this runner didn't start is running.</exception>
     /// <exception cref="ArgumentException">The name is not a probe's, or makes the map's path too long for the game.</exception>
+    /// <exception cref="TimeoutException">Another run kept the game longer than ten minutes.</exception>
     public ProbeRun Run(string name, string lua, TimeSpan timeout)
     {
-        using var one = new Mutex(false, "MirrorImaged.GameRunner");
+        using var one = new Mutex(false, OneRunAtATime);
+        bool mine;
         try
         {
-            one.WaitOne();
+            mine = one.WaitOne(LongestTurnWait);
         }
         catch (AbandonedMutexException)
         {
             // A runner ended without letting go; the mutex is this one's now, and its game ended with its job.
+            mine = true;
         }
+
+        if (!mine)
+            throw new TimeoutException($"Another run has held the game for {LongestTurnWait.TotalMinutes} minutes (mutex {OneRunAtATime}); wait for it, or end the process that holds it");
 
         try
         {
@@ -87,9 +112,19 @@ public sealed class GameRunner(string game, string documents, string maps)
         var output = Path.Combine(Data, name + ".pld");
         var loaded = Path.Combine(documents, "CustomMapData", ProbeMap.Loaded);
         var started = Path.Combine(documents, "CustomMapData", ProbeMap.Started);
-        var events = new List<string>();
+        var events = new List<string> { Version() };
         IReadOnlyList<string>? lines = null;
-        var kept = Keep(Kept());
+        if (KeptFiles.Left(KeptFolder) is { } left)
+            events.AddRange(left.PutBack(left.LastMark + TimeSpan.FromSeconds(5)).Select(line => $"from a run that ended early: {line}"));
+
+        // The game rewrites the preferences once it has logged in to Battle.net and opened the account (facts).
+        var preferences = Path.Combine(documents, "War3Preferences.txt");
+        var preferencesBefore = File.Exists(preferences) ? File.GetLastWriteTimeUtc(preferences) : DateTime.MinValue;
+        bool LoggedIn() => File.Exists(preferences) && File.GetLastWriteTimeUtc(preferences) != preferencesBefore;
+        var loggedIn = false;
+        var stillRunning = false;
+
+        var kept = KeptFiles.Keep(KeptFolder, Kept());
         using var watch = new Watch();
         GameProcess? running = null;
         try
@@ -100,7 +135,9 @@ public sealed class GameRunner(string game, string documents, string maps)
             File.Delete(loaded);
             File.Delete(started);
             running = GameProcess.Start(game, $"-launch -windowmode windowed -loadfile \"{map}\"", Path.GetDirectoryName(Path.GetDirectoryName(game))!, watch.Desktop);
-            lines = Wait(output, loaded, started, timeout, watch, running, events);
+            lines = Wait(output, loaded, started, timeout, watch, running, kept, LoggedIn, events);
+            loggedIn = LoggedIn();
+            stillRunning = !running.Process.HasExited;
             events.Add($"in the game's job: {string.Join(", ", running.Ids().Select(Name))}");
         }
         finally
@@ -111,16 +148,39 @@ public sealed class GameRunner(string game, string documents, string maps)
                 running.Dispose();
             }
 
-            events.AddRange(Restore(kept));
+            // Another Warcraft III may be Sven's own, writing his files: they are left as they are.
+            events.AddRange(watch.Foreign
+                ? kept.Forget().Select(file => $"another Warcraft III ran, so this was left as it is: {file}")
+                : kept.PutBack());
             if (File.Exists(map))
                 File.Delete(map);
         }
 
-        var state = lines is not null ? ProbeState.Done : File.Exists(loaded) ? ProbeState.NoOutput : ProbeState.Queued;
+        var state = Ending(lines is not null, File.Exists(loaded), stillRunning, loggedIn);
+        if (state == ProbeState.AtLogin)
+            events.Insert(0, AtLoginSays);
         return new ProbeRun(state, lines ?? [], $"""
             {string.Join('\n', events)}
             windows on the desktop: {string.Join("; ", watch.Windows)}
             """);
+    }
+
+    // The installed build, with a warning when it isn't the one the facts were measured on.
+    string Version()
+    {
+        string version;
+        try
+        {
+            version = GameInstall.Build(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(game)))!).Version;
+        }
+        catch (Exception problem) when (problem is IOException or InvalidDataException)
+        {
+            version = $"unknown ({problem.Message})";
+        }
+
+        return version == MeasuredOn
+            ? $"game {version}"
+            : $"game {version}; warning: the facts this runner relies on were measured on {MeasuredOn} (docs/facts.md)";
     }
 
     // Files of Sven's that the game rewrites: his preferences, and for each account the replays and campaign profiles.
@@ -143,38 +203,6 @@ public sealed class GameRunner(string game, string documents, string maps)
         return files;
     }
 
-    /// <summary>The content of each file as it is, or null for one that doesn't exist.</summary>
-    internal static List<(string File, byte[]? Content)> Keep(IEnumerable<string> files) =>
-        files.Select(file => (file, File.Exists(file) ? File.ReadAllBytes(file) : null)).ToList();
-
-    /// <summary>
-    /// Puts each kept file back as it was, removing one that didn't exist, and says which it changed or couldn't. Never
-    /// throws for a file, so it can run when a run fails.
-    /// </summary>
-    internal static List<string> Restore(List<(string File, byte[]? Content)> kept)
-    {
-        var changed = new List<string>();
-        foreach (var (file, content) in kept)
-        {
-            try
-            {
-                if (content is null && File.Exists(file))
-                    File.Delete(file);
-                else if (content is not null && (!File.Exists(file) || !File.ReadAllBytes(file).AsSpan().SequenceEqual(content)))
-                    File.WriteAllBytes(file, content);
-                else
-                    continue;
-                changed.Add($"put back {file}");
-            }
-            catch (Exception problem) when (problem is IOException or UnauthorizedAccessException)
-            {
-                changed.Add($"could not put back {file}: {problem.Message}");
-            }
-        }
-
-        return changed;
-    }
-
     /// <summary>A new path for this run's map: the probe's name and a random suffix, so two runs never share one.</summary>
     /// <exception cref="ArgumentException">The path is longer than <see cref="LongestMapPath"/>.</exception>
     internal static string MapPath(string maps, string name)
@@ -185,21 +213,41 @@ public sealed class GameRunner(string game, string documents, string maps)
         return map;
     }
 
+    /// <summary>
+    /// How a run ended: with its lines; with the map loaded but no lines; with the game still running and never logged
+    /// in; or otherwise without the map loaded.
+    /// </summary>
+    internal static ProbeState Ending(bool lines, bool loaded, bool stillRunning, bool loggedIn) =>
+        lines ? ProbeState.Done
+        : loaded ? ProbeState.NoOutput
+        : stillRunning && !loggedIn ? ProbeState.AtLogin
+        : ProbeState.Queued;
+
     /// <summary>Whether the map has loaded (its <c>main</c> wrote the loaded file) and its game hasn't started.</summary>
     internal static bool OnLoadingScreen(string loaded, string started) => File.Exists(loaded) && !File.Exists(started);
 
     // Waits for the probe's lines. A loaded map waits on its loading screen for a key (Sven, 11-08), so while it does, a
     // space key is posted to the game's window every few seconds.
-    static IReadOnlyList<string>? Wait(string output, string loaded, string started, TimeSpan timeout, Watch watch, GameProcess running, List<string> events)
+    static IReadOnlyList<string>? Wait(
+        string output, string loaded, string started, TimeSpan timeout, Watch watch, GameProcess running, KeptFiles kept, Func<bool> loggedIn,
+        List<string> events)
     {
         var time = Stopwatch.StartNew();
         var posted = TimeSpan.Zero;
         var posts = 0;
         var waiting = false;
+        var account = false;
         while (time.Elapsed < timeout && !running.Process.HasExited)
         {
             Thread.Sleep(250);
+            kept.Mark();
             watch.Look(running.Ids());
+            if (!account && loggedIn())
+            {
+                account = true;
+                events.Add($"the game logged in and opened the account at {time.Elapsed.TotalSeconds:0.0} s");
+            }
+
             if (Preload.Lines(ReadShared(output) ?? "") is { } lines)
             {
                 events.Add($"the probe's lines came at {time.Elapsed.TotalSeconds:0.0} s");
@@ -239,7 +287,7 @@ public sealed class GameRunner(string game, string documents, string maps)
             using var process = Process.GetProcessById(id);
             return process.ProcessName;
         }
-        catch (ArgumentException)
+        catch (Exception problem) when (problem is ArgumentException or InvalidOperationException)
         {
             return $"{id} (exited)";
         }
@@ -278,9 +326,19 @@ public sealed class GameRunner(string game, string documents, string maps)
 
         public nint Main { get; private set; }
 
+        /// <summary>Whether a Warcraft III outside the game's job ran at a look: Sven's own game, or World Editor's test.</summary>
+        public bool Foreign { get; private set; }
+
         public void Look(IReadOnlyList<int> ours)
         {
             _ = Desktop;
+            foreach (var other in Process.GetProcessesByName("Warcraft III"))
+            {
+                Foreign |= !ours.Contains(other.Id);
+                other.Dispose();
+            }
+
+
             bool See(nint window, nint parameter)
             {
                 var (name, title) = (Text(window, Win32.GetClassName), Text(window, Win32.GetWindowText));

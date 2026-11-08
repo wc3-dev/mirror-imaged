@@ -31,7 +31,8 @@ public static partial class ProbeMap
     /// <summary>Builds a probe's map at <paramref name="path"/>.</summary>
     /// <param name="name">The probe's name, letters, digits and dashes; its lines go to <c>MirrorImaged\&lt;name&gt;.pld</c>.</param>
     /// <param name="lua">
-    /// The probe: Lua that calls <c>out(text)</c> for each line (at most 253 bytes, no line breaks) and <c>done()</c> when
+    /// The probe: Lua that calls <c>out(text)</c> for each line (at most 253 bytes, a backslash counting two, no line
+    /// breaks) and <c>done()</c> when
     /// it has finished; a function it hands to the game, such as a timer's, goes through <c>guard</c> so its error ends
     /// the probe too.
     /// </param>
@@ -49,8 +50,10 @@ public static partial class ProbeMap
 
             function out(text)
                 text = tostring(text)
-                if #text > 253 or text:find("[\r\n]") then
-                    error("a line is at most 253 bytes, with no line break: " .. (text:sub(1, 40):gsub("[\r\n]", " ")), 2)
+                -- The game writes a backslash doubled, so it counts two.
+                if #text + select(2, text:gsub("\\", "")) > 253 or text:find("[\r\n]") then
+                    error("a line is at most 253 bytes, a backslash counting two, with no line break: "
+                        .. (text:sub(1, 40):gsub("[\r\n]", " ")), 2)
                 end
                 lines[#lines + 1] = text
             end

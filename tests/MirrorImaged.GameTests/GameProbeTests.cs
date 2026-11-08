@@ -39,12 +39,13 @@ public sealed class GameProbeTests
     [GameFact]
     public void A_line_too_long_for_Preload_ends_the_probe_with_its_error()
     {
-        var run = GameRunner.Default.Run("refused", "out('kept')\nout(string.rep('a', 254))\nout('never')\ndone()", TimeSpan.FromMinutes(2));
+        // 126 backslashes and a letter count 253, the most a line holds, and come back whole.
+        var run = GameRunner.Default.Run("refused", "out(string.rep('\\\\', 126) .. 'a')\nout(string.rep('a', 254))\nout('never')\ndone()", TimeSpan.FromMinutes(2));
 
         Assert.True(run.State == ProbeState.Done, $"{run.State}: {run.Detail}");
-        Assert.Equal("kept", run.Lines[0]);
+        Assert.Equal(new string('\\', 126) + "a", run.Lines[0]);
         Assert.StartsWith("error: ", run.Lines[1]);
-        Assert.Contains("a line is at most 253 bytes, with no line break", run.Lines[1]);
+        Assert.Contains("a line is at most 253 bytes, a backslash counting two, with no line break", run.Lines[1]);
         Assert.Equal(2, run.Lines.Count);
     }
 }

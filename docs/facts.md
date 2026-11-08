@@ -9,11 +9,18 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
 (Sven was watching from 02:20 to 02:35), maps started with `-launch -windowmode windowed -loadfile "<map>"`, 11-08
 (W0-4) unless marked.
 
-- Login: no login was typed in any run, and none was asked for (Sven, 11-08, who first saw a login prompt for a
-  `-loadfile` launch that morning). Seen in every run whose `War3Log.txt` was written out (about 15):
-  `[CLoginCallbacks] LoginDoorClose called` 5 to 6 s after the start, before `Activating WebUI`, and the game rewrote
-  the account's `BattleNet\<account>\Campaigns\Classic\Classic.w3p` and `Reforged\Reforged.w3p` before the map's game
-  began. Not tried with the Battle.net app closed.
+- Login: a `-loadfile` launch logs in to Battle.net by itself, with nothing typed (Sven, 11-08, had seen a login prompt
+  that morning). Seen in the pictures of every run in a normal window (`PrintWindow`, 2 so far): a door, then a "Login
+  Queue" box ("The Blizzard servers are busy right now! You're position 1 in the queue (estimated time: 5s).", with a
+  Cancel button) for 2 to 5 s, then the map's loading screen, "Loading...", then "Press any key to continue". In every
+  run whose `War3Log.txt` was written out (about 15), `[CLoginCallbacks] LoginDoorClose called` came 5 to 6 s after the
+  start, before `Activating WebUI`. Once logged in, 10 to 14 s after the start, the game rewrites `War3Preferences.txt`
+  and the account's `BattleNet\<account>\Campaigns\Classic\Classic.w3p` and `Reforged\Reforged.w3p`, before the map
+  loads. The Battle.net app was running in every run; not tried with it closed.
+- What the game shows can be captured only from a window on the visible desktop: `PrintWindow` with
+  `PW_RENDERFULLCONTENT` of the game's window on a hidden desktop gives its frame and title bar and a black inside (3
+  runs), while on the visible desktop it gives the game's picture, also with the display switched off by power saving
+  (2 runs).
 - A map without a minimap image (`war3mapMap.blp` or `war3mapMap.tga`) closes the game as the map starts. Seen:
   War3Net's `MapFactory` map (info format 28, terrain, `war3map.lua`) exited with code 0 about 8 s after the game made
   `TempReplay.w3g`, 4 runs (two on a hidden desktop, two minimised); World Editor's own new map (`e10-probe.w3m`) packed

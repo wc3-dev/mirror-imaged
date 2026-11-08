@@ -63,11 +63,11 @@ public sealed class ProbeMapTests : IDisposable
     }
 
     [Fact]
-    public void A_line_is_refused_when_it_is_too_long_for_one_Preload_call_or_has_a_line_break()
+    public void A_line_is_refused_when_it_is_too_long_for_one_Preload_call_counting_a_backslash_twice_or_has_a_line_break()
     {
         var script = Build("hello", "done()").Script!;
 
-        Assert.Contains("    text = tostring(text)\n    if #text > 253 or text:find(\"[\\r\\n]\") then\n        error(", script);
+        Assert.Contains("    -- The game writes a backslash doubled, so it counts two.\n    if #text + select(2, text:gsub(\"\\\\\", \"\")) > 253 or text:find(\"[\\r\\n]\") then\n        error(", script);
     }
 
     [Fact]

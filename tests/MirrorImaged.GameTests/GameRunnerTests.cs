@@ -31,6 +31,18 @@ public sealed class GameRunnerTests : IDisposable
         Assert.False(GameRunner.OnLoadingScreen(loaded, started));
     }
 
+    [Theory]
+    [InlineData(true, true, true, true, ProbeState.Done)]
+    [InlineData(false, true, true, true, ProbeState.NoOutput)]
+    [InlineData(false, true, true, false, ProbeState.NoOutput)]
+    [InlineData(false, false, true, false, ProbeState.AtLogin)]
+    [InlineData(false, false, true, true, ProbeState.Queued)]
+    [InlineData(false, false, false, false, ProbeState.Queued)]
+    public void A_run_ends_by_how_far_the_game_got(bool lines, bool loaded, bool stillRunning, bool loggedIn, ProbeState ending)
+    {
+        Assert.Equal(ending, GameRunner.Ending(lines, loaded, stillRunning, loggedIn));
+    }
+
     [Fact]
     public void A_map_path_is_new_each_run_and_no_longer_than_the_game_loads()
     {
@@ -44,34 +56,12 @@ public sealed class GameRunnerTests : IDisposable
         Assert.Throws<ArgumentException>(() => GameRunner.MapPath(_folder, longest + "a"));
     }
 
-    [Fact]
-    public void Kept_files_are_put_back_as_they_were()
-    {
-        var changed = Path.Combine(_folder, "LastReplay.w3g");
-        var same = Path.Combine(_folder, "Classic.w3p");
-        var made = Path.Combine(_folder, "TempReplay.w3g");
-        var removed = Path.Combine(_folder, "War3Preferences.txt");
-        File.WriteAllText(changed, "Sven's replay");
-        File.WriteAllText(same, "profile");
-        File.WriteAllText(removed, "preferences");
-        var kept = GameRunner.Keep([changed, same, made, removed]);
-
-        File.WriteAllText(changed, "the probe's replay");
-        File.WriteAllText(same, "profile");
-        File.WriteAllText(made, "");
-        File.Delete(removed);
-        var report = GameRunner.Restore(kept);
-
-        Assert.Equal("Sven's replay", File.ReadAllText(changed));
-        Assert.Equal("profile", File.ReadAllText(same));
-        Assert.False(File.Exists(made));
-        Assert.Equal("preferences", File.ReadAllText(removed));
-        Assert.Equal([$"put back {changed}", $"put back {made}", $"put back {removed}"], report);
-    }
-
     [WindowsFact]
     public void A_run_is_refused_while_a_Warcraft_III_it_did_not_start_runs()
     {
+        // Held while the fake runs, so a game test running at the same time doesn't see it.
+        using var turn = new Mutex(false, GameRunner.OneRunAtATime);
+        turn.WaitOne();
         var other = Path.Combine(_folder, "Warcraft III.exe");
         File.Copy(Path.Combine(Environment.SystemDirectory, "PING.EXE"), other);
         using var running = Process.Start(new ProcessStartInfo(other, "-n 60 127.0.0.1") { CreateNoWindow = true, UseShellExecute = false })!;
@@ -87,6 +77,7 @@ public sealed class GameRunnerTests : IDisposable
         {
             running.Kill();
             running.WaitForExit();
+            turn.ReleaseMutex();
         }
     }
 }

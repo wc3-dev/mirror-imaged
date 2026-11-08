@@ -52,7 +52,14 @@ sealed class GameProcess : IDisposable
 
                 var process = Process.GetProcessById(started.ProcessId);
                 _ = process.Handle; // held from now on, so the exit code can be read after the process exits
-                Win32.ResumeThread(started.Thread);
+                if (Win32.ResumeThread(started.Thread) == uint.MaxValue)
+                {
+                    // Closing the job below ends the suspended process.
+                    var error = new Win32Exception();
+                    process.Dispose();
+                    throw error;
+                }
+
                 return new GameProcess(job, process);
             }
             finally
