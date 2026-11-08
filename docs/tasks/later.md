@@ -41,6 +41,12 @@ Each item names the wave whose file it goes into when that file is written.
   D86). And binary `load`: MirrorImaged refuses binary chunks on purpose (D36, D126: bytecode isn't verified, so a
   map could corrupt the test process), which keeps `lua-config` different for good; that A6 exception is the
   coordinator's call, listed for Sven's review at the end.
+- Wave 5 (presentation): sound file lengths (`GetSoundDuration`, from the install's sound files), and a map's own
+  FDF/TOC string lists (D211, `BlzLoadTOCFile`) for `GetLocalizedString` (W2-1).
+- Wave 7 (AI): the balance sets hold their own AI scripts (`_Balance/Custom_V0.w3mod`, `Melee_V0.w3mod`:
+  `Scripts/human.ai` etc. and `*Melee.pld`); take them from the set `StandardData.Sets` picks (W2-1).
+- Wave 10 (speed): a cross-process cache of the standard data (about 1.2-1.7 s a process) if the benchmark or the
+  corpus runs need it; it must live outside the repo and packages (A15) (W2-1).
 - Wave 10 (the number model, W1-10's rest): find the game's `exp`, `log` and `atan` (tables on straight lines, by the
   fine probes; `numbers-fine-2` has runs to start from) and with them `asin`, `acos` and powers that aren't whole; the
   last 5% of the reciprocal (D151; `numbers-div` and `numbers-fine` hold 2,376 measured); and why `(int)Sqrt(n * n)`

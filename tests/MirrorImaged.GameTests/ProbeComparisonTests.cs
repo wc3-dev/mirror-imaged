@@ -6,12 +6,21 @@ public sealed class ProbeComparisonTests : IDisposable
 
     public void Dispose() => File.Delete(_file);
 
-    public static TheoryData<string> Probes => [.. ProbeComparison.Names];
+    public static TheoryData<string> Probes => [.. ProbeComparison.Names.Where(name => !ProbeComparison.ReadsData(name))];
+
+    public static TheoryData<string> DataProbes => [.. ProbeComparison.Names.Where(ProbeComparison.ReadsData)];
 
     // Without the game: MirrorImaged against the game's lines in probes/expected (decisions D120, D121).
     [Theory]
     [MemberData(nameof(Probes))]
     public void A_probe_gives_the_games_lines_in_MirrorImaged_but_for_its_recorded_differences(string name) =>
+        ProbeComparison.AssertMirror(name);
+
+    // The probes that read the game's data, with the install's standard data (decisions D213).
+    [Trait("Needs", "Game")]
+    [InstallTheory]
+    [MemberData(nameof(DataProbes))]
+    public void A_data_probe_gives_the_games_lines_in_MirrorImaged_with_the_installs_data_but_for_its_recorded_differences(string name) =>
         ProbeComparison.AssertMirror(name);
 
     List<Difference> Compare(string expected, params string[] run)
@@ -97,5 +106,15 @@ public sealed class ProbeComparisonTests : IDisposable
         Assert.Equal(["- c"], new Difference(3, "c", null).Recorded);
         Assert.Equal(["+ f"], new Difference(5, null, "f").Recorded);
         Assert.Equal(["! war3map.lua:3: no"], new Difference(0, null, null, "war3map.lua:3: no").Recorded);
+    }
+}
+
+/// <summary>A theory that reads the Warcraft III install on this computer; skipped when there is none.</summary>
+public sealed class InstallTheoryAttribute : TheoryAttribute
+{
+    public InstallTheoryAttribute()
+    {
+        if (MirrorImaged.Data.GameInstall.Find() is null)
+            Skip = $"No Warcraft III install in {MirrorImaged.Data.GameInstall.Place()}; set {MirrorImaged.Data.GameInstall.Variable} to run it";
     }
 }

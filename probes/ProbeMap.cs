@@ -43,7 +43,8 @@ public static partial class ProbeMap
     /// with fixed player settings (0 and 2 in one force, 1 in the other). Its <c>config</c> adds what it reads before
     /// it sets anything to the global list <c>ProbeConfig</c>, one string a call.
     /// </param>
-    public static void Build(string name, string lua, string path, bool withComputer = false)
+    /// <param name="change">Changes the map before it is written: its info, strings or object data.</param>
+    public static void Build(string name, string lua, string path, bool withComputer = false, Action<Map>? change = null)
     {
         if (!Name().IsMatch(name))
             throw new ArgumentException($"A probe's name is letters, digits and dashes, not \"{name}\"", nameof(name));
@@ -131,7 +132,9 @@ public static partial class ProbeMap
             PlayerData Slot(int id, PlayerController controller, string slotName) =>
                 new() { Id = id, Controller = controller, Race = PlayerRace.Human, Flags = PlayerFlags.RaceSelectable, Name = slotName, StartPosition = start };
         }
-        var builder = new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info), Script = script });
+        var map = new Map { Info = info, Environment = MapFactory.Environment(info), Script = script };
+        change?.Invoke(map);
+        var builder = new MapBuilder(map);
         builder.AddFiles(MpqFile.New(new MemoryStream(Minimap), "war3mapMap.tga"));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         builder.Build(path);

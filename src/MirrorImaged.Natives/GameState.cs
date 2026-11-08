@@ -3,14 +3,21 @@ using MirrorImaged.World;
 namespace MirrorImaged.Natives;
 
 // The game's speed, pause, difficulty and states, and the time of day as a clock (facts, "Time of day"): an hour every
-// 20 game seconds at scale 1, a day of 24 hours, the standard gameplay constants (DayLength 480, DayHours 24; a map's
-// own come with the game data). The time is worked out from the clock, not added up frame by frame, so it moves only
+// 20 game seconds at scale 1, a day of 24 hours, the standard gameplay constants (DayLength 480, DayHours 24), or the
+// map's own (decisions D208). The time is worked out from the clock, not added up frame by frame, so it moves only
 // where an event's pass sets it to its limit, by under a step's share each time (decisions D144); the game adds each
 // frame's share and loses a little (2.5 millionths of an hour in 2 s, 0.00013 in 20, docs/facts.md), which isn't
 // modelled.
 public sealed partial class GameNatives
 {
-    const double HoursPerSecond = 24.0 / 480;
+    double? _dayHours;
+
+    double DayHours => _dayHours ??= Positive(Data.Constant("DayHours", 24), 24);
+
+    double HoursPerSecond => DayHours / Positive(Data.Constant("DayLength", 480), 480);
+
+    // A day of no hours or no length is the standard one (decisions D215, not measured).
+    static double Positive(float value, double standard) => float.IsFinite(value) && value > 0 ? value : standard;
 
     int _speed = 2, _difficulty; // MAP_SPEED_NORMAL, MAP_DIFFICULTY_EASY
     readonly Dictionary<int, int> _integerStates = [];
@@ -20,13 +27,13 @@ public sealed partial class GameNatives
     float _dayScale = 1;
     bool _daySuspended;
 
-    // In hours from 0 below 24: running backward past 0 comes round to 24 (not measured). % on doubles is exact, so a
+    // In hours from 0 below DayHours: running backward past 0 comes round to DayHours (not measured). % on doubles is exact, so a
     // huge scale still gives an hour of the day.
     double Day()
     {
-        var hours = (_daySuspended ? _day : _day + (_game.Step - _dayStep) * (double)_dayScale * HoursPerSecond / Game.StepsPerSecond) % 24;
-        if (hours < 0) hours += 24;
-        return hours < 24 ? hours : 0;
+        var hours = (_daySuspended ? _day : _day + (_game.Step - _dayStep) * (double)_dayScale * HoursPerSecond / Game.StepsPerSecond) % DayHours;
+        if (hours < 0) hours += DayHours;
+        return hours < DayHours ? hours : 0;
     }
 
     // Moves the time's start to now, before its speed or start changes.
@@ -37,16 +44,17 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// The time of day, cut toward zero to a float so that it reads under 24; 0 for another state. Close: the game's
+    /// The time of day, cut toward zero to a float so that it reads under 24, and no more than 24 in a longer day
+    /// (facts: DayHours=30); 0 for another state. Close: the game's
     /// own frames make it run a little slow (above), and its time-of-day events read the hour a float step under it at
     /// 12 (facts).
     /// </summary>
     [Native(Level.Close)]
-    public float GetFloatGameState(fgamestate? whichFloatGameState) => whichFloatGameState?.Id == 2 ? TowardZero(Day()) : 0; // GAME_STATE_TIME_OF_DAY
+    public float GetFloatGameState(fgamestate? whichFloatGameState) => whichFloatGameState?.Id == 2 ? TowardZero(Math.Min(Day(), 24)) : 0; // GAME_STATE_TIME_OF_DAY
 
     /// <summary>
-    /// Sets the time of day, which reads back at once as set; below 0 or above 23.99 (from 23.995, measured) it is 0.
-    /// A set fires the time's events inside the call (the events probe): GREATER_THAN and GREATER_THAN_OR_EQUAL when it
+    /// Sets the time of day, which reads back at once as set; below 0 or above 23.99 (from 23.995, measured), the
+    /// day's hours less 0.01, it is 0 (with DayHours=30 the facts' 29.999 read 24, here 0). A set fires the time's events inside the call (the events probe): GREATER_THAN and GREATER_THAN_OR_EQUAL when it
     /// goes up from the limit or below to the limit or above, LESS_THAN and LESS_THAN_OR_EQUAL when it goes down from
     /// above the limit to the limit or below, EQUAL when it lands on the limit with the day stopped (running, the day
     /// fires it as it moves on, ScheduleDay), and NOT_EQUAL never. Close: the game reads some values back a few float
@@ -58,7 +66,7 @@ public sealed partial class GameNatives
     {
         if (whichFloatGameState?.Id != 2) return;
         var old = TowardZero(Day());
-        var now = value is >= 0 and <= 23.99f ? value : 0;
+        var now = value >= 0 && value <= DayHours - 0.01 ? value : 0;
         (_day, _dayStep) = (now, _game.Step);
         var stopped = _daySuspended || _dayScale == 0;
         foreach (var (state, op, limit, registered) in _stateEvents.ToArray())
@@ -89,9 +97,9 @@ public sealed partial class GameNatives
         float limit = 0;
         foreach (var (state, _, l, _) in _stateEvents)
         {
-            if (state is not fgamestate { Id: 2 } || l is not (>= 0 and < 24)) continue;
+            if (state is not fgamestate { Id: 2 } || l < 0 || l >= DayHours) continue;
             var hours = forward ? l - now : now - l;
-            if (hours < 0 || hours == 0 && _game.Step != _daySetStep) hours += 24;
+            if (hours < 0 || hours == 0 && _game.Step != _daySetStep) hours += DayHours;
             if (hours < nearest || nearest is null) (nearest, limit) = (hours, l);
         }
         if (nearest is not { } distance) return;

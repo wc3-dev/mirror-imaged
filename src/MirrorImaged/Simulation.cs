@@ -45,13 +45,15 @@ public sealed partial class Simulation : IDisposable
     readonly LuaState _lua = new() { Halts = e => e is MissingNativeException or GameClosedException };
     TimeSpan _time;
 
-    Simulation(byte[] script, MapInfo? info, string blizzard, SimulationOptions options)
+    Simulation(GameData data, string blizzard, SimulationOptions options)
     {
+        var info = data.Map!.Files.Info;
         _game = new Game(options.Seed);
-        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this), Documents = options.Documents, RunPreloadFile = RunPreloadFile };
+        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this), Documents = options.Documents, RunPreloadFile = RunPreloadFile, Data = data };
         try
         {
             var (users, computers, others) = Lineup(info, options);
+            foreach (var file in data.Map.Unread) _game.Write("map", "left out, as it can't be read: " + file);
             foreach (var native in NativeMethods.OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())
@@ -59,11 +61,11 @@ public sealed partial class Simulation : IDisposable
             AddLuaExtras();
             AddPreloader();
             _lua.Run(blizzard, "blizzard.lua");
-            Protect(() => _lua.Run(script, "war3map.lua"));
+            Protect(() => _lua.Run(data.Map.Script!, "war3map.lua"));
             Protect(() => _lua.Call("config"));
             var flags = info?.MapFlags ?? 0;
             _natives.Seat(users, computers, others, flags.HasFlag(MapFlags.UseCustomForces), flags.HasFlag(MapFlags.FixedPlayerSettingsForCustomForces),
-                info?.Players.Where(p => p.Controller == PlayerController.Computer).DistinctBy(p => p.Id).ToDictionary(p => p.Id, p => p.Name));
+                info?.Players.Where(p => p.Controller == PlayerController.Computer).DistinctBy(p => p.Id).ToDictionary(p => p.Id, p => data.Map.Resolve(p.Name)));
             Protect(() => _lua.Call("main"));
         }
         catch (LuaException e) when (_lua.Halted is not null)
@@ -84,7 +86,7 @@ public sealed partial class Simulation : IDisposable
     /// <see cref="Stopped"/>.
     /// </summary>
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>.</exception>
-    /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> every run needs.</exception>
+    /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> and standard data every run needs.</exception>
     /// <exception cref="LuaException"><c>blizzard.j</c>'s Lua doesn't load or run (<c>blizzard.lua:N: ...</c>), so no map can.</exception>
     /// <exception cref="ArgumentException">
     /// The options seat no person, a slot twice, a slot the map's <c>war3map.w3i</c> doesn't have, a person in a slot
@@ -92,16 +94,24 @@ public sealed partial class Simulation : IDisposable
     /// </exception>
     public static Simulation Load(string path, SimulationOptions? options = null)
     {
-        var script = MapArchive.ReadLua(path); // first, so a missing map says so whether or not the game is installed
-        return new(script, MapArchive.ReadInfo(path), Blizzard.Lua(), options ?? new SimulationOptions());
+        var map = Read(path); // first, so a missing map says so whether or not the game is installed
+        var blizzard = Blizzard.Lua();
+        return new(new GameData(StandardData.Installed(GameInstall.Require(), map.Files.Info), map), blizzard, options ?? new SimulationOptions());
     }
 
     /// <summary>
     /// As <see cref="Load(string, SimulationOptions?)"/>, with <paramref name="blizzard"/> run in place of the
-    /// installed game's <c>blizzard.j</c>: <c>""</c> for the tests of the runtime itself, which run without the game.
+    /// installed game's <c>blizzard.j</c> and <paramref name="data"/> in place of its standard data (none when null):
+    /// <c>""</c> and the data a test gives for the tests of the runtime itself, which run without the game.
     /// </summary>
-    internal static Simulation Load(string path, string blizzard, SimulationOptions? options = null) =>
-        new(MapArchive.ReadLua(path), MapArchive.ReadInfo(path), blizzard, options ?? new SimulationOptions());
+    internal static Simulation Load(string path, string blizzard, SimulationOptions? options = null, StandardData? data = null)
+    {
+        var map = Read(path);
+        return new(new GameData(data ?? new StandardData(), map), blizzard, options ?? new SimulationOptions());
+    }
+
+    static MapArchive Read(string path) =>
+        MapArchive.Read(path) is { Script: not null } map ? map : throw new FileNotFoundException($"{path} has no war3map.lua; only Lua maps run so far", path);
 
     // Who the lobby seats: the people and computers the options name, else the map's first user and its computers, and
     // the map's neutral and rescuable slots, which always play. Checked against war3map.w3i's slots before any Lua runs:
@@ -129,6 +139,12 @@ public sealed partial class Simulation : IDisposable
     /// the game; until dialogs and input exist (waves 5 and 6), only what was due in the step it paused in still runs.
     /// </summary>
     public bool Paused => _game.Paused;
+
+    /// <summary>
+    /// The map's files left out as they can't be read (<see cref="MapArchive.Unread"/>), each also the run's first log
+    /// entries: <c>0.000 map: left out, as it can't be read: war3map.w3e: ...</c>.
+    /// </summary>
+    public IReadOnlyList<string> Unread => _natives.Data.Map!.Unread;
 
     /// <summary>
     /// Whether the map has ended the game (<c>EndGame</c>): the rest of that step ran, and the clock doesn't move again.

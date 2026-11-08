@@ -610,8 +610,8 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
   a map with custom forces (inferred from the lobby, which offers no other there; replaced by D141: melee), and custom
   forces with fixed player settings set `MAP_LOCK_ALLIANCE_CHANGES` (facts); `SetMapFlag` is Close, as only that flag
   set false was measured. `war3map.w3i` is read with War3Net's `ReadMapInfo` from `War3Net.Build.Core`, now a package of
-  `MirrorImaged.Data` too. Player names from `war3map.w3i` aren't used yet (replaced by D141: a computer's is): they are
-  `TRIGSTR_n` until the strings file is read (W2-1), so `GetPlayerName` is Close.
+  `MirrorImaged.Data` too. Player names from `war3map.w3i` aren't used yet (replaced by D141: a computer's is; and by
+  D210: only with fixed player settings, its `TRIGSTR_n` read from the strings file), so `GetPlayerName` is Close.
 - **D94. Forces are a mask of slots,** so `ForForce` goes in slot order (measured). It runs over the players the force
   holds as it starts: one the callback adds isn't visited and one it removes still is (not measured; the simplest
   reading of a mask copied at the start). The enumerations clear the force first and take the playing players of slots 0
@@ -636,7 +636,7 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
   12; the scale and suspending are Exact. The workspace's facts saw a 7 read 6.999999 (11-05, a Moonwell check map)
   where the probe read 7 back exactly; the facts' read may have come later than the set, and W1-9's probe is to separate
   them (answered by D149: neither read gives 6.999999). A day is the standard 24 hours of 480 s until the game's data
-  (W2-1) gives a map's own (the facts' `DayHours=30` cases).
+  (W2-1) gives a map's own (the facts' `DayHours=30` cases; done in D208).
 - **D97. Events wait for the triggers (W1-9):** `TriggerRegisterPlayerEvent` (victory, defeat, leave),
   `TriggerRegisterPlayerStateEvent`, `TriggerRegisterPlayerAllianceChange` and `TriggerRegisterGameStateEvent` stay
   Missing, and with them the events the facts measure inside `RemovePlayer`, `SetPlayerAlliance` and `SetPlayerState`
@@ -1026,6 +1026,132 @@ The measurements are three probes, `probes/lobby.lua`, `events.lua` and `forforc
   model matches.
 - **D128. After W1-8,** with W1-6 and W1-9 merged first: 130 Exact, 267 Close, 11 Recorded, 1,427 Missing
   (`SaveFogStateHandle` went to Close, D125).
+
+### Map files and the game's standard data (W2-1)
+
+The probes `data`, `data-objects`, `data-tags`, `data-names`, `data-sets-melee`, `data-sets-tft` and `data-sets-fk`
+(`docs/facts.md`, "The game's data") measured what the facts left open; the choices below follow them, the facts'
+"Object data", and Moonwell.GameData's reading of the tables, ported. What W2-1 leaves is in its tasks: W2-2, W2-3,
+W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
+
+- **D200. One data model, `GameData`:** the standard data (`StandardData`) with the map's changes, and the map's files
+  (`MapArchive`). An object is found by its kind and id (`Object(ObjectKind.Unit, id)`; ids are the game's, `FourCC`'s
+  order), since two kinds may share one; a field by its id (`uhpm`, `Hhb1`) and level, as text (`Text`), or read as
+  C's `atoi` and `atof` read it (`Integer`, `Real`: the longest number at the start, else 0), and null or 0 for none.
+  A field without levels is read at level 0 whatever level is given; one with levels from 1 to the object's count
+  (`alev`, `glvl`, `bvar`, `dvar`; 0 for the other kinds), and past the count it has none, as the standard Storm Bolt
+  reads 0 past its third level (game-facts). A table column's level past the 4th with no value of its own, in the map
+  or the tables, takes the level before's (game-facts: a 6-level Storm Bolt reads its 4th column at 4 to 6; the patch
+  note). A level of a field in the text files is its list's entry, and past the list's end there is none. The natives
+  decide what none reads as: tooltips past the last level read the last one (game-facts), which is W2-7's.
+- **D201. The standard data is read from the install's storage** through one seam, a function giving a file's bytes by
+  its path in `War3.w3mod` (`units/unitdata.slk`, `_balance/custom_v1.w3mod/units/unitdata.slk`,
+  `_locales/enus.w3mod/units/humanunitstrings.txt`), null when there is none, which is passed over. Each kind's
+  metadata, tables, func and skin files and locale strings are Moonwell.GameData's, merged in its order (a later
+  value replaces an earlier one), with the files named one by one (the race files in alphabetical order) instead of
+  listed, as the storage has no folders: the first table names the objects and another table's row of any other id
+  is dropped; a text section is the object's in any case, its exact id first (`[Boac]` is `BOac`'s), and its name is
+  what is between `[` and the first `]`, as the install has sections with words after the bracket (`[Hleo] leonid`,
+  `[AHw2] - T2 - Spell Blade`), whose keys would otherwise land in the section before (fapo took Leonid's icon); a
+  key is found in any case, and a later file's `UberTip` replaces `Ubertip`. The `*Addons.txt` files of 3.0 aren't
+  read, as Moonwell doesn't. The text is the installed locale's (the build's tags, `enUS` text). The SLK and profile
+  readers are written here (`Tables`), keeping each cell's text, as Moonwell's keep-text fork of War3Net.IO.Slk does
+  (Moonwell's package); unlike the SYLK format, a value's `;;` and `""` aren't read as a semicolon and a quote, as no
+  game file has them. Reading takes about 1.2 s (0.5 s opening the storage, 0.25 s `AbilityData.slk`); it is done
+  once a process for each install folder, build (its locale too) and pair of balance sets (`StandardData.Installed`);
+  a cache between processes is `later.md`'s (wave 10).
+- **D202. Which balance set a map reads** (`StandardData.Sets`): the facts' table (Forsaken Kingdom the base tables;
+  Custom `custom_v0` or `custom_v1`; Melee with Reign of Chaos `melee_v0`, with The Frozen Throne the base values and
+  `custom_v1`'s objects), and, from the probes, the Default data set read as Melee on a map with the melee flag and as
+  Custom on another, and an info file of format 28, which has no data version, read as The Frozen Throne. For Melee
+  with The Frozen Throne, measured: units (fapo's life 0), items (`CreateItem` of ckdk nil) and abilities
+  (`UnitAddAbility` of AA12 false) that `custom_v1` leaves out don't exist, while Forsaken Kingdom has all three; and
+  the constants are the base file's (`DamageBonusPierce`: a footman took 80.36 of 100 pierce, as on Forsaken
+  Kingdom, where a `custom_v1` map's took 89.29). Inferred: the same for buffs, upgrades, destructables and doodads,
+  for the func and skin files, and for the 14 other constants `custom_v1`'s `MiscGame.txt` changes; formats 25 to 30
+  read as The Frozen Throne and older ones as Reign of Chaos (25 is World Editor's first for The Frozen Throne). A map
+  without an info file reads `custom_v1`. 257 of the install's 273 maps read the base values with `custom_v1`'s
+  objects. Which AI scripts a set holds is `later.md`'s (wave 7).
+- **D203. A value kept per graphics mode is read as Definitive Edition graphics read it** (`:de`, else `:hd`, else
+  the plain key, never `:sd`; game-facts, graphics mode 2), as Moonwell does: a run shows nothing, the facts measured
+  that mode, and it is the one Sven plays. Another mode isn't offered.
+- **D204. The map's changes:** each object file and then its skin file (the data probe: hkni read the skin file's
+  name), a change to a standard object changing it, a new object starting from the standard object it is based on and
+  not the map's change to it (game-facts; the data probe for an upgrade's levels), and a change to an object the
+  balance set doesn't have dropped (not measured). War3Net keeps an id's first letter in its lowest byte, so its ids
+  are reversed to the game's (`docs/upstream.md`). A string value's `TRIGSTR_n` is resolved as the map is read; a
+  number is kept as its invariant text (D214). A doodad's variation is taken as the file's number, as a level is;
+  whether the file counts variations from 0 is W2-4's.
+- **D205. A field's place comes from its metadata row,** as Moonwell.GameData's `Fields.ColumnOf` finds it: the
+  column is `field` with the data pointer's letter (`DataA`); a field of each level in a table has a column a level
+  (`DataA1`), in the text files a comma list, or with `appendIndex` a key a level (`Requires`, `Requires1`); a field
+  sharing its `field` with others, or of the text files with an index, is that entry of a comma list (`Buttonpos`'s 0
+  and 1, a unit's `Name`), an entry in quotes keeping its commas; a blank cell, `-` and `_` are none. Which fields
+  apply to which object isn't checked: any field reads its column, so an ability's field read on another ability
+  reads the other's column of that place. Not measured: units' (`useUnit`, `useHero`, `useBuilding`) are W2-2's,
+  abilities' (`useSpecific`) and changes stored by column W2-8's.
+- **D206. A `TRIGSTR_n` given to a native that reads it is the map's string n,** resolved where its string argument is
+  read (D80), n read as `atoi` reads it after the prefix in capitals (`TRIGSTR_` and `TRIGSTR_abc` are string 0,
+  `TRIGSTR_-1` none); a string the file doesn't have stays as it is. The data probe measured which natives read it:
+  `GetLocalizedString`, `SetPlayerName`, `StringCase` and `StringLength` do; `StringHash`, `S2I`, `S2R`, `SubString`
+  and `SaveStr` don't, and `ParseTags` doesn't (data-tags), which its task (W2-8) keeps so. `DisplayTextToPlayer` and
+  `DisplayTimedTextToPlayer` resolve it too, inferred: World Editor writes the texts a map shows as `TRIGSTR_n`, and
+  the game shows the strings. The list is `ReadsTrigstr` in `Simulation.Lua.cs`; a task bringing a native that shows
+  or keeps text adds it when it measures it.
+- **D207. Runtime tests give their own data** (rule 5): `StandardData` is empty when made with `new`, and a test adds
+  objects to it with their values by field and level (`Add(ObjectKind.Upgrade, "Rhme", {["glvl"] = "3"})`, `"Hhb1:2"`
+  for a level) and strings, hotkeys and constants to its dictionaries; `Simulation.Load(path, blizzard, options,
+  data)` runs with it, and without data with an empty one, where every object is missing and the day is the standard
+  24 hours of 480 s. A test object has no metadata, so its fields read exactly the level given, with no carry past
+  level 4. The map's own files are always read, in tests too.
+- **D208. The day's hours and length are the constants `DayHours` and `DayLength`,** the map's own over the game's: the
+  time moves `DayHours / DayLength` hours a second, comes round at `DayHours`, and reads no more than 24 (game-facts:
+  `DayHours=30` gives an hour per 16 s; set to 26 or 29 it reads 24). A set above `DayHours` less 0.01 is 0, which for
+  24 hours is the measured 23.99 kept and 23.995 not; Close: with 30 hours the facts' 29.999 read 24, here 0, and the
+  game's 29.9 still read 24 3 s later, where this comes round.
+- **D209. A terrain, doodad or placed-unit file War3Net can't read is left out** (null), named in `MapArchive.Unread`
+  and `Simulation.Unread`, and written as the run's first log entries (`0.000 map: left out, as it can't be read:
+  war3map.w3e: ...`), rather than stopping the run: the game loads the install's three such maps (`docs/upstream.md`),
+  and no wave reads those files yet. Any other file that can't be read stops the read, naming it. Fixing the readers
+  is W2-6's (DustwallowKeys' `war3map.w3e`) and W2-4's (SilverpineSprint's `war3map.doo`); Roundabout's
+  `war3mapUnits.doo`, World Editor's file, which the game makes no units from, stays left out.
+- **D210. Player names, with D141:** the one person of a single-player game is "Local Player", whatever its name in
+  `war3map.w3i` (the players, lobby and data probes); a seated computer is its `war3map.w3i` name, its `TRIGSTR_n` read
+  from the strings file, when the map has custom forces with fixed player settings (the lobby probe, "Probe Computer";
+  data-names, `TRIGSTR_001` read "The Horde"), and "Computer (Normal)" otherwise (the data probe, a map without custom
+  forces whose computer was named `TRIGSTR_002`), a computer seated in a slot the map gives a user too (with fixed
+  settings D141's "Player N" stays there; neither measured); every other slot is "Player N". Not separated: custom
+  forces without fixed settings; that the names follow the fixed settings is inferred, as the lobby shows a map's own
+  names only with them. Several people's names, their accounts', stay unknown, so `GetPlayerName` stays Close. The
+  names are written in English, as before, not looked up in the strings (`LOCAL_PLAYER`, `COMPUTER_NORMAL`).
+- **D211. `GetLocalizedString` and `GetLocalizedHotkey` are Exact:** the strings are the `StringList`s of the locale's
+  `GlobalStrings.fdf`, `InfoPanelStrings.fdf`, `NetworkStrings.fdf` and `DateStrings.fdf`, FrameDef.toc's string files,
+  each key in its case, the first of a key kept; a missing key gives the text back. The hotkeys are `UI\MiscUI.txt`'s
+  `[Hotkeys]`, any case, a line for the installed language (`KEY:deDE='W'`, `KEY:esES,itIT='A'`) before the plain one;
+  the letter's code, 0 for none. A map's own string lists (`BlzLoadTOCFile`) are `later.md`'s (wave 5).
+  `GetPlayerTechMaxAllowed` is Exact with the upgrades' level counts, and `AddPlayerTechResearched` stops at them
+  (Close: a count already past one, or a limit set below it, isn't measured).
+- **D212. Read but not used yet:** placed units, doodads, regions, cameras, sounds and the import list are read as
+  War3Net gives them, for the waves that make them, and the map's other files by name (`MapArchive.File`, the FDF and
+  TOC files of wave 5). The terrain's heights (`Terrain`, the game-facts' rules for `GetLocationZ`, each corner rule
+  tested) wait for W2-6's `GetLocationZ`, which also measures the off-map edge (inferred: a point off the map reads
+  its nearest edge); bridges and walkable destructables are W2-4's. `GetObjectName` is W2-2's (it reads a name even
+  for an object the set leaves out: fapo's under Melee with The Frozen Throne), a kind's ordered objects for the random
+  item and creep natives W2-3's, `ParseTags` W2-8's, and the sound files' lengths `later.md`'s (wave 5).
+- **D213. The data probes are compared as every probe is (D120),** each on its own map: `ProbeComparison.Change` gives
+  a probe's change (`DataProbeMaps`), in the game and in MirrorImaged alike, with one probe file a map. In MirrorImaged
+  they run with the install's standard data for their map (`ProbeComparison.ReadsData`), so their comparison is
+  `Needs=Game`, skipped without an install, and CI compares the other probes as before. `data` reads only natives
+  MirrorImaged has and gives every one of the game's 49 lines; `data-names` gives its 3; `data-objects` and the three
+  `data-sets` stop at `GetObjectName` and `CreateUnit` (wave 2) and `data-tags` at `ParseTags` (W2-8), recorded in
+  `probes/differences`, so their data are tested by `GameDataTests` and `InstalledDataTests`.
+- **D214. A real the map changes is kept as decimal text without an exponent** (`0.00001`), as `Integer` reads text
+  as `atoi` does and would read `1E-05` as 1; shortcut: a real under 1e-28 is kept as 0. A whole number past the
+  integers' range reads as the range's end, as the C library's `strtol` holds it (`Integer`), not 0.
+- **D215. A day of no length or no hours is the standard one:** a map's `DayLength` or `DayHours` of 0 or below (or
+  not a number) is passed over for 480 s and 24 hours, rather than a day that never moves or divides by 0. Not
+  measured.
+- **D216. After W2-1,** with W1-6, W1-8 and W1-9 merged first: 133 Exact, 266 Close, 11 Recorded, 1,425 Missing.
 
 ### The Lua number model fitted to the game (W1-10)
 

@@ -1,0 +1,5 @@
+# Where MirrorImaged differs from the game's lines in expected/data-sets-tft.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# CreateUnit is Missing until wave 2 (W2-2); the sets are InstalledDataTests' cases (decisions D213).
+! war3map.lua:50: The native CreateUnit is Missing: MirrorImaged does not simulate it yet.
