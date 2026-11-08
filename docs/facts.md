@@ -206,3 +206,54 @@ are in `probes/expected/players.txt`, as the game gave them.
   `x / 24 * 24` and the like). Against the workspace's facts: on a Moonwell check map (11-05) a time set to 7 read
   6.999999, where here 7 read back exactly; that read may have come later, after the game had moved the time on, while
   here it came at once. Not separated (W1-9's probe).
+
+## Files and game cache
+
+Probe `probes/files.lua`, three runs on 3.0.1.24371, 11-08 (W1-5), the probe map started with `-loadfile` on a hidden
+desktop, single player. The committed probe's lines are in `probes/expected/files.txt`, as the game gave them in its
+third run; the first run also saved and reloaded game caches (below), and the files it wrote were looked at on disk
+after each run. Two more one-off runs read files an outside program wrote and tried more paths (`files-paths`), and
+read a file that isn't JASS (`files-text`). Files are read back through `AHbz`'s tooltip, as the workspace's facts did.
+
+- What a file holds: `Preload` before `PreloadGenStart` is written; without `PreloadGenClear` the next file holds the
+  earlier texts too; `PreloadGenEnd` twice writes the same file twice; a `Preload` after `PreloadGenEnd` is in the next
+  file; after `PreloadGenClear` a file has only its start and end. So every `Preload` text is kept until
+  `PreloadGenClear`.
+- The bytes: `function PreloadFiles takes nothing returns nothing\n\r\n\tcall PreloadStart()\r\n`, each text as
+  `\tcall Preload( "<text>" )\r\n`, then `\tcall PreloadEnd( 0.0 )\r\n\nendfunction\n\n\r\n`. `PreloadEnd`'s number
+  was 1.9 in one run and 2.0 in another for a file whose `PreloadGenEnd` came 2.5 game seconds after its
+  `PreloadGenStart`, in a timer; 0.0 for every file written in one call. Of the 311 Preload files in this PC's
+  `CustomMapData`, 304 have 0.0 and 7 have 0.1 (Moonwell's balance probe's, written in one call, and one of another
+  map's).
+- Paths: `.txt` and `.pld` were written and read back; `.dat`, `.json`, no extension, `.ini`, `.log`, `.w3v` and `.PLD`
+  were written nowhere, and an outside program's `.dat`, `.json` and extensionless files (valid Preload JASS) read back
+  nothing, nor did an existing `own.pld` read as `own.PLD`. Folders written in capitals (`MIRRORIMAGED\FILES-PROBE\`)
+  and a name in another case (`Mixed.pld` as `mixed.pld`) were read. `/` worked as `\` for writing and reading;
+  `files-probe\.\dot.pld` was written as `dot.pld`. `files-probe\sub\..\dots.pld` was written nowhere, but an outside
+  file read through `sub\..` came back. `..\MirrorImaged-files-probe-escape.pld` (into `Documents\Warcraft III`) and an
+  absolute path (`C:\Users\...\abs.pld`) were written nowhere and read nothing. Paths relative to `CustomMapData` of
+  150, 200 and 201 characters were written and read back, 202 and 230 not; `CustomMapData`'s own path here has 58
+  characters, so 201 makes a whole path of 259.
+- `Preloader` reads a path once a game: written with one piece, read, written again with another and read, it gave the
+  first piece both times; the next game read the second.
+- `Preloader` of a file whose line is `not jass` (wrapped as the probes' lines are) closed the game: it exited by
+  itself with code 1, a `BlizzardError` process started, and the probe's lines never came (`files-text`).
+- Game caches: `InitGameCache` of one name twice gives two handles (`~=`) to one cache (5 stored through the first
+  read 5 through the second); another name read 0. A missing value reads 0, 0.0, false and the empty string (a
+  string, not nil). An integer and a real stored under one mission and key are both kept, and `HaveStored*` is true
+  for those two types only; `FlushStoredInteger` then takes the integer and leaves the real. `StoreString` gives true,
+  also for an empty string, which `HaveStoredString` then finds; a stored false and a stored 0 are found too. Missions
+  and keys are found in any case (`Case`/`Key` read as `case`/`key` and `CASE`/`KEY`). `FlushStoredMission` takes the
+  mission's real, string and boolean and leaves another mission. After `FlushGameCache` its handle read 0, and so did a
+  new `InitGameCache` of the name; a value stored through the old handle then read 0 through it and by name, and
+  `SyncStoredInteger` changed nothing. A `Preload` file whose line is
+  `call StoreInteger(InitGameCache("files-probe.w3v"), "pre", "k", 42)` made `GetStoredInteger` of a new handle of
+  that name read 42 after `Preloader`.
+- Saving (the first run only): `SaveGameCache` gave true, also for a name without `.w3v`, and
+  `ReloadGameCachesFromDisk` true. After a value was saved and another stored, a reload read the saved one and 0 for
+  the other, through the old handle and a new one; a cache never saved read 0 after a reload. The game wrote the
+  account's `BattleNet\<id>\Campaigns\Classic\Campaigns.w3v`, which then held every cache the game had then (two the
+  probe never saved by name among them) and not the one dropped by the reload. The next game (`files-paths`) read the
+  saved value, 1, and 0 for the one stored after the save. A probe that saves a cache rewrites that file of the user's
+  account, so the committed probe doesn't; the first run rewrote it once (it held no other cache afterwards).
+  `Classic.w3p` in the same folder is rewritten by every game, saving or not.

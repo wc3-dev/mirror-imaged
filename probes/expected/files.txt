@@ -1,0 +1,33 @@
+own write, read: first
+own write again, read: first
+the path in capitals, read: -
+buffer files written
+ext.txt: p1
+ext.pld: p2
+ext.dat: -
+ext.json: -
+ext: -
+ext.ini: -
+ext.log: -
+ext.w3v: -
+sub\..\dots.pld: -
+forward slashes: slash
+relative path of 150: len150
+relative path of 200: len200
+relative path of 201: len201
+relative path of 202: -
+relative path of 230: -
+same name: 5, same handle n
+other name: 0
+missing: 0 0.0 n string ''
+integer and real on one key: 5 1.5, have yynn
+integer flushed, have ny
+StoreString gives y, of an empty string y, have it y ''
+false and 0 stored, have yy
+keys in other cases: 3 3
+mission flushed, have nnn, another mission 3
+cache flushed: 0, by name 0
+stored after the flush: 0, by name 0
+synced: 0
+stored by Preloader: 42
+late written

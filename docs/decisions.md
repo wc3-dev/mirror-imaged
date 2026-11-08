@@ -490,3 +490,65 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
   `Maps\lua-reference` runs through, and each stops at the first line of `main`, `GetCameraMargin` (wave 5); `main`'s
   player setup (`InitBlizzard`) comes after the cameras, sounds, regions and units, and its first player function,
   `InitBlizzardGlobals`, needs `Filter` (W1-2) and sounds first.
+
+### Files and game caches (W1-5)
+
+The files probe (`probes/files.lua`, its lines in `probes/expected/files.txt`) and two one-off runs measured what the
+workspace's facts left open (`docs/facts.md`, "Files and game cache"); the choices below follow them where they
+measured and say so where not.
+
+- **D100. The documents are an object the test holds,** `Documents` (in `MirrorImaged.World`): `CustomMapData`, the
+  files by their path in it, `\` between folders, found in any case, which a test reads, fills and empties; and the
+  saved game caches, internal. A run takes it from `SimulationOptions.Documents` (a new, empty one by default) and
+  shows it as `Simulation.Documents`; the same one given to the next run keeps both. It is in memory, not a folder: a
+  run stays the same on every platform and a map can reach nothing outside it; a test that wants a real file copies it
+  in.
+- **D101. Paths are the game's, as the probe measured them.** A file is written and read only with `.pld` or `.txt` in
+  lower case: `.PLD`, `.dat`, `.json`, `.ini`, `.log`, `.w3v` and none were written nowhere, and an outside program's
+  `.dat`, `.json` and extensionless files weren't read. `/` is `\`, and `.` and empty folders are left out. `..` makes a
+  write go nowhere, while a read goes through it (an outside file read through `sub\..`), never above `CustomMapData`
+  (not measured). An absolute path (`C:\...`, measured) and one starting with a slash (not measured) are neither
+  written nor read. At most 201 characters: 201 was written and 202 not, on a PC whose `CustomMapData` path has 58, so
+  the game's limit is likely the whole path's 259 and moves with the player's folder; reads have it too (not measured:
+  the longer files weren't there to read). Windows's other refused characters (`<>"|?*`) aren't modelled.
+- **D102. Preload and Preloader.** Every `Preload` text is kept, its first 259 bytes of UTF-8 (whether a cut can split
+  a letter isn't measured), until `PreloadGenClear`, whether or not `PreloadGenStart` came first and also after
+  `PreloadGenEnd`, which writes them all and keeps them (probe). A backslash is doubled as the file is written, after
+  the cut: whether the game's cut counts it once or twice isn't measured, and D52's lines take the safe side.
+  `PreloadEnd`'s number is written 0.0: 304 of the 311 Preload files on this PC have it, those known to be written in
+  one call among them; 7 have 0.1, and a file ended 2.5 game seconds after its `PreloadGenStart` had 1.9 and 2.0 in two
+  runs, so it counts something other than game time, perhaps real time, and `PreloadGenStart` and `PreloadGenEnd` are
+  Close. `Preloader` reads a path once a game and keeps that content, also after the map writes the path again (probe);
+  a path that was missing is read again (not measured). It runs the file at once: the JASS goes through War3Net's
+  transpiler and D65's rewriter as blizzard.j does, against declarations of common.j's natives and globals made from
+  `GameNatives` by reflection (the transpiler needs a function's declaration to call it inside an expression, and no
+  game file is needed), and runs with those natives and globals as they were before blizzard.j and the map ran, and
+  `FourCC`, which War3Net writes a rawcode as. So a native the map replaced isn't what a file calls, and a file's
+  `PreloadFiles` isn't the map's (inferred: the game runs a Preload file as JASS, without blizzard.j or Lua, facts). A
+  file that doesn't parse, names anything else or raises an error closes the game, as a cut piece and a blizzard.j
+  global did (facts) and a line that isn't JASS did (probe): the run stops with a `GameClosedException`, as for a
+  Missing native (D43), at the line of the map's `Preloader` call. JASS's own type checks aren't made: a call with an
+  argument too many runs. The game's own Preload files (`scripts\HumanMelee.pld`, which the melee BJ functions read)
+  aren't in `CustomMapData` and read as missing; they only name files to load. `PreloadStart`, `PreloadEnd`,
+  `PreloadEndEx` and `PreloadRefresh` are Recorded and not in the log (D98). The ability-tooltip carrier needs
+  `BlzSetAbilityTooltip` and `BlzGetAbilityTooltip` (wave 2): until then a file calling them stops the run as Missing.
+  The game-cache carrier works now (probe: 42 came back), and so does `SetPlayerName`.
+- **D103. Game caches, as the probe measured them:** one cache a name, every `InitGameCache` of it a new handle to it;
+  each type's values apart; missions and keys found in any case (measured with ASCII letters; `ToUpperInvariant`
+  here); a missing value reads 0, 0.0, false and an empty string; an empty string, false and 0 are stored values, and
+  `StoreString` gives true. `FlushGameCache` removes the cache: its handles then read and store nothing, also once
+  `InitGameCache` makes the name again, which gives a new, empty cache. `FlushStoredInteger` takes the integer only;
+  the real, boolean and string ones take theirs (Close, not measured). A name is found in any case, as a file is (not
+  measured).
+- **D104. Saved caches.** A game starts with the caches saved in its documents (a value saved in one game read 1 in the
+  next, one stored after the save 0); `SaveGameCache` writes every cache, not only the one given (the game's file then
+  held caches the probe never saved by name), and gives true; `ReloadGameCachesFromDisk` gives true, as in a live game
+  (facts: false in a replay, not simulated), puts the saved caches back in place, so their handles read them, and drops
+  the caches never saved, whose handles then read nothing. The game keeps them in the account's
+  `BattleNet\<id>\Campaigns\Classic\Campaigns.w3v`; here in `Documents`. So caches go from one map of a test to the
+  next through `SaveGameCache`, as from one game to the next; a level change in one game (`ChangeLevel`), which may
+  keep caches never saved, isn't simulated. `SaveGameCache(null)` gives false (not measured). The sync natives do
+  nothing: a run is one machine, whose caches are every player's. The unit natives (`StoreUnit`, `RestoreUnit`,
+  `HaveStoredUnit`, `FlushStoredUnit`, `SyncStoredUnit`) wait for the units (wave 2); the 255-cache limit (a claim)
+  isn't modelled.
+- **D105. After W1-5,** on top of W1-4: 46 Exact, 178 Close, 11 Recorded, 1,600 Missing.

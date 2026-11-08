@@ -1777,25 +1777,7 @@ public sealed partial class GameNatives
     public void FlushChildHashtable(hashtable? table, int parentKey) => throw new MissingNativeException("FlushChildHashtable");
 
     [Native(Level.Missing)]
-    public void FlushGameCache(gamecache? cache) => throw new MissingNativeException("FlushGameCache");
-
-    [Native(Level.Missing)]
     public void FlushParentHashtable(hashtable? table) => throw new MissingNativeException("FlushParentHashtable");
-
-    [Native(Level.Missing)]
-    public void FlushStoredBoolean(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("FlushStoredBoolean");
-
-    [Native(Level.Missing)]
-    public void FlushStoredInteger(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("FlushStoredInteger");
-
-    [Native(Level.Missing)]
-    public void FlushStoredMission(gamecache? cache, string? missionKey) => throw new MissingNativeException("FlushStoredMission");
-
-    [Native(Level.Missing)]
-    public void FlushStoredReal(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("FlushStoredReal");
-
-    [Native(Level.Missing)]
-    public void FlushStoredString(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("FlushStoredString");
 
     [Native(Level.Missing)]
     public void FlushStoredUnit(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("FlushStoredUnit");
@@ -2281,18 +2263,6 @@ public sealed partial class GameNatives
     public location? GetStartLocationLoc(int whichStartLocation) => throw new MissingNativeException("GetStartLocationLoc");
 
     [Native(Level.Missing)]
-    public bool GetStoredBoolean(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("GetStoredBoolean");
-
-    [Native(Level.Missing)]
-    public int GetStoredInteger(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("GetStoredInteger");
-
-    [Native(Level.Missing)]
-    public float GetStoredReal(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("GetStoredReal");
-
-    [Native(Level.Missing)]
-    public string? GetStoredString(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("GetStoredString");
-
-    [Native(Level.Missing)]
     public unit? GetSummonedUnit() => throw new MissingNativeException("GetSummonedUnit");
 
     [Native(Level.Missing)]
@@ -2542,18 +2512,6 @@ public sealed partial class GameNatives
     public bool HaveSavedString(hashtable? table, int parentKey, int childKey) => throw new MissingNativeException("HaveSavedString");
 
     [Native(Level.Missing)]
-    public bool HaveStoredBoolean(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("HaveStoredBoolean");
-
-    [Native(Level.Missing)]
-    public bool HaveStoredInteger(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("HaveStoredInteger");
-
-    [Native(Level.Missing)]
-    public bool HaveStoredReal(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("HaveStoredReal");
-
-    [Native(Level.Missing)]
-    public bool HaveStoredString(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("HaveStoredString");
-
-    [Native(Level.Missing)]
     public bool HaveStoredUnit(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("HaveStoredUnit");
 
     [Native(Level.Missing)]
@@ -2567,9 +2525,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public int IncUnitAbilityLevel(unit? whichUnit, int abilcode) => throw new MissingNativeException("IncUnitAbilityLevel");
-
-    [Native(Level.Missing)]
-    public gamecache? InitGameCache(string? campaignFile) => throw new MissingNativeException("InitGameCache");
 
     [Native(Level.Missing)]
     public hashtable? InitHashtable() => throw new MissingNativeException("InitHashtable");
@@ -3205,33 +3160,6 @@ public sealed partial class GameNatives
     public float Pow(float x, float power) => throw new MissingNativeException("Pow");
 
     [Native(Level.Missing)]
-    public void Preload(string? filename) => throw new MissingNativeException("Preload");
-
-    [Native(Level.Missing)]
-    public void PreloadEnd(float timeout) => throw new MissingNativeException("PreloadEnd");
-
-    [Native(Level.Missing)]
-    public void PreloadEndEx() => throw new MissingNativeException("PreloadEndEx");
-
-    [Native(Level.Missing)]
-    public void PreloadGenClear() => throw new MissingNativeException("PreloadGenClear");
-
-    [Native(Level.Missing)]
-    public void PreloadGenEnd(string? filename) => throw new MissingNativeException("PreloadGenEnd");
-
-    [Native(Level.Missing)]
-    public void PreloadGenStart() => throw new MissingNativeException("PreloadGenStart");
-
-    [Native(Level.Missing)]
-    public void PreloadRefresh() => throw new MissingNativeException("PreloadRefresh");
-
-    [Native(Level.Missing)]
-    public void PreloadStart() => throw new MissingNativeException("PreloadStart");
-
-    [Native(Level.Missing)]
-    public void Preloader(string? filename) => throw new MissingNativeException("Preloader");
-
-    [Native(Level.Missing)]
     public questitem? QuestCreateItem(quest? whichQuest) => throw new MissingNativeException("QuestCreateItem");
 
     [Native(Level.Missing)]
@@ -3314,9 +3242,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void ReloadGame() => throw new MissingNativeException("ReloadGame");
-
-    [Native(Level.Missing)]
-    public bool ReloadGameCachesFromDisk() => throw new MissingNativeException("ReloadGameCachesFromDisk");
 
     [Native(Level.Missing)]
     public void RemoveAllGuardPositions(player? num) => throw new MissingNativeException("RemoveAllGuardPositions");
@@ -3455,9 +3380,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SaveGame(string? saveFileName) => throw new MissingNativeException("SaveGame");
-
-    [Native(Level.Missing)]
-    public bool SaveGameCache(gamecache? whichCache) => throw new MissingNativeException("SaveGameCache");
 
     [Native(Level.Missing)]
     public void SaveGameCheckpoint(string? saveFileName, bool showWindow) => throw new MissingNativeException("SaveGameCheckpoint");
@@ -4132,18 +4054,6 @@ public sealed partial class GameNatives
     public void StopSound(sound? soundHandle, bool killWhenDone, bool fadeOut) => throw new MissingNativeException("StopSound");
 
     [Native(Level.Missing)]
-    public void StoreBoolean(gamecache? cache, string? missionKey, string? key, bool value) => throw new MissingNativeException("StoreBoolean");
-
-    [Native(Level.Missing)]
-    public void StoreInteger(gamecache? cache, string? missionKey, string? key, int value) => throw new MissingNativeException("StoreInteger");
-
-    [Native(Level.Missing)]
-    public void StoreReal(gamecache? cache, string? missionKey, string? key, float value) => throw new MissingNativeException("StoreReal");
-
-    [Native(Level.Missing)]
-    public bool StoreString(gamecache? cache, string? missionKey, string? key, string? value) => throw new MissingNativeException("StoreString");
-
-    [Native(Level.Missing)]
     public bool StoreUnit(gamecache? cache, string? missionKey, string? key, unit? whichUnit) => throw new MissingNativeException("StoreUnit");
 
     [Native(Level.Missing)]
@@ -4163,18 +4073,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SyncSelections() => throw new MissingNativeException("SyncSelections");
-
-    [Native(Level.Missing)]
-    public void SyncStoredBoolean(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("SyncStoredBoolean");
-
-    [Native(Level.Missing)]
-    public void SyncStoredInteger(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("SyncStoredInteger");
-
-    [Native(Level.Missing)]
-    public void SyncStoredReal(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("SyncStoredReal");
-
-    [Native(Level.Missing)]
-    public void SyncStoredString(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("SyncStoredString");
 
     [Native(Level.Missing)]
     public void SyncStoredUnit(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("SyncStoredUnit");

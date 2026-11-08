@@ -93,10 +93,13 @@ static class Blizzard
     /// <paramref name="jass"/> as Lua. <paramref name="commonJ"/> gives the natives' return types, by which the
     /// transpiler tells joining strings from adding numbers.
     /// </summary>
-    internal static string ToLua(string commonJ, string jass)
+    internal static string ToLua(string commonJ, string jass) => ToLua(JassSyntaxFactory.ParseCompilationUnit(commonJ), jass);
+
+    /// <inheritdoc cref="ToLua(string, string)"/>
+    internal static string ToLua(JassCompilationUnitSyntax commonJ, string jass)
     {
         var transpiler = new JassToLuaTranspiler();
-        transpiler.RegisterJassFile(JassSyntaxFactory.ParseCompilationUnit(commonJ));
+        transpiler.RegisterJassFile(commonJ);
         var lua = new StringWriter();
         new LuaRenderer(new LuaSyntaxGenerator.SettingInfo(), lua)
             .RenderCompilationUnit(transpiler.Transpile(Rewriter.Rewrite(JassSyntaxFactory.ParseCompilationUnit(jass))));
