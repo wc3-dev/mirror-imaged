@@ -111,6 +111,20 @@ public sealed class InstalledDataTests
 
         Assert.Equal([shaman, bush, footman], new[] { "oshm", "ebsh", "fapo" }.Select(id => data.Object(ObjectKind.Unit, Id(id))?.Integer(Id("uhpm")) ?? 0));
     }
+
+    // probes data-sets-melee and units: GetObjectName names units, items, abilities and upgrades, also one the set leaves
+    // out (fapo, ckdk and AA12 under Melee with The Frozen Throne), and nothing else (D229)
+    [InstallFact]
+    public void A_name_is_read_also_for_an_object_the_set_leaves_out()
+    {
+        var info = MapFactory.Info(32, 32);
+        info.MapFlags = MapFlags.MeleeMap;
+        var data = new GameData(StandardData.Installed(GameInstall.Require(), info));
+
+        Assert.Null(data.Object(ObjectKind.Unit, Id("fapo")));
+        Assert.Equal(["Footman", "Apothecary", "Potion of Healing", "|cffffff00Dungeon Key|r", "Holy Light", "Item Hero Stat Bonus", "Iron Forged Swords", null, null],
+            new[] { "hfoo", "fapo", "phea", "ckdk", "AHhb", "AA12", "Rhme", "Bdef", "LTlt" }.Select(id => data.Name(Id(id))));
+    }
 }
 
 /// <summary>A theory that reads the Warcraft III install on this computer; skipped when there is none.</summary>
