@@ -87,13 +87,13 @@ public sealed class TriggerTests : IDisposable
         using var simulation = Load("""
             local f = function() return true end
             local cn = Condition(nil)
-            print(Condition(f) == Condition(f), Filter(f) == Filter(f), rawequal(cn, Condition(nil)), rawequal(Filter(nil), Filter(nil)))
+            print(Condition(f) == Condition(f), Filter(f) == Filter(f), rawequal(cn, Condition(nil)), rawequal(Filter(nil), Filter(nil)), cn == Filter(nil), rawequal(cn, Filter(nil)))
             print(tostring(cn):match("^%a+"), tostring(Filter(nil)):match("^%a+"), pcall(Condition, 5))
             """);
 
         Assert.Equal([
-            "0.000 false\tfalse\ttrue\ttrue",
-            "0.000 conditionfunc\tfilterfunc\tfalse\tbad argument #1 to 'Condition' (function expected, got number)",
+            "0.000 false\tfalse\ttrue\ttrue\ttrue\tfalse",
+            "0.000 conditionfunc\tfilterfunc\tfalse\tbad argument #1 to 'Condition' (function expected)",
         ], Printed(simulation));
     }
 
@@ -123,6 +123,95 @@ public sealed class TriggerTests : IDisposable
             """);
 
         Assert.Equal(["0.000 true\ttrue\ttrue\tfalse\tfalse\tfalse\ttrue\tz"], Printed(simulation));
+    }
+
+    // Every case the probes triggers-2, triggers-3, handles and handles-3 measured with Condition(nil) (cn) in a trigger's
+    // conditions, the game's result beside the model's (decisions D114): t and u pass, f fails, x passes. A list of
+    // several is a trigger's conditions in turn.
+    static readonly (string Conditions, bool Game, bool Model)[] NilConditionCases =
+    [
+        ("cn", true, true),
+        ("Not(cn)", true, true),
+        ("Not(Not(cn))", false, false),
+        ("And(cn, f)", false, false),
+        ("And(cn, x)", false, false),
+        ("Or(cn, f)", false, false),
+        ("And(t, cn)", true, false),
+        ("And(t, Not(cn))", false, true),
+        ("Not(And(t, cn))", false, true),
+        ("And(t, And(cn, x))", false, false),
+        ("And(Or(f, t), cn)", false, false),
+        ("Or(f, cn)", false, false),
+        ("t, Not(cn)", true, true),
+        ("t, cn", true, true),
+        ("And(t, Or(cn, f))", false, false),
+        ("And(t, Not(Not(cn)))", false, false),
+        ("Or(f, Not(cn))", true, true),
+        ("And(Not(f), cn)", false, false),
+        ("And(t, And(u, cn))", true, false),
+        ("And(Not(cn), t)", false, true),
+        ("And(And(t, u), Not(cn))", false, true),
+    ];
+
+    [Fact]
+    public void Condition_nil_in_a_boolexpr_gives_the_games_result_in_15_of_the_21_cases_measured()
+    {
+        using var simulation = Load($$"""
+            local cn = Condition(nil)
+            local yes, no = function() return true end, function() return false end
+            local t, u, f, x = Condition(yes), Condition(yes), Condition(no), Condition(yes)
+            local function evaluate(...) local trig = CreateTrigger() for _, c in ipairs({...}) do TriggerAddCondition(trig, c) end return TriggerEvaluate(trig) end
+            {{string.Join("\n", NilConditionCases.Select(c => $"print(evaluate({c.Conditions}))"))}}
+            """);
+
+        Assert.Equal(NilConditionCases.Select(c => $"0.000 {(c.Model ? "true" : "false")}"), Printed(simulation));
+        Assert.Equal(15, NilConditionCases.Count(c => c.Game == c.Model));
+    }
+
+    // W1-9's probe events: a destroyed Filter given to ForceEnumPlayers after a Condition had taken its place ran the new
+    // condition; a destroyed condition given to a native is its place's (decisions D115)
+    [Fact]
+    public void A_destroyed_condition_given_to_a_native_runs_what_its_place_holds()
+    {
+        using var simulation = Load(Cond + """
+            local df = Filter(function() ran[#ran + 1] = "d" return true end)
+            DestroyFilter(df)
+            local t = CreateTrigger()
+            TriggerAddCondition(t, df)
+            print("empty", TriggerEvaluate(t), done())
+            cond("c", true)
+            print("taken", TriggerEvaluate(t), evaluate(And(df, cond("y", true))), GetHandleId(df) > 0, done())
+            """);
+
+        Assert.Equal(["0.000 empty\tfalse\t", "0.000 taken\ttrue\ttrue\ttrue\tc,c,y"], Printed(simulation));
+    }
+
+    // Condition(nil) and Filter(nil) are one handle in the game: destroying either destroys both (decisions D114; not
+    // measured)
+    [Fact]
+    public void Destroying_Condition_nil_destroys_Filter_nil()
+    {
+        using var simulation = Load(Cond + """
+            local cn, fn = Condition(nil), Filter(nil)
+            print(evaluate(fn))
+            DestroyCondition(cn)
+            print(evaluate(fn), evaluate(cn), GetHandleId(fn) == GetHandleId(cn), GetHandleId(fn) > 0)
+            """);
+
+        Assert.Equal(["0.000 true", "0.000 false\tfalse\ttrue\ttrue"], Printed(simulation));
+    }
+
+    [Fact]
+    public void Filter_nil_first_asked_for_after_Condition_nil_was_destroyed_is_destroyed()
+    {
+        using var simulation = Load(Cond + """
+            local cn = Condition(nil)
+            DestroyCondition(cn)
+            local fn = Filter(nil)
+            print(evaluate(fn), rawequal(fn, Filter(nil)), GetHandleId(fn) == GetHandleId(cn), GetHandleId(fn) > 0)
+            """);
+
+        Assert.Equal(["0.000 false\ttrue\ttrue\ttrue"], Printed(simulation));
     }
 
     // facts: a self-removing condition ran
@@ -181,6 +270,59 @@ public sealed class TriggerTests : IDisposable
             "0.000 destroyed operand\ttrue\t",
             "0.000 self-removing\tfalse\tself,next",
             "0.000 after\ttrue\tnext",
+        ], Printed(simulation));
+    }
+
+    // probes triggers, handles and handles-2: a Condition or Filter made after one was destroyed takes its place, the first
+    // destroyed first, and what still holds the destroyed one runs the new one; other handles don't take it, and a new
+    // boolexpr doesn't take a destroyed And's, which still runs its own operands
+    [Fact]
+    public void A_condition_made_after_one_was_destroyed_runs_in_its_place()
+    {
+        using var simulation = Load(Cond + """
+            local function trig(...) local t = CreateTrigger() for _, c in ipairs({...}) do TriggerAddCondition(t, c) end return t end
+            local dc = cond("d1", true)
+            local t = trig(dc)
+            DestroyCondition(dc)
+            local before = TriggerEvaluate(t)
+            local nc = cond("n1", false)
+            print("new", before, TriggerEvaluate(t), done(), dc == nc)
+            dc = cond("d2", true) t = trig(dc) DestroyCondition(dc)
+            Filter(function() ran[#ran + 1] = "filter2" return false end)
+            print("filter", TriggerEvaluate(t), done())
+            local df = Filter(function() ran[#ran + 1] = "d3" return true end) t = trig(df) DestroyFilter(df)
+            cond("n3", false)
+            print("filter then condition", TriggerEvaluate(t), done())
+            local a, b = cond("a4", true), cond("b4", true) t = trig(a, b) DestroyCondition(a) DestroyCondition(b)
+            cond("x4", true) cond("y4", true)
+            print("two", TriggerEvaluate(t), done())
+            dc = cond("d5", true) t = trig(dc) DestroyCondition(dc)
+            CreateTimer() CreateTrigger()
+            cond("n5", true)
+            print("after other handles", TriggerEvaluate(t), done())
+            dc = cond("d6", true) t = trig(Not(dc)) DestroyCondition(dc)
+            cond("n6", true)
+            print("in a not", TriggerEvaluate(t), done())
+            local de = And(cond("a7", true), cond("b7", true)) t = trig(de) DestroyBoolExpr(de)
+            Or(cond("x7", true), cond("y7", true))
+            print("and then or", TriggerEvaluate(t), done())
+            t = CreateTrigger()
+            dc = cond("destroyed", true)
+            TriggerAddCondition(t, dc)
+            DestroyCondition(dc)
+            TriggerRemoveCondition(t, TriggerAddCondition(t, cond("removed", false)))
+            print("removed", TriggerEvaluate(t), done())
+            """);
+
+        Assert.Equal([
+            "0.000 new\tfalse\tfalse\tn1\tfalse",
+            "0.000 filter\tfalse\tfilter2",
+            "0.000 filter then condition\tfalse\tn3",
+            "0.000 two\ttrue\tx4,y4",
+            "0.000 after other handles\ttrue\tn5",
+            "0.000 in a not\tfalse\tn6",
+            "0.000 and then or\ttrue\ta7,b7",
+            "0.000 removed\tfalse\tremoved",
         ], Printed(simulation));
     }
 
@@ -793,7 +935,7 @@ public sealed class TriggerTests : IDisposable
 
         natives.DestroyTrigger(t);
 
-        Assert.All(events, e => Assert.Null(simulation.ToCSharp(new LuaHandle("event", e!.Key), typeof(@event), 1, "F")));
+        Assert.All(events, e => Assert.Null(simulation.ToCSharp(new LuaHandle("event", e!.Key, e.Id, true), typeof(@event), 1, "F")));
     }
 
     // a function a trigger no longer has is let go of, so Lua collects it, once no running thread can still run it

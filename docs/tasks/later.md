@@ -32,6 +32,8 @@ Each item names the wave whose file it goes into when that file is written.
   0.2 s later, last freed first, plus one unexplained extra id (`handles-2` lines 8 and 13, `handles-3` lines 10 and
   18). Model it from MirrorImaged's own deterministic collector (D39's arena keeps A7), or take A2's exception for
   `GetHandleId` to Sven. Until then, maps that forget to flush data keyed by `GetHandleId` behave differently (D111).
+  With it, let go of a destroyed `Condition` or `Filter` once Lua has collected its userdata: it now stays in the game
+  for good (D115; the `shortcut:` in `Triggers.cs`'s `Destroy`).
 - Wave 10 (the nil condition): probe further for `Condition(nil)`'s value inside `And`/`Or`/`Not` (the 6 mismatched
   cases in D114); `Condition`, `Filter`, `And`, `Or` and `Not` stay Close until it fits every measured case.
 - Wave 10 (accuracy): accept against A6, or fit, these standing differences: R2S/R2SW from 2^31 (D84), S2R past the

@@ -9,7 +9,9 @@
 #include "lauxlib.h"
 #include "lualib.h"
 #include "lgc.h"
+#include "lobject.h"
 #include "lstate.h"
+#include <string.h>
 #include "mitime.h"
 
 void *mirror_arena_new (void);
@@ -17,20 +19,25 @@ void mirror_arena_free (void *arena);
 void *mirror_arena_alloc (void *ud, void *ptr, size_t osize, size_t nsize);
 size_t mirror_arena_committed (void *arena);
 
-/* A value crossing to or from C#; strings are not owned. A handle is its id and its declared type's name. */
+/* A value crossing to or from C#; strings are not owned. A handle (VHANDLE, or VAGENT for an agent) is its key in
+   integer, its game id in id and its declared type's name in string. */
 typedef struct ManagedValue {
-  int type;  /* VNIL, VBOOLEAN, VINTEGER, VFLOAT, VSTRING or VHANDLE */
+  int type;  /* VNIL, VBOOLEAN, VINTEGER, VFLOAT, VSTRING, VHANDLE or VAGENT */
   int integer;
   float number;
   const char *string;
   size_t length;
+  int id;
 } ManagedValue;
 
-enum { VNIL, VBOOLEAN, VINTEGER, VFLOAT, VSTRING, VHANDLE };
+enum { VNIL, VBOOLEAN, VINTEGER, VFLOAT, VSTRING, VHANDLE, VAGENT };
 
-/* A handle's userdata: its id, and its declared type's name, which the type's metatable keeps alive */
+/* A handle's userdata: its key, by which C# finds it, the id the game shows, whether its declared type is an agent,
+   and that type's name, which the type's metatable keeps alive */
 typedef struct Handle {
+  int key;
   int id;
+  int agent;
   const char *type;
 } Handle;
 
@@ -177,26 +184,30 @@ LUALIB_API void mirror_close (lua_State *L) {
   mirror_arena_free(arena);
 }
 
-static int ishandle (lua_State *L, int index) {
-  return lua_type(L, index) == LUA_TUSERDATA && lua_rawlen(L, index) == sizeof(Handle);
+static Handle *tohandle (lua_State *L, int index) {
+  return lua_type(L, index) == LUA_TUSERDATA && lua_rawlen(L, index) == sizeof(Handle)
+         ? (Handle *)lua_touserdata(L, index) : NULL;
 }
 
-/* == holds for the same handle seen as two types, as the game's does: GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED.
-   Called straight from its metatable, it may be given anything else, which is never equal. */
+/* == as the game's: by the game ids, whatever the types (GetTriggerEventId() == ConvertPlayerColor(4)). Lua calls the
+   first operand's, and an agent's refuses a second that isn't an agent, at the comparing line. */
 static int handleeq (lua_State *L) {
-  lua_pushboolean(L, ishandle(L, 1) && ishandle(L, 2)
-                     && ((Handle *)lua_touserdata(L, 1))->id == ((Handle *)lua_touserdata(L, 2))->id);
+  Handle *a = tohandle(L, 1), *b = tohandle(L, 2);
+  if (a == NULL) return luaL_argerror(L, 1, "handle expected");
+  if (b == NULL || (a->agent && !b->agent)) return luaL_argerror(L, 2, a->agent ? "agent expected" : "handle expected");
+  lua_pushboolean(L, a->id == b->id);
   return 1;
 }
 
-/* Pushes the userdata standing for handle id as the declared type named type: the same one while Lua holds it, with
-   a metatable named after the type, so tostring writes "timer: <address>" as the game's does. */
-static void pushhandle (lua_State *L, int id, const char *type, size_t length) {
+/* Pushes the userdata standing for the handle with key as the declared type named type: the same one while Lua holds
+   it, with a metatable named after the type, so tostring writes "timer: <address>" as the game's does, and which
+   getmetatable reads as false, as the game's. */
+static void pushhandle (lua_State *L, int key, int id, int agent, const char *type, size_t length) {
   Handle *h;
   lua_pushlstring(L, type, length);
   luaL_getsubtable(L, LUA_REGISTRYINDEX, HANDLES);  /* type, handles */
   lua_pushvalue(L, -2);
-  if (lua_rawget(L, -2) != LUA_TTABLE) {  /* the type's userdata by id, held weakly */
+  if (lua_rawget(L, -2) != LUA_TTABLE) {  /* the type's userdata by key, held weakly */
     lua_pop(L, 1);
     lua_newtable(L);
     lua_createtable(L, 0, 1);
@@ -207,18 +218,22 @@ static void pushhandle (lua_State *L, int id, const char *type, size_t length) {
     lua_pushvalue(L, -2);
     lua_rawset(L, -4);
   }  /* type, handles, cache */
-  if (lua_rawgeti(L, -1, id) == LUA_TNIL) {
+  if (lua_rawgeti(L, -1, key) == LUA_TNIL) {
     lua_pop(L, 1);
     h = (Handle *)lua_newuserdata(L, sizeof(Handle));
+    h->key = key;
     h->id = id;
+    h->agent = agent;
     h->type = lua_tostring(L, -4);  /* a short string, kept by the metatable's __name and the registry */
     if (luaL_newmetatable(L, h->type)) {
       lua_pushcfunction(L, handleeq);
       lua_setfield(L, -2, "__eq");
+      lua_pushboolean(L, 0);
+      lua_setfield(L, -2, "__metatable");
     }
     lua_setmetatable(L, -2);
     lua_pushvalue(L, -1);
-    lua_rawseti(L, -3, id);
+    lua_rawseti(L, -3, key);
   }
   lua_replace(L, -4);
   lua_pop(L, 2);
@@ -232,7 +247,7 @@ static void pushvalues (lua_State *L, const ManagedValue *v, int n) {
       case VINTEGER: lua_pushinteger(L, v->integer); break;
       case VFLOAT: lua_pushnumber(L, v->number); break;
       case VSTRING: lua_pushlstring(L, v->string, v->length); break;
-      case VHANDLE: pushhandle(L, v->integer, v->string, v->length); break;
+      case VHANDLE: case VAGENT: pushhandle(L, v->integer, v->id, v->type == VAGENT, v->string, v->length); break;
       default: lua_pushnil(L); break;
     }
   }
@@ -500,4 +515,17 @@ LUALIB_API int mirror_resume (lua_State *L, int thread, int *yielded) {
   int status = protect(L, doresume, &r, LUA_MULTRET);
   *yielded = status == LUA_OK && r.n;
   return status;
+}
+
+/* What the string s of length bytes is as a number to Lua, as luaL_checkinteger and luaL_checknumber read one: 1 an
+   integer, 2 a float, 0 none */
+LUALIB_API int mirror_tonumber (const char *s, size_t length, int *integer, float *number) {
+  TValue o;
+  if (strlen(s) != length || luaO_str2num(s, &o) != length + 1) return 0;
+  if (ttisinteger(&o)) {
+    *integer = (int)ivalue(&o);
+    return 1;
+  }
+  *number = fltvalue(&o);
+  return 2;
 }

@@ -63,6 +63,19 @@ public sealed class GameProbeTests
     [GameFact]
     public void The_fourth_triggers_probe_gives_the_lines_measured() => Measured("triggers-4");
 
+    // docs/facts.md, "Handles and errors"
+    [GameFact]
+    public void The_handles_probe_gives_the_lines_measured() => Measured("handles");
+
+    [GameFact]
+    public void The_second_handles_probe_gives_the_lines_measured() => Measured("handles-2");
+
+    [GameFact]
+    public void The_third_handles_probe_gives_the_lines_measured() => Measured("handles-3");
+
+    [GameFact]
+    public void The_arguments_probe_gives_the_lines_measured() => Measured("arguments");
+
     static void Measured(string name)
     {
         var run = GameRunner.Default.Run(name, ProbeMap.Source(name), TimeSpan.FromMinutes(2));
