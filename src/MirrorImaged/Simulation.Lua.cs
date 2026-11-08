@@ -36,8 +36,8 @@ public sealed partial class Simulation
         if (value is null) return null;
         if (type == typeof(string) && value is string s) return s;
         if (type == typeof(Action) && value is LuaFunction code) return (Action)new LuaCode(this, code.Keep()).Run;
-        if (value is LuaHandle h && type.IsAssignableFrom(typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}")))
-            return _game.Handle(h.Id);
+        if (value is LuaHandle h && typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}") is { } declared && type.IsAssignableFrom(declared))
+            return _natives.Handle(declared, h.Id);
         throw BadArgument(position, function, $"{(type == typeof(Action) ? "function" : type.Name.ToLowerInvariant())} expected, got {TypeName(value)}");
     }
 

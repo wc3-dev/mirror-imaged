@@ -14,9 +14,10 @@ public sealed class SimulationOptions
 }
 
 /// <summary>
-/// A map's script running on a simulated game, with no game open. <see cref="Load"/> runs the script, then its
-/// <c>config</c> and <c>main</c>; <see cref="Advance"/> moves the clock on and runs the timers that fall due. A Lua
-/// error goes in the log and the run carries on, as the game drops it. A Missing native stops the run:
+/// A map's script running on a simulated game, with no game open. <see cref="Load"/> sets <c>common.j</c>'s globals,
+/// runs the installed game's <c>blizzard.j</c>, then the script, its <c>config</c> and <c>main</c>;
+/// <see cref="Advance"/> moves the clock on and runs the timers that fall due. A Lua error goes in the log and the run
+/// carries on, as the game drops it. A Missing native stops the run:
 /// <see cref="Stopped"/> is then a <see cref="LuaException"/> that starts with the calling line
 /// (<c>war3map.lua:3: The native ...</c>), whose inner exception is the <see cref="MissingNativeException"/>, and
 /// <see cref="Advance"/> throws it. The log keeps what came before.
@@ -28,7 +29,7 @@ public sealed partial class Simulation : IDisposable
     readonly LuaState _lua = new() { Halts = e => e is MissingNativeException };
     TimeSpan _time;
 
-    Simulation(byte[] script, SimulationOptions options)
+    Simulation(byte[] script, string blizzard, SimulationOptions options)
     {
         _game = new Game(options.Seed);
         _natives = new GameNatives(_game);
@@ -38,7 +39,10 @@ public sealed partial class Simulation : IDisposable
                          .Where(method => method.GetCustomAttribute<NativeAttribute>() is not null)
                          .OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
+            foreach (var (name, value) in _natives.Globals())
+                _lua[name] = value is handle h ? new LuaHandle(h.GetType().Name, h.Id) : value;
             AddLuaExtras();
+            Protect(() => _lua.Run(blizzard, "blizzard.lua"));
             Protect(() => _lua.Run(script, "war3map.lua"));
             Protect(() => _lua.Call("config"));
             Protect(() => _lua.Call("main"));
@@ -55,12 +59,13 @@ public sealed partial class Simulation : IDisposable
     }
 
     /// <summary>
-    /// Loads the map at <paramref name="path"/> and runs its script, <c>config</c> and <c>main</c>; if a Missing
-    /// native stops the run there, the simulation comes back <see cref="Stopped"/>.
+    /// Loads the map at <paramref name="path"/> and runs <c>blizzard.j</c>, its script, <c>config</c> and
+    /// <c>main</c>; if a Missing native stops the run there, the simulation comes back <see cref="Stopped"/>.
     /// </summary>
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>.</exception>
+    /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> every run needs.</exception>
     public static Simulation Load(string path, SimulationOptions? options = null) =>
-        new(MapArchive.ReadLua(path), options ?? new SimulationOptions());
+        new(MapArchive.ReadLua(path), Blizzard.Lua(), options ?? new SimulationOptions());
 
     /// <summary>
     /// What the run showed, an entry each: the time in seconds, where it came from (<c>print</c>, <c>player 0</c> for

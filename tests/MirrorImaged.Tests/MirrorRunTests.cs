@@ -1,3 +1,4 @@
+using MirrorImaged.Data;
 using static MirrorImaged.Tests.CoverageTests;
 
 namespace MirrorImaged.Tests;
@@ -10,7 +11,8 @@ public sealed class MirrorRunTests : IDisposable
 
     string Map(string main) => _maps.Build($"function config() end\nfunction main()\n{main}\nend\n");
 
-    [Fact]
+    [InstallFact]
+    [Trait("Needs", "Game")]
     public void Mirror_run_runs_a_map_for_the_seconds_given_with_the_seed_and_prints_its_log()
     {
         var map = Map("print(GetRandomInt(1, 1000000)) TimerStart(CreateTimer(), 1, true, function() print('tick') end)");
@@ -24,7 +26,8 @@ public sealed class MirrorRunTests : IDisposable
         Assert.EndsWith("2.000 print: tick\n", output);
     }
 
-    [Fact]
+    [InstallFact]
+    [Trait("Needs", "Game")]
     public void Mirror_run_prints_the_log_then_what_stopped_the_run()
     {
         var map = Map("print('before') TimerStart(CreateTimer(), 1, false, function() ClearTextMessages() end)");
@@ -36,7 +39,8 @@ public sealed class MirrorRunTests : IDisposable
         Assert.StartsWith("war3map.lua:3: The native ClearTextMessages is Missing", error);
     }
 
-    [Fact]
+    [InstallFact]
+    [Trait("Needs", "Game")]
     public void Mirror_run_prints_the_log_of_config_and_main_before_a_stop_in_main()
     {
         var map = _maps.Build("function config() print('config') end\nfunction main() print('main\\nagain') ClearTextMessages() end\n");
@@ -59,6 +63,18 @@ public sealed class MirrorRunTests : IDisposable
 
         Assert.Equal(2, exit);
         Assert.Contains("mirror run <map>", error);
+    }
+
+    [Fact]
+    public void Mirror_run_without_the_game_says_a_run_needs_its_blizzard_j()
+    {
+        var nowhere = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+        var (exit, output, error) = Mirror(new Dictionary<string, string?> { [GameInstall.Variable] = nowhere }, "run", Map("print('never')"));
+
+        Assert.Equal(1, exit);
+        Assert.Empty(output);
+        Assert.Equal($"A run needs blizzard.j from an installed Warcraft III, and there is none in {nowhere}. Set {GameInstall.Variable} to the game's folder.\n", error);
     }
 
     [Fact]

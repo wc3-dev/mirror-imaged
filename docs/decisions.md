@@ -267,3 +267,53 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   metatable's `__index`, storing nothing. `FourCC` and `__jarray` are Lua, so `FourCC` reads the bytes, which a Lua
   string read in C# loses when it isn't UTF-8. The four maps in `Maps\lua-reference` load their scripts and stop in
   `config` at `SetMapName`. After W0-5: 1 Exact (`GetLocalPlayer`), 14 Close, 2 Recorded, 1,818 Missing.
+
+### The game's globals and blizzard.j (W1-1)
+
+- **D50. common.j's globals are generated with the natives,** as `GameNatives.Globals()` in `Generated/Globals.g.cs`:
+  each global's name and its value as C#, sorted by name. A value is an integer (any of JASS's forms, and the products
+  such as `MAP_LOCK_SPEED`'s `8192*2`, written out), a boolean, or the call of the native common.j calls, with integer
+  arguments (`ConvertPlayerColor(0)`, `GetPlayerNeutralPassive()`), so each handle is made by its native as the game
+  makes it, and no JASS is committed. Any other form stops the generator, naming the global. 3.0.1.24371's common.j has
+  1,872 globals, all constants: 1,858 made by the 88 `Convert*` natives, 10 integers, 2 booleans and the two neutral
+  players. A run sets them as Lua globals in that order, after the natives and before the game's Lua functions and
+  blizzard.j. Not measured: whether the game's are plain globals a script can change, as they are here.
+- **D51. A Convert native gives the handle standing for its value:** one object per type and value, made the first time
+  and kept, whose id is the value. So the same value gives the same userdata (D41) and `==` holds, the same value as
+  another type is another handle (`ConvertRace(0) ~= ConvertPlayerColor(0)`), and no game id is taken, so the agents'
+  ids are as before (D47). A handle Lua passes back is found by its declared type and id (`GameNatives.Handle`): a
+  converted one first, else the game's. Exact: `ConvertPlayerColor` and `ConvertRace` (facts: `GetPlayerColor` equals
+  `ConvertPlayerColor(n)` and `GetPlayerRace` `RACE_*` with `==`), and `ConvertAttackType`, `ConvertDamageType` and
+  `ConvertWeaponType` (the Moonwell.Damage gate's types, made once and compared with `==`); the other 83 Close. Not
+  measured: `GetHandleId` of one (said to be the value; W1-6), and a value common.j doesn't name, which gives a handle
+  like any other.
+- **D52. blizzard.j is transpiled at run time** from the install's `War3.w3mod:scripts/blizzard.j` (the root spells it
+  `Scripts/Blizzard.j`; its lookup ignores case, D24), with `common.j` registered first for the natives' return types,
+  by the upstream `War3Net.CodeAnalysis.Transpilers` 6.1.1 from nuget.org, rendered by its CSharp.lua with the default
+  settings. 6.1.1, not 6.0.2: 6.0.2 brings `War3Net.CSharpLua` 2.0.3, whose `NuGet.Packaging` 5.11.6 and
+  `Newtonsoft.Json` 9.0.1 fail the build on their advisories; 6.1.1 brings 2.0.4, which doesn't. No fork: the one fix
+  is made before transpiling, by War3Net's own `JassSyntaxRewriter`: a JASS name that is a Lua keyword and not a JASS
+  one (`SubStringBJ`'s parameter `end`) gets `_lua` after it, since War3Net writes it as it is and Lua can't load it
+  (`docs/upstream.md`), and JASS refuses `end_`. The Lua runs as the chunk `blizzard.lua`, after common.j's globals and
+  the game's Lua functions (its globals use `FourCC` and `__jarray`), before `war3map.lua`; an error in a BJ function
+  reads `blizzard.lua:N:`, N the line in the cached file (D53); the game's name for it isn't measured. Its globals make
+  4 timers and 3 groups, the handles after the 28 players, and call the slot natives (D54); none of its functions runs
+  until a map calls one. They call the natives as globals, looked up at each call, so a native a script replaces is
+  what they call (facts). Without an install, `Simulation.Load` throws a `DirectoryNotFoundException` ("A run needs
+  blizzard.j from an installed Warcraft III, and there is none in ..."), after reading the map, so a missing map is
+  still reported as such. Every test that runs a map is therefore `Needs=Game`, and CI runs none.
+- **D53. The transpiled Lua is cached:** a transpile takes about 1.6 s in a new process (0.35 s opening the storage, the
+  rest parsing and transpiling; Release build). It is kept once a process, and between processes in
+  `%LOCALAPPDATA%\MirrorImaged\cache\blizzard-<the game's build key>-<MirrorImaged.dll's module version id>.lua`. A
+  deterministic build's module version id changes with its code and its references, so a change to the transpiling
+  makes a new file; any other change to MirrorImaged.dll transpiles once more. A file is written whole under another
+  name and moved in place, so no process reads half of one; writing one removes the other `blizzard-*` files there, and
+  a cache that can't be read or written is passed over. A `mirror run` of a small map then takes about 0.2 s.
+- **D54. The slot natives:** `GetBJMaxPlayers` and `GetPlayerNeutralAggressive` 24, `GetBJPlayerNeutralVictim` 25,
+  `GetBJPlayerNeutralExtra` 26, `GetPlayerNeutralPassive` 27 (Exact: facts, a new item belongs to neutral passive, slot
+  27) and `GetBJMaxPlayerSlots` 28; the rest Close, the values the game has given since it had 24 players, not
+  measured here. `CreateGroup` makes a group with the next id, Close; what groups hold comes with the units (wave 2).
+- **D55. Left for W1-7,** whose JASS rules reach blizzard.j too, as it goes through the same transpiler: a whole number
+  given to a real stays a Lua integer (`bj_MELEE_MINE_SEARCH_RADIUS` is the integer 2000; `docs/upstream.md`), and
+  JASS's integer division is Lua's `//`, which floors where JASS cuts toward zero. What the game's own Lua gives for
+  these is not measured. After W1-1: 7 Exact, 103 Close, 2 Recorded, 1,723 Missing.

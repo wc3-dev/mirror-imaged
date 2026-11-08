@@ -4,6 +4,7 @@ using MirrorImaged.Natives;
 namespace MirrorImaged.Tests;
 
 /// <summary>Small Lua maps run from their archives, as the game runs them: the script, config, main, then time.</summary>
+[Trait("Needs", "Game")]
 public sealed class SimulationTests : IDisposable
 {
     readonly TestMaps _maps = new();
@@ -13,7 +14,7 @@ public sealed class SimulationTests : IDisposable
     Simulation Load(string main, int seed = 0) =>
         Simulation.Load(_maps.Build($"function config() end\nfunction main()\n{main}\nend\n"), new SimulationOptions { Seed = seed });
 
-    [Fact]
+    [InstallFact]
     public void The_script_then_config_then_main_run_and_print_goes_in_the_log()
     {
         using var simulation = Simulation.Load(_maps.Build("""
@@ -25,7 +26,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Equal(["0.000 print: script", "0.000 print: config\t1\tnil\ttrue", "0.000 print: main"], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void Timers_fire_in_order_at_the_right_simulated_times()
     {
         using var simulation = Load("""
@@ -40,7 +41,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Equal(["0.000 print: started", "0.500 print: half", "0.750 print: every", "1.500 print: every", "2.000 print: two"], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_periodic_timer_doesnt_drift()
     {
         using var simulation = Load("""
@@ -56,7 +57,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Equal(["100.000 print: 1000", "200.000 print: 2000", "300.000 print: 3000"], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void Time_moves_on_across_advances()
     {
         using var simulation = Load("TimerStart(CreateTimer(), 1.5, false, function() print('done') end)");
@@ -76,7 +77,7 @@ public sealed class SimulationTests : IDisposable
         end)
         """;
 
-    [Fact]
+    [InstallFact]
     public void The_same_seed_gives_the_same_log()
     {
         string[] Run(int seed)
@@ -92,7 +93,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Equal(10, first.Length);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_missing_native_stops_the_run_with_its_name_and_line_and_keeps_the_log()
     {
         using var simulation = Simulation.Load(_maps.Build("""
@@ -111,7 +112,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Same(stop, Assert.Throws<LuaException>(() => simulation.Advance(TimeSpan.FromSeconds(1))));
     }
 
-    [Fact]
+    [InstallFact]
     public void A_missing_native_stops_the_run_before_its_arguments_are_read()
     {
         using var simulation = Load("CreateUnit({}, coroutine.create(print), 0, 0, 0)");
@@ -119,7 +120,7 @@ public sealed class SimulationTests : IDisposable
         Assert.StartsWith("war3map.lua:3: The native CreateUnit is Missing", simulation.Stopped!.Message);
     }
 
-    [Theory]
+    [InstallTheory]
     [InlineData("pcall(ClearTextMessages)")]
     [InlineData("xpcall(ClearTextMessages, print)")]
     [InlineData("coroutine.wrap(ClearTextMessages)()")]
@@ -131,7 +132,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Empty(simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_missing_native_stops_the_run_from_a_timer_even_inside_pcall()
     {
         using var simulation = Load("""
@@ -153,7 +154,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Same(error, Assert.Throws<LuaException>(() => simulation.Advance(TimeSpan.FromSeconds(3))));
     }
 
-    [Fact]
+    [InstallFact]
     public void Short_advances_add_up_as_one_long_one()
     {
         using var simulation = Load("TimerStart(CreateTimer(), 10, false, function() print('ten') end)");
@@ -165,7 +166,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Equal(["10.000 print: ten"], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_print_of_several_lines_is_one_entry_with_every_line_marked()
     {
         using var simulation = Load("print('one\\ntwo')");
@@ -173,7 +174,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Equal(["0.000 print: one\n0.000 print: two"], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_map_without_config_or_main_logs_which_is_missing()
     {
         using var simulation = Simulation.Load(_maps.Build("print('script')"));
@@ -185,7 +186,7 @@ public sealed class SimulationTests : IDisposable
         ], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_lua_error_goes_in_the_log_and_the_run_carries_on()
     {
         using var simulation = Load("""
@@ -204,7 +205,7 @@ public sealed class SimulationTests : IDisposable
         ], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void Text_shown_to_players_goes_in_the_log_with_the_player()
     {
         using var simulation = Load("""
@@ -217,7 +218,7 @@ public sealed class SimulationTests : IDisposable
     }
 
     // facts, "Handles and identity" and "Version and launching"
-    [Fact]
+    [InstallFact]
     public void Handles_are_userdata_named_after_their_type_and_the_same_while_held()
     {
         using var simulation = Load("""
@@ -235,7 +236,7 @@ public sealed class SimulationTests : IDisposable
         ], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_native_checks_its_arguments_as_the_game_does()
     {
         using var simulation = Load("""
@@ -258,7 +259,7 @@ public sealed class SimulationTests : IDisposable
     }
 
     // a function a native refuses, or can't keep, is let go of, so Lua collects it
-    [Theory]
+    [InstallTheory]
     [InlineData("pcall(TimerStart, {}, 1, false, f)")]
     [InlineData("TimerStart(nil, 1, false, f)")]
     [InlineData("local t = CreateTimer() DestroyTimer(t) TimerStart(t, 1, false, f)")]
@@ -278,7 +279,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Equal(["0.000 print: true"], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_destroyed_timer_reads_as_nothing()
     {
         using var simulation = Load("""
@@ -293,7 +294,7 @@ public sealed class SimulationTests : IDisposable
         Assert.Equal(["0.000 print: 0.0\tuserdata"], simulation.Log);
     }
 
-    [Fact]
+    [InstallFact]
     public void A_timer_callback_reads_its_timer_and_the_clock()
     {
         using var simulation = Load("""
@@ -309,7 +310,7 @@ public sealed class SimulationTests : IDisposable
     }
 
     // facts: six 0 s timers, each started in the one before, read the same elapsed time and os.clock as the 0.5 s timer
-    [Fact]
+    [InstallFact]
     public void Zero_second_timers_started_in_a_callback_run_in_the_same_step()
     {
         using var simulation = Load("""
@@ -328,7 +329,7 @@ public sealed class SimulationTests : IDisposable
     }
 
     // facts, "Lua runtime": math.random is the game's generator, shared with GetRandomInt; math.randomseed reseeds it
-    [Fact]
+    [InstallFact]
     public void Math_random_shares_the_games_generator()
     {
         using var simulation = Load("""
@@ -354,7 +355,7 @@ public sealed class SimulationTests : IDisposable
     }
 
     // facts, "Lua runtime": FourCC is callable
-    [Fact]
+    [InstallFact]
     public void FourCC_reads_an_object_id_from_its_bytes()
     {
         using var simulation = Load("print(FourCC('hfoo'), FourCC('A000'), FourCC('\\255\\0\\0\\1'), pcall(FourCC, 5))");
@@ -363,7 +364,7 @@ public sealed class SimulationTests : IDisposable
     }
 
     // World Editor writes its array variables as udg_name = __jarray(default)
-    [Fact]
+    [InstallFact]
     public void A_jarray_reads_its_default_where_nothing_is_set()
     {
         using var simulation = Load("""
