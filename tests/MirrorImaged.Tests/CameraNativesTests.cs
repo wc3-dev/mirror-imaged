@@ -1,9 +1,13 @@
+using MirrorImaged.Data;
 using MirrorImaged.Natives;
 using MirrorImaged.World;
 
 namespace MirrorImaged.Tests;
 
-/// <summary>The local player's camera, against the probes cameras, cameras-2 and cameras-3 (docs/facts.md, "Cameras").</summary>
+/// <summary>
+/// The local player's camera and the fog flags, against the probes cameras to cameras-4 and units-camera (docs/facts.md,
+/// "Cameras").
+/// </summary>
 public sealed class CameraNativesTests
 {
     readonly Game _game = new(0);
@@ -166,6 +170,32 @@ public sealed class CameraNativesTests
         _natives.ResetToGameCamera(0);
         Advance(0.5);
         Assert.Equal((500f, -500f, 10f), (_natives.GetCameraTargetPositionX(), _natives.GetCameraTargetPositionY(), _natives.GetCameraTargetPositionZ()), Within(0.01f));
+    }
+
+    // units-camera: the target follows a unit at the offsets from the next step, stays where it was once the unit is
+    // removed, and a pan or a position ends the follow
+    [Fact]
+    public void The_target_follows_a_unit_until_a_pan()
+    {
+        var natives = new GameNatives(_game) { Data = new GameData(new StandardData().Add(ObjectKind.Unit, "hfoo", new Dictionary<string, string> { ["uhpm"] = "420" })) };
+        natives.SetCameraBounds(-2000, -2000, 2000, 2000, -2000, 2000, 2000, -2000);
+        var footman = natives.CreateUnit(natives.Player(0), 0x68666F6F, 200, 100, 90);
+        (float, float) Target() => (natives.GetCameraTargetPositionX(), natives.GetCameraTargetPositionY());
+
+        natives.SetCameraTargetController(footman, 100, 50, false);
+        Assert.Equal((0f, 0f), Target());
+        _game.Advance(1);
+        Assert.Equal((300f, 150f), Target());
+        natives.SetUnitX(footman, 600);
+        Advance(0.5);
+        Assert.Equal((700f, 150f), Target());
+
+        natives.RemoveUnit(footman);
+        Advance(0.5);
+        Assert.Equal((700f, 150f), Target());
+        natives.PanCameraToTimed(0, 0, 0);
+        Advance(0.5);
+        Assert.Equal((0f, 0f), Target());
     }
 
     // cameras, cameras-2: AdjustCameraField adds to the field, and ResetToGameCamera puts back all but ZABSOLUTE

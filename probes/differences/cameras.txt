@@ -1,0 +1,13 @@
+# Where MirrorImaged differs from the game's lines in expected/cameras.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# The eye at an angle of attack of 300: the game's cos(300 degrees) reads 0.5000004, a float library of its own; here
+# the float of the double's cos (D503, Close).
+- field 0.5s 1000.0000 5.2360 eye 0.0000 -500.0004 876.0252
++ field 0.5s 1000.0000 5.2360 eye 0.0000 -499.9999 876.0255
+
+# A position outside bounds of 200 each way, set after pans with a z made inside bounds of 0, with the rotation at 120:
+# the game held the target 200 along the view past the corner, which cameras-2 and cameras-3 didn't repeat at any
+# rotation; here the bounds' box holds it (D502, Close).
+- clamped 100.0000 373.2051 10.0000
++ clamped 200.0000 200.0000 10.0000

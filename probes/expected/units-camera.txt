@@ -1,4 +1,4 @@
-# probes/cameras-units.lua on 3.0.1.24371, single player, 11-08: the game's lines.
+# probes/units-camera.lua on 3.0.1.24371, single player, 11-08: the game's lines.
 follow now 0.0000 0.0000 10.0000
 follow 0s 0.0000 0.0000 10.0000
 follow 0.5s 300.0000 150.0000 10.0000

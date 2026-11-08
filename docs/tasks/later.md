@@ -63,3 +63,7 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
   is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
 - Wave 10 (JASS): a rawcode with a backslash (`'a\bc'`) loads here but the game refuses the map (D137) (W1-7).
+- Wave 10 (cameras, W5-1): a position set as the game starts lands 0.2 to 0.25 s later in the game, here in the next
+  step (D502); the bounds once held the target 200 along the view past their corner (D502); the game's cos(300
+  degrees) in the eye (D503); a followed unit's move reaches the target a frame later (D504). Each is in
+  `probes/differences`.

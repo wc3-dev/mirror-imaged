@@ -11,10 +11,10 @@ public partial class camerasetup
     internal string? Label = "";
 }
 
-// The local player's camera (probes cameras, cameras-2 and cameras-3; decisions D500 to D505): its fields, kept as
-// set (angles in degrees) and read at once, its target and the bounds that hold it, and its eye, which the game works
-// out as it draws, so the target and the eye read as the step before left them. A change over a time moves in a
-// straight line from where the value is. The view itself isn't simulated. Every player's camera is the local
+// The local player's camera (probes cameras to cameras-4 and units-camera; decisions D500 to D505): its fields, kept
+// as set (angles in degrees) and read at once, its target and the bounds that hold it, and its eye, which the game
+// works out as it draws, so the target and the eye read as the step before left them. A change over a time moves in
+// a straight line from where the value is. The view itself isn't simulated. Every player's camera is the local
 // player's (multiplayer: wave 6).
 public sealed partial class GameNatives
 {
@@ -33,6 +33,9 @@ public sealed partial class GameNatives
     // view turning with it while the rotation field reads as it was, and without the z offset, until the game camera is
     // put back; the angles are in radians.
     (float X, float Y, double Radius, double Start, Motion Swept)? _orbit;
+
+    // A unit the target follows at offsets from the step after Start (units-camera)
+    (unit Unit, float X, float Y, long Start)? _follow;
     readonly float[] _bounds = new float[8];
     readonly bool[] _byInput = [.. Enumerable.Repeat(true, CameraFields)];
     int _cameraType;
@@ -95,20 +98,26 @@ public sealed partial class GameNatives
         return most ? corners.Max() : corners.Min();
     }
 
-    float TargetX => Math.Clamp(_orbit is { } o ? (float)(o.X + o.Radius * Math.Cos(o.Start + o.Swept.At(_game.Step - 1))) : _cameraX.At(_game.Step - 1),
+    float TargetX => Math.Clamp(
+        _orbit is { } o ? (float)(o.X + o.Radius * Math.Cos(o.Start + o.Swept.At(_game.Step - 1)))
+        : _follow is { } f && _game.Step > f.Start ? f.Unit.X + f.X
+        : _cameraX.At(_game.Step - 1),
         Bound(0, false), Bound(0, true));
 
-    float TargetY => Math.Clamp(_orbit is { } o ? (float)(o.Y + o.Radius * Math.Sin(o.Start + o.Swept.At(_game.Step - 1))) : _cameraY.At(_game.Step - 1),
+    float TargetY => Math.Clamp(
+        _orbit is { } o ? (float)(o.Y + o.Radius * Math.Sin(o.Start + o.Swept.At(_game.Step - 1)))
+        : _follow is { } f && _game.Step > f.Start ? f.Unit.Y + f.Y
+        : _cameraY.At(_game.Step - 1),
         Bound(1, false), Bound(1, true));
 
     float TargetZ => (Data.Terrain?.Height(TargetX, TargetY) ?? 0) + (_orbit is null ? ZOffset : 0);
 
     float ZOffset => _panZ?.At(_game.Step - 1) ?? _camera[6].At(_game.Step - 1);
 
-    // Ends a turn about a point, the target staying where the turn has it.
+    // Ends a turn about a point or a follow, the target staying where it reads.
     void Settle()
     {
-        if (_orbit is not null) (_cameraX, _cameraY, _orbit) = (new Motion(TargetX), new Motion(TargetY), null);
+        if (_orbit is not null || _follow is not null) (_cameraX, _cameraY, _orbit, _follow) = (new Motion(TargetX), new Motion(TargetY), null, null);
     }
 
     // Moves the target to (x, y), held in the bounds, over the steps given; 0 lands in the next step. A pan's z moves
@@ -117,6 +126,7 @@ public sealed partial class GameNatives
     void MoveCamera(float x, float y, long steps, float? z = null)
     {
         if (_orbit is not null) return;
+        Settle();
         var (toX, toY) = (Math.Clamp(x, Bound(0, false), Bound(0, true)), Math.Clamp(y, Bound(1, false), Bound(1, true)));
         if ((toX, toY) != (TargetX, TargetY)) _panZ = z is { } height ? new Motion(ZOffset).Toward(height, _game.Step, steps) : null;
         _cameraX = _cameraX.Toward(toX, _game.Step, steps);
@@ -126,13 +136,15 @@ public sealed partial class GameNatives
     long PanSteps(float x, float y) =>
         Game.Steps(Math.Sqrt(Math.Pow(Math.Clamp(x, Bound(0, false), Bound(0, true)) - TargetX, 2) + Math.Pow(Math.Clamp(y, Bound(1, false), Bound(1, true)) - TargetY, 2)) / PanSpeed);
 
-    // The eye: the distance back from the target along the angle of attack and the rotation, as the step before saw them
+    // The eye: the distance back from the target along the angle of attack and the rotation, as the step before saw
+    // them, in floats as the game's: 5 of the 6 eyes the probes read match to the last digit, the sixth by its cos(300).
     (float X, float Y, float Z) Eye()
     {
         var step = _game.Step - 1;
-        var (distance, turned) = (_camera[0].At(step), _orbit is { } o ? o.Swept.At(step) * 180 / Math.PI : 0);
-        var ((attackSin, attackCos), (rotationSin, rotationCos)) = (double.SinCosPi(Field(2, step) / 180.0), double.SinCosPi((Field(5, step) + turned) / 180.0));
-        return ((float)(TargetX - distance * attackCos * rotationCos), (float)(TargetY - distance * attackCos * rotationSin), (float)(TargetZ - distance * attackSin));
+        var distance = _camera[0].At(step);
+        var (attack, rotation) = ((float)Radians(Field(2, step)), (float)(Radians(Field(5, step)) + (_orbit is { } o ? o.Swept.At(step) : 0)));
+        var (attackCos, attackSin, rotationCos, rotationSin) = ((float)Math.Cos(attack), (float)Math.Sin(attack), (float)Math.Cos(rotation), (float)Math.Sin(rotation));
+        return (TargetX - distance * (attackCos * rotationCos), TargetY - distance * (attackCos * rotationSin), TargetZ - distance * attackSin);
     }
 
     // Sets every field of the setup over its own time or the one given, and pans to its place if asked: over its
@@ -242,6 +254,25 @@ public sealed partial class GameNatives
         Settle();
         var (dx, dy) = (TargetX - x, TargetY - y);
         _orbit = (x, y, Math.Sqrt(dx * dx + dy * dy), Math.Atan2(dy, dx), new Motion(0).Toward(radiansToSweep, _game.Step, CameraSteps(duration)));
+    }
+
+    /// <summary>
+    /// The target follows the unit at the offsets from the next step, and stays where it was once it is removed, until a
+    /// position, a pan or ResetToGameCamera (units-camera). Close: the game follows a move a frame later. Neither
+    /// inheritOrientation nor the unit's facing changes the rotation field (units-camera); what they turn in the view
+    /// isn't simulated.
+    /// </summary>
+    [Native(Level.Close)]
+    public void SetCameraTargetController(unit? whichUnit, float xoffset, float yoffset, bool inheritOrientation) => Follow(whichUnit, xoffset, yoffset);
+
+    /// <summary>As SetCameraTargetController with these offsets: the target went to the unit at them (units-camera).</summary>
+    [Native(Level.Close)]
+    public void SetCameraOrientController(unit? whichUnit, float xoffset, float yoffset) => Follow(whichUnit, xoffset, yoffset);
+
+    void Follow(unit? whichUnit, float x, float y)
+    {
+        Settle();
+        if (whichUnit is not null) _follow = (whichUnit, x, y, _game.Step);
     }
 
     /// <summary>The target's x as the step before left it.</summary>

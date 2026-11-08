@@ -2620,12 +2620,6 @@ public sealed partial class GameNatives
     public void SetBlightRect(player? whichPlayer, rect? r, bool addBlight) => throw new MissingNativeException("SetBlightRect");
 
     [Native(Level.Missing)]
-    public void SetCameraOrientController(unit? whichUnit, float xoffset, float yoffset) => throw new MissingNativeException("SetCameraOrientController");
-
-    [Native(Level.Missing)]
-    public void SetCameraTargetController(unit? whichUnit, float xoffset, float yoffset, bool inheritOrientation) => throw new MissingNativeException("SetCameraTargetController");
-
-    [Native(Level.Missing)]
     public void SetCampaignAvailable(int campaignNumber, bool available) => throw new MissingNativeException("SetCampaignAvailable");
 
     [Native(Level.Missing)]
