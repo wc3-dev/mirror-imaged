@@ -123,7 +123,7 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
 - A game started from Claude Code's Bash tool never logs in, and one started from its PowerShell tool always does.
   Seen: the reviewers' runs (2 at 02:53 to 02:57, 3 at 03:45 to 03:51, 3 at 05:03 to 05:09, all from Git Bash) and
   this task's runs from the Bash tool (the 3 game tests at 05:12 to 05:18, 5 runs of `hello`, 1 game in a normal window,
-  and 3 runs of the 3 game tests at 05:31 to 05:50 with the game given the user's own environment) all ended with the
+  and 4 runs of the 3 game tests at 05:31 to 06:03 with the game given the user's own environment) all ended with the
   map never loaded and `War3Preferences.txt` and the account's files never rewritten, the job holding up to 11
   `BlizzardBrowser` processes, against 4 or 5 in a run that logs in. The one game
   from the Bash tool that was pictured, in a normal window, stayed black for its 60 s, where a game started from
