@@ -50,3 +50,5 @@ maths probe (11-01, `moonwell-maths-numbers.txt`, printed with `%.9g`). 3.0.1.24
   1024, `Pow(10, 2)` 100, `Pow(10, 3)` 1000, `Pow(1.5, 2)` 2.25, `Pow(2, 0.5)` 1.41421354, `Sin(PI)` and `Cos(PI / 2)`
   4.65661287e-10 (2^-31).
 - `float.Epsilon` reads 1.40129846e-45: a subnormal literal is read and printed as it is.
+- `math.pi` is `40490fdb` and `math.huge` `7f800000` (printed inf); `0.1` is `3dcccccd`, `0.2` `3e4ccccd`, and
+  `tostring(0.1)` is 0.1.

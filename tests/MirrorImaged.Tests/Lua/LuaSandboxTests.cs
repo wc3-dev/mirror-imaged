@@ -21,6 +21,7 @@ public sealed class LuaSandboxTests : IDisposable
     [InlineData("math.randomseed")]
     public void Missing(string name) => Assert.Null(_lua.Run($"return {name}")[0]);
 
+    // plain Lua 5.3's: the facts list only what the game is missing
     [Theory]
     [InlineData("load")]
     [InlineData("pcall")]
@@ -44,6 +45,26 @@ public sealed class LuaSandboxTests : IDisposable
 
     [Fact]
     public void OsTimeIsAnInteger() => Assert.Equal("integer", _lua.Run("return math.type(os.time())")[0]);
+
+    /// <summary>Bytecode is never checked by Lua 5.3; what the game does with it isn't measured.</summary>
+    [Theory]
+    [InlineData("load(string.dump(function() return 1 end))")]
+    [InlineData("load(string.dump(function() return 1 end), 'dumped', 'b')")]
+    public void BinaryChunksAreRefused(string load)
+    {
+        var result = _lua.Run($"return {load}");
+        Assert.Null(result[0]);
+        Assert.Contains("attempt to load a binary chunk", (string)result[1]!);
+    }
+
+    /// <summary>os.date takes the options of a Windows build of Lua (not measured; decisions D33).</summary>
+    [Fact]
+    public void OsDateTakesWindowsOptions()
+    {
+        Assert.Equal("1970-01-02 03:04:05", _lua.Run("return os.date('!%Y-%m-%d %H:%M:%S', 97445)")[0]);
+        Assert.Equal(false, _lua.Run("return (pcall(os.date, '%F'))")[0]);
+        Assert.Equal(true, _lua.Run("return (pcall(os.date, '%#x'))")[0]);
+    }
 
     [Fact]
     public void VersionIsLua53() => Assert.Equal("Lua 5.3", _lua.Run("return _VERSION")[0]);

@@ -136,7 +136,7 @@ float mi_sqrtf (float x) {
 static const double LN2_HI = 6.93147180369123816490e-01, LN2_LO = 1.90821492927058770002e-10;
 static const double PI = 3.14159265358979311600e+00, PIO2 = 1.57079632679489655800e+00;
 
-/* Toward zero, after a nudge of 2^-45 so that a result that should be exact (2^10, log2(8)) stays exact. A
+/* Toward zero, after a nudge of 2^-45 so that a result that should be exact (2^10, 10^3) stays exact. A
    nan is 0: its sign differs between x64 and arm64, and the game makes none. */
 static float to_float (double d) {
   uint64_t u;
@@ -205,27 +205,21 @@ static double exp_d (double x) {
   return scale2(s, k);
 }
 
-/* log(x) = e ln 2 + log(m) for x > 0; returns log(m) and sets e */
-static double logm_d (double x, int32_t *e) {
+/* log(x) = e ln 2 + log(m), for x > 0 */
+static double log_d (double x) {
   uint64_t u;
   double m, s, z, t, sum = 0;
-  int32_t i;
+  int32_t e, i;
   memcpy(&u, &x, sizeof u);
-  *e = (int32_t)((u >> 52) & 0x7ff) - 1023;
+  e = (int32_t)((u >> 52) & 0x7ff) - 1023;
   u = (u & 0x000fffffffffffffull) | 0x3ff0000000000000ull;
   memcpy(&m, &u, sizeof m);
-  if (m > 1.41421356237309514547) { m *= 0.5; (*e)++; }
+  if (m > 1.41421356237309514547) { m *= 0.5; e++; }
   s = (m - 1) / (m + 1);
   z = s * s;
   t = s;
   for (i = 1; i <= 41; i += 2) { sum += t / i; t *= z; }
-  return 2 * sum;
-}
-
-static double log_d (double x) {
-  int32_t e;
-  double lm = logm_d(x, &e);
-  return e * LN2_HI + (lm + e * LN2_LO);
+  return e * LN2_HI + (2 * sum + e * LN2_LO);
 }
 
 /* sqrt, log and asin outside their domains give 0, as sqrt(-1) does in the game */
@@ -235,13 +229,6 @@ float mi_expf (float x) { return to_float(exp_d(x)); }
 float mi_logf (float x) { return bad_log(x) ? (x == 0 ? -HUGE_VALF : 0.0f) : to_float(log_d(x)); }
 float mi_log10f (float x) {
   return bad_log(x) ? (x == 0 ? -HUGE_VALF : 0.0f) : to_float(log_d(x) * 4.34294481903251816668e-01);
-}
-float mi_log2f (float x) {
-  int32_t e;
-  double lm;
-  if (bad_log(x)) return x == 0 ? -HUGE_VALF : 0.0f;
-  lm = logm_d(x, &e);
-  return to_float(e + lm * 1.44269504088896338700e+00);
 }
 
 float mi_powf (float x, float y) {
@@ -295,10 +282,21 @@ float mi_acosf (float x) {
   return to_float(atan2_d(__builtin_sqrt((1.0 - x) * (1.0 + x)), x));
 }
 
+/* inf and nan are written here, as the C library writes them but the same on every platform: the sign, or + or
+   a space for those flags, in capitals for %E %F %G %A, padded with spaces to the width */
 int mi_snprintf (char *s, size_t sz, const char *f, double n) {
   uint64_t u;
+  const char *flags = f + 1, *p = flags;
+  char text[8];
+  int width = 0, upper;
   memcpy(&u, &n, sizeof u);
-  if (((u >> 52) & 0x7ff) == 0x7ff)
-    return snprintf(s, sz, "%s%s", (u >> 63) ? "-" : "", (u << 12) ? "nan" : "inf");
-  return snprintf(s, sz, f, n);
+  if (((u >> 52) & 0x7ff) != 0x7ff) return snprintf(s, sz, f, n);
+  while (*p && strchr("-+ #0", *p)) p++;
+  while (*p >= '0' && *p <= '9') width = width * 10 + (*p++ - '0');
+  while (*p == '.' || (*p >= '0' && *p <= '9')) p++;
+  upper = *p >= 'A' && *p <= 'Z';
+  snprintf(text, sizeof text, "%s%s", (u >> 63) ? "-" : memchr(flags, '+', (size_t)(p - flags)) ? "+"
+           : memchr(flags, ' ', (size_t)(p - flags)) ? " " : "",
+           (u << 12) ? (upper ? "NAN" : "nan") : (upper ? "INF" : "inf"));
+  return snprintf(s, sz, memchr(flags, '-', (size_t)(p - flags)) ? "%-*s" : "%*s", width, text);
 }

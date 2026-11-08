@@ -78,6 +78,44 @@ public sealed class LuaStateTests : IDisposable
             """, "war3map.lua"));
 
     [Fact]
+    public void AStrictGlobalTableRaisesLuaErrors()
+    {
+        _lua.Run("setmetatable(_G, {__index = function(_, k) error('undefined ' .. k, 2) end, __newindex = function(_, k) error('no new global ' .. k, 2) end})");
+        Assert.Contains("undefined x", Assert.Throws<LuaException>(() => _lua["x"]).Message);
+        Assert.Contains("no new global y", Assert.Throws<LuaException>(() => { _lua["y"] = 1; }).Message);
+        Assert.Contains("undefined missing", Assert.Throws<LuaException>(() => _lua.Call("missing")).Message);
+        Assert.Contains("no new global add", Assert.Throws<LuaException>(() => _lua.Register("add", _ => [])).Message);
+        Assert.Equal([2], _lua.Run("return 1 + 1"));
+    }
+
+    [Fact]
+    public void AFailingGcWhileACallbacksResultsArePushedIsALuaError()
+    {
+        var called = false;
+        _lua.Register("many", _ =>
+        {
+            called = true;
+            return Enumerable.Range(0, 100000).Select(_ => (object?)new string('x', 64)).ToArray();
+        });
+        var e = Assert.Throws<LuaException>(() => _lua.Run("""
+            local function junk() setmetatable({}, {__gc = function() error('gc failed') end}) end
+            junk()
+            return select('#', many())
+            """));
+        Assert.True(called);
+        Assert.Contains("gc failed", e.Message);
+        Assert.Equal([2], _lua.Run("return 1 + 1"));
+    }
+
+    [Fact]
+    public void AValueThatCantBePassedLeavesTheStateAsItWas()
+    {
+        _lua.Run("function f(...) return select('#', ...) end");
+        for (int i = 0; i < 1000; i++) Assert.Throws<ArgumentException>(() => _lua.Call("f", 1, new object()));
+        Assert.Equal([2], _lua.Call("f", 1, 2));
+    }
+
+    [Fact]
     public void ATableCantBeReadInCSharp() =>
         Assert.Throws<InvalidOperationException>(() => _lua.Run("return {}"));
 

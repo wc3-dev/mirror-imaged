@@ -128,8 +128,8 @@ static Node *mainposition (const Table *t, const TValue *key) {
       return hashboolean(t, bvalue(key));
     case LUA_TLIGHTUSERDATA:
       return hashpointer(t, pvalue(key));
-    case LUA_TLCF:
-      return hashpointer(t, fvalue(key));
+    case LUA_TLCF:  /* MirrorImaged: by its place in this library, the same every run */
+      return hashpointer(t, cast(void *, cast(size_t, fvalue(key)) - cast(size_t, lua_newstate)));
     default:
       lua_assert(!ttisdeadkey(key));
       return hashpointer(t, gcvalue(key));

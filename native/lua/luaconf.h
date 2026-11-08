@@ -785,6 +785,18 @@
 /* MirrorImaged: the game's float arithmetic and maths (native/mifloat.h) */
 #include "mifloat.h"
 
+/* MirrorImaged: every platform is built as Windows is (LUA_USE_C89, by native/build.ps1), with Windows's
+   os.date options */
+#define LUA_STRFTIMEOPTIONS	"aAbBcdHIjmMpSUwWxXyYzZ%" "||" "#c#x#d#H#I#j#m#M#S#U#w#W#y#Y"
+
+/* MirrorImaged: no wall clock in table.sort's pivot, so a sort gives the same order every run */
+#define l_randomizePivot()	(~0u)
+
+/* MirrorImaged: a pointer is written as its offset in the state's arena (native/arena.c), the same every run */
+LUAI_FUNC int mirror_pointer2str (char *buff, size_t sz, const void *p);
+#undef lua_pointer2str
+#define lua_pointer2str(buff,sz,p)	mirror_pointer2str(buff,sz,p)
+
 
 
 

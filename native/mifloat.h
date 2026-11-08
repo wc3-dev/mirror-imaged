@@ -25,7 +25,6 @@ LUA_API float mi_acosf (float x);
 LUA_API float mi_atan2f (float y, float x);
 LUA_API float mi_expf (float x);
 LUA_API float mi_logf (float x);
-LUA_API float mi_log2f (float x);
 LUA_API float mi_log10f (float x);
 LUA_API float mi_powf (float x, float y);
 LUA_API int mi_snprintf (char *s, size_t sz, const char *f, double n);
@@ -70,8 +69,6 @@ LUA_API int mi_snprintf (char *s, size_t sz, const char *f, double n);
 #define expf mi_expf
 #undef logf
 #define logf mi_logf
-#undef log2f
-#define log2f mi_log2f
 #undef log10f
 #define log10f mi_log10f
 #undef powf

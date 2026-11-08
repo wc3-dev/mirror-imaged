@@ -23,21 +23,41 @@ internal static unsafe partial class Native
     public const int RegistryIndex = -1000000 - 1000;
     public const int MultipleResults = -1;
 
+    /// <summary>A value crossing to C (sandbox.c's <c>Value</c>); the string is not owned.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Value
+    {
+        public const int Nil = 0, Boolean = 1, Integer = 2, Float = 3, String = 4;
+
+        public int Type;
+        public int IntegerValue;
+        public float FloatValue;
+        public byte* StringValue;
+        public nuint Length;
+    }
+
     [LibraryImport(Lib)] public static partial nint mirror_newstate();
-    [LibraryImport(Lib)] public static partial void mirror_setcallback(delegate* unmanaged<nint, int> f);
-    [LibraryImport(Lib)] public static partial void mirror_pushfunction(nint l, int upvalues);
+    [LibraryImport(Lib)] public static partial void mirror_close(nint l);
+    [LibraryImport(Lib)] public static partial void mirror_setcallback(delegate* unmanaged<nint, Value**, int> f);
     [LibraryImport(Lib)] public static partial int mirror_pcall(nint l, int args, int results);
-    [LibraryImport(Lib)] public static partial void lua_close(nint l);
+
+    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mirror_call(nint l, string name, Value* args, int n);
+
+    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mirror_getglobal(nint l, string name);
+
+    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mirror_setglobal(nint l, string name, Value* value);
+
+    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mirror_register(nint l, string name, nint state, int id);
 
     [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
     public static partial int luaL_loadbufferx(nint l, byte* code, nuint size, string name, string mode);
 
     [LibraryImport(Lib)] public static partial int lua_gettop(nint l);
     [LibraryImport(Lib)] public static partial void lua_settop(nint l, int index);
-    [LibraryImport(Lib)] public static partial int lua_checkstack(nint l, int n);
-    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)] public static partial int lua_getglobal(nint l, string name);
-    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)] public static partial void lua_setglobal(nint l, string name);
-
     [LibraryImport(Lib)] public static partial int lua_type(nint l, int index);
     [LibraryImport(Lib)] public static partial int lua_toboolean(nint l, int index);
     [LibraryImport(Lib)] public static partial int lua_isinteger(nint l, int index);
@@ -45,11 +65,4 @@ internal static unsafe partial class Native
     [LibraryImport(Lib)] public static partial float lua_tonumberx(nint l, int index, int* isNumber);
     [LibraryImport(Lib)] public static partial byte* lua_tolstring(nint l, int index, nuint* length);
     [LibraryImport(Lib)] public static partial nint lua_touserdata(nint l, int index);
-
-    [LibraryImport(Lib)] public static partial void lua_pushnil(nint l);
-    [LibraryImport(Lib)] public static partial void lua_pushboolean(nint l, int value);
-    [LibraryImport(Lib)] public static partial void lua_pushinteger(nint l, int value);
-    [LibraryImport(Lib)] public static partial void lua_pushnumber(nint l, float value);
-    [LibraryImport(Lib)] public static partial byte* lua_pushlstring(nint l, byte* s, nuint length);
-    [LibraryImport(Lib)] public static partial void lua_pushlightuserdata(nint l, nint p);
 }

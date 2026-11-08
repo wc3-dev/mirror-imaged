@@ -1,11 +1,28 @@
 /*
 ** A Lua state with the game's libraries, and what the C# side needs to call into it and be called from it.
+** Everything that can raise a Lua error (anything that allocates can, through a failing __gc) runs here in C
+** under lua_pcall, so Lua's longjmp never crosses a managed frame.
 */
 #define LUA_LIB
 
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
+
+void *mirror_arena_new (void);
+void mirror_arena_free (void *arena);
+void *mirror_arena_alloc (void *ud, void *ptr, size_t osize, size_t nsize);
+
+/* A value crossing to or from C#; strings are not owned */
+typedef struct Value {
+  int type;  /* VNIL, VBOOLEAN, VINTEGER, VFLOAT or VSTRING */
+  int integer;
+  float number;
+  const char *string;
+  size_t length;
+} Value;
+
+enum { VNIL, VBOOLEAN, VINTEGER, VFLOAT, VSTRING };
 
 static const luaL_Reg libs[] = {
   {"_G", luaopen_base},
@@ -25,12 +42,10 @@ static void drop (lua_State *L, const char *name) {
 
 /* No io, debug or package; no dofile, loadfile or collectgarbage; os with only clock, date, difftime and
    time. math.random and math.randomseed are the game's generator, which the world provides. */
-LUALIB_API lua_State *mirror_newstate (void) {
+static int openlibs (lua_State *L) {
   static const char *const os_kept[] = {"clock", "date", "difftime", "time", NULL};
   const luaL_Reg *lib;
   const char *const *name;
-  lua_State *L = luaL_newstate();
-  if (L == NULL) return NULL;
   for (lib = libs; lib->func; lib++) {
     luaL_requiref(L, lib->name, lib->func, 1);
     lua_pop(L, 1);
@@ -50,29 +65,64 @@ LUALIB_API lua_State *mirror_newstate (void) {
     lua_setfield(L, -2, *name);
   }
   lua_setfield(L, -3, LUA_OSLIBNAME);
-  lua_pop(L, 2);
+  return 0;
+}
+
+LUALIB_API lua_State *mirror_newstate (void) {
+  void *arena = mirror_arena_new();
+  lua_State *L = arena != NULL ? lua_newstate(mirror_arena_alloc, arena) : NULL;
+  if (L == NULL) {
+    if (arena != NULL) mirror_arena_free(arena);
+    return NULL;
+  }
+  lua_pushcfunction(L, openlibs);
+  if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+    lua_close(L);
+    mirror_arena_free(arena);
+    return NULL;
+  }
   return L;
 }
 
-static int (*callback) (lua_State *L);
+LUALIB_API void mirror_close (lua_State *L) {
+  void *arena;
+  lua_getallocf(L, &arena);
+  lua_close(L);
+  mirror_arena_free(arena);
+}
 
-LUALIB_API void mirror_setcallback (int (*f) (lua_State *L)) {
+static void pushvalues (lua_State *L, const Value *v, int n) {
+  luaL_checkstack(L, n, "too many values");
+  for (; n > 0; v++, n--) {
+    switch (v->type) {
+      case VBOOLEAN: lua_pushboolean(L, v->integer); break;
+      case VINTEGER: lua_pushinteger(L, v->integer); break;
+      case VFLOAT: lua_pushnumber(L, v->number); break;
+      case VSTRING: lua_pushlstring(L, v->string, v->length); break;
+      default: lua_pushnil(L); break;
+    }
+  }
+}
+
+static int (*callback) (lua_State *L, const Value **results);
+
+LUALIB_API void mirror_setcallback (int (*f) (lua_State *L, const Value **results)) {
   callback = f;
 }
 
-/* Calls back into C#. A negative answer means the C# side failed and pushed its message: the error is
-   raised here, so Lua's longjmp never crosses a managed frame. */
+/* Calls back into C#, which only reads the arguments and returns its results (or its error message, as a
+   negative count) for this to push. */
 static int trampoline (lua_State *L) {
-  int n = callback(L);
-  if (n >= 0) return n;
+  const Value *results;
+  int n = callback(L, &results);
+  if (n >= 0) {
+    pushvalues(L, results, n);
+    return n;
+  }
   luaL_where(L, 1);
-  lua_insert(L, -2);
+  pushvalues(L, results, 1);
   lua_concat(L, 2);
   return lua_error(L);
-}
-
-LUALIB_API void mirror_pushfunction (lua_State *L, int nup) {
-  lua_pushcclosure(L, trampoline, nup);
 }
 
 static int traceback (lua_State *L) {
@@ -90,4 +140,71 @@ LUALIB_API int mirror_pcall (lua_State *L, int nargs, int nresults) {
   status = lua_pcall(L, nargs, nresults, base);
   lua_remove(L, base);
   return status;
+}
+
+typedef struct Request {
+  const char *name;
+  const Value *values;
+  int n;
+  void *state;
+} Request;
+
+static int docall (lua_State *L) {
+  const Request *r = (const Request *)lua_touserdata(L, 1);
+  lua_settop(L, 0);
+  lua_getglobal(L, r->name);
+  pushvalues(L, r->values, r->n);
+  lua_call(L, r->n, LUA_MULTRET);
+  return lua_gettop(L);
+}
+
+static int doget (lua_State *L) {
+  lua_getglobal(L, ((const Request *)lua_touserdata(L, 1))->name);
+  return 1;
+}
+
+static int doset (lua_State *L) {
+  const Request *r = (const Request *)lua_touserdata(L, 1);
+  pushvalues(L, r->values, 1);
+  lua_setglobal(L, r->name);
+  return 0;
+}
+
+static int doregister (lua_State *L) {
+  const Request *r = (const Request *)lua_touserdata(L, 1);
+  lua_pushlightuserdata(L, r->state);
+  lua_pushinteger(L, r->n);
+  lua_pushcclosure(L, trampoline, 2);
+  lua_setglobal(L, r->name);
+  return 0;
+}
+
+static int protect (lua_State *L, lua_CFunction f, const Request *r, int nresults) {
+  lua_pushlightuserdata(L, (void *)r);
+  lua_pushcfunction(L, f);
+  lua_insert(L, -2);
+  return mirror_pcall(L, 1, nresults);
+}
+
+/* name(args...), leaving its results */
+LUALIB_API int mirror_call (lua_State *L, const char *name, const Value *args, int n) {
+  Request r = {name, args, n, NULL};
+  return protect(L, docall, &r, LUA_MULTRET);
+}
+
+/* leaves the global */
+LUALIB_API int mirror_getglobal (lua_State *L, const char *name) {
+  Request r = {name, NULL, 0, NULL};
+  return protect(L, doget, &r, 1);
+}
+
+LUALIB_API int mirror_setglobal (lua_State *L, const char *name, const Value *value) {
+  Request r = {name, value, 1, NULL};
+  return protect(L, doset, &r, 0);
+}
+
+/* the global name calls C# function id of state */
+LUALIB_API int mirror_register (lua_State *L, const char *name, void *state, int id) {
+  Request r = {name, NULL, id, state};
+  return protect(L, doregister, &r, 0);
 }

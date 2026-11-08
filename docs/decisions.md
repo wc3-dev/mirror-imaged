@@ -88,7 +88,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   products, the `10 * 0.7` family and the limits.
 - **D29. Division** is the dividend times a reciprocal, R = ⌊(2^47 + 0xCC0000) / m⌋ with m the divisor's 24-bit mantissa
   without its lowest bit, cut toward zero, with no zero check: zero reads as 1.0 × 2^-127, so `0/0` is 1, `1/0` is
-  2^127 and `100/0` is past the range, 0. Matches the twelve measured quotients, `3/5`, `math.fmod(7.2, 0.1)` = 0, 21 of
+  2^127 and `100/0` is past the range, 0. Matches the twelve measured quotients, `3/5`, `7.2 % 0.1` = 0, 21 of
   the 23 roots after a correction step, and the 140 wrong casts of 4,200 in `n * (k / 100)`. Rejected: exact
   truncation (`1/3`), rounding up (`1/5`), Newton-Raphson reciprocals in the game's arithmetic from 2- to 12-bit tables
   (no quotient set matched), a table with one exact Newton step plus a bias. **Close:** `(int)(n / d)` for n 1-2000, d
@@ -106,32 +106,65 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   gives 1.67e-5), which neither a Newton step from straight lines over [1, 2], [2, 3], [3, 4] nor a table and a Newton
   step reproduce.
 - **D32. sin, cos, tan, asin, acos, atan, exp, log and pow are Close.** They are computed in doubles with + - × ÷ only
-  (no C library), then cut to a float toward zero after a nudge of 2^-45, so that exact results (2^10, log2 8) stay
-  exact. sin and cos go through a 31-bit fraction as the game's do (cos 0 = 1 - 2^-24, sin π/2 the same), and tan is
-  sin over cos, as the game's `tan(0.5)` is. Exact on `log(10)`, `asin(0.5)`, `acos(0.5)`, `2^10`, `10^2`, `10^3`,
-  `1.5^2`, `2^0.5`, cos 0, sin π/2, `1 - cos(0)`. Off: sin, cos and tan of 0.5 by up to 7e-6 (the game's angle is
-  about 5.6e-6 rad off there), `exp(1)`, `log(2)` and `atan(1)` by one or two float steps, `log10(1000)` by 8e-6, `x^0.5`
-  by the game's own 1.35e-5 low, sin π (2^-31 in the game). Tried for sin: an angle in 2^14 to 2^20 units a turn,
-  floored or rounded, into an exact sine; at most 19 of the 720 whole-degree values matched. Outside their domains the
-  functions give 0, as `math.sqrt(-1)` does; `log(0)` is -inf; a nan result is 0.
-- **D33. Number text and parsing.** `tostring` is `%.7g` (Lua's default for floats; the game's `1/0` reads
-  1.701412e+38). inf and nan are written by the library as `inf`, `-inf`, `nan`, `-nan` on every platform (the game
-  writes `nan` for `MaxValue * 2`); `%a` is still the C library's. Numbers are parsed with `strtod` and cast to a float,
-  since `strtof` differs between C libraries. An integer becomes a float by the C cast (to nearest); not measured.
-- **D34. The Lua build.** Lua 5.3.6 without `LUA_COMPAT_5_2`, so no `math.pow`, `bit32` or `unpack`: no fact shows them
-  in the game, and a probe can settle it. Changed in the vendored sources, and nowhere else: `luaconf.h` (`LUA_32BITS`
-  and the include of `mifloat.h`), `lstate.c` (the string hash seed is 0 instead of the time and addresses, so `pairs`
-  visits string keys in the same order every run; the game's seed is unknown), `lmathlib.c` (`math.log` with a base,
-  `math.modf`, `math.rad` and `math.deg` use the game's arithmetic instead of C operators).
-- **D35. The sandbox** leaves out `math.random` and `math.randomseed`: the game's are its own generator, shared with
+  (no C library), then cut to a float toward zero after a nudge of 2^-45, so that exact results (2^10, 10^3) stay exact.
+  sin and cos go through a 31-bit fraction as the game's do (cos 0 = 1 - 2^-24, sin 90° the same), and tan is sin over
+  cos, as the game's `tan(0.5)` is. Exact on `log(10)`, `asin(0.5)`, `acos(0.5)`, `2^10`, `10^2`, `10^3`, `1.5^2`,
+  `2^0.5`, cos 0, sin 90°, `1 - cos(0)`. Off: sin, cos and tan of 0.5 by up to 7.4e-6 (the game's angle is about
+  5.6e-6 rad off there), `exp(1)`, `log(2)` and `atan(1)` by one or two float steps, `log10(1000)` by 8.1e-6, `x^0.5`
+  by the game's own up to 1.35e-5 low, sin π (2^-31 in the game, -8.7e-8 here), and the 720 whole-degree sines and
+  cosines by up to 5.3e-6 (18 the same). Tried for sin: an angle in 2^14 to 2^20 units a turn, floored or rounded, into
+  an exact sine; at most 19 of the 720 matched. `math.log(x, 2)` is `log(x) / log(2)` in the game's arithmetic (D33),
+  so `math.log(8, 2)` is 3.00000024. Outside their domains the functions give 0, as `math.sqrt(-1)` does; `log(0)` is
+  -inf; a nan result is 0.
+- **D33. One configuration on every platform: Windows's.** Lua's `luaconf.h` gives a Windows build `LUA_USE_C89` and
+  others C99 paths, which differ in what a script sees: `math.log(x, 2)`, hex numerals, `%a` and `os.date`'s options.
+  Every platform is built as a stock Windows build is (`-DLUA_USE_C89` and Windows's `os.date` options), chosen to
+  match the likely Windows build of the game; to be settled by a probe of `math.log(8, 2)` (here 3.00000024),
+  `math.log(3, 2)` (1.58496273), `0x1.0000011p0` (1: Lua's own reader adds the digits in floats), `string.format('%a',
+  0.1)` (`0xc.ccccdp-7`, Lua's own writer) and `os.date('%F')` (refused; `%#x` is taken). `LUA_USE_POSIX` stays on
+  Linux and macOS, where it only makes the time functions thread-safe.
+- **D34. Number text and parsing.** `tostring` is `%.7g` (Lua's default for floats; the game's `1/0` reads
+  1.701412e+38). inf and nan are written by the library, as the C library writes them (sign or `+` or space, capitals
+  for `%G` and the like, padded to the width) but the same on every platform; the game writes `nan` for `MaxValue * 2`.
+  Decimal numerals are parsed with `strtod` and cast to a float, since `strtof` differs between C libraries. An integer
+  becomes a float by the C cast (to nearest); not measured.
+- **D35. The Lua build.** Lua 5.3.6 without `LUA_COMPAT_5_2`, so no `math.pow`, `bit32` or `unpack`: no fact shows them
+  in the game, and a probe can settle it. Changed in the vendored sources, and nowhere else: `luaconf.h` (`LUA_32BITS`,
+  the include of `mifloat.h`, Windows's `os.date` options, a fixed `table.sort` pivot instead of the clock, pointers
+  written as arena offsets), `lstate.c` (the string hash seed is 0 instead of the time and addresses; the game's seed
+  is unknown), `lmathlib.c` (`math.log` with a base, `math.modf`, `math.rad` and `math.deg` use the game's arithmetic
+  instead of C operators), `ldo.c` (binary chunks refused, D36), `lapi.c` and `ltable.c` (a C function is hashed and
+  written by its place in the library, D39).
+- **D36. The sandbox** leaves out `math.random` and `math.randomseed`: the game's are its own generator, shared with
   `GetRandomInt` (fact), which the world provides (W0-5). `os.clock`, `os.time` and `os.date` read the real clock, as the
-  game's do, until the world replaces them.
-- **D36. The native build** uses zig 0.17.0 (`native/build.ps1`) for win-x64 (MinGW), linux-x64 (glibc 2.17) and
-  osx-arm64, with `-ffp-contract=off` (arm64 would fuse multiply-adds and x64 not) and `-s` (without it the DLL holds a
-  hash of the folder it was built in). The output is the same bytes from any folder and with CRLF sources (checked), so
-  CI rebuilds it on Windows and fails if it differs from the committed libraries. A determinism test hashes every number
-  operation over 20,000 float pairs, nan and infinity patterns included, and runs on all three platforms.
-- **D37. LuaState** passes nil, booleans, integers (`int`), floats (`float`) and strings; reading a table or a function
-  throws until a task needs them. A C# function is called through a C trampoline that raises the Lua error itself, at
-  the calling line, so Lua's `longjmp` never crosses a managed frame. Errors carry Lua's traceback, and a chunk's name is
-  given with `@`, so messages read `war3map.lua:3:`.
+  game's do, until the world replaces them. Binary chunks are refused by every `load`, whatever its mode: Lua 5.3 never
+  checks bytecode, so a map could crash the process with one. Whether the game loads them isn't measured;
+  `string.dump` stays, harmless without them.
+- **D37. The native build** uses zig 0.17.0 (`native/build.ps1`) for win-x64 (MinGW), linux-x64 (glibc 2.17) and
+  osx-arm64, with `-DLUA_USE_C89` (D33), `-ffp-contract=off` (arm64 would fuse multiply-adds and x64 not) and `-s`
+  (without it the DLL holds a hash of the folder it was built in). The output is the same bytes from any folder and
+  with CRLF sources (checked), so CI rebuilds it on Windows and fails if it differs from the committed libraries. A
+  determinism test hashes every number operation over 20,000 float pairs, nan and infinity patterns, hex numerals, `%a`
+  and `os.date` included, and runs on all three platforms.
+- **D38. LuaState** passes nil, booleans, integers (`int`), floats (`float`) and strings; a Lua string is read as UTF-8,
+  so bytes that aren't UTF-8 come back as U+FFFD; reading a table or a function throws until a task needs them.
+  Anything that can raise a Lua error runs in C under `lua_pcall` (`sandbox.c`): getting and setting globals, calling
+  one, registering a function, and pushing a C# function's results, which a C trampoline does after C# returns them in
+  a buffer. So Lua's `longjmp` never crosses a managed frame, even when a `__gc` fails during an allocation or `_G` has a
+  strict metatable. Errors carry Lua's traceback, and a chunk's name is given with `@`, so messages read
+  `war3map.lua:3:`. The state is a `SafeHandle`, freed by `Dispose` or, if forgotten, by the finalizer.
+- **D39. Addresses are the same every run.** Each state allocates from its own arena of 64 GB of address space,
+  aligned to its size and filled the same way every run (size classes, freed blocks reused last in first out), so an
+  object's offset in it is the same every run. Lua hashes an object by the low 32 bits of its address, which are the
+  offset's, so `pairs` visits table, function and coroutine keys in the same order, and `tostring` writes the offset
+  (16 hex digits, as Windows writes `%p`). A C function from the library is hashed and written by its place in the
+  library. The game's order isn't reproduced: the facts say it differs between machines. Only the address space is
+  reserved; memory is committed as it is used, and never given back to the system before the state is closed.
+- **D40. Facts not tested here.** The "Lua runtime" facts that measure Moonwell's or CSharp.lua's own Lua code on top of
+  these numbers (`Round(2.567, 2)`, `F2` and `F0` text, `Normalize`, `Wrap`, `Lerp`, vectors, rays, slides, bounces,
+  circle and wall hits, straight lines, distances away from the origin, easing ends but `InSine(0)`, `-7 / 2` and
+  `-7 % 2` as .NET, CoreSystem's integer forms): those libraries aren't part of this repository; the arithmetic under
+  them is tested, and their probes can be compared when a C# map runs here. The clock facts (`os.clock`'s steps,
+  `os.time` as the PC's seconds, `os.date` in local time, long calls not stopped, slow ticks made up): they are about
+  the real clock and the game loop, which belong to the world (W0-5); only `os.time` being an integer and `os.date`'s
+  options are tested. `math.random` sharing the game's generator: W0-5.

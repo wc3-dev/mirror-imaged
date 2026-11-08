@@ -4,8 +4,9 @@ using MirrorImaged.Lua;
 namespace MirrorImaged.Tests.Lua;
 
 /// <summary>
-/// The game's numbers, from the "Lua runtime" facts and the probes behind them (3.0.1.24371): every value is
-/// the game's, given as its float bits or as the game printed it with %.9g.
+/// The game's numbers, from the "Lua runtime" facts and the probes behind them (3.0.1.24371, docs/facts.md "Lua
+/// numbers"): each expected value is the game's, given as its float bits or as the game printed it with %.9g, except
+/// in <see cref="NotMeasuredInTheGame"/>, which checks what the model or plain Lua gives where nothing was measured.
 /// </summary>
 public sealed class LuaNumberTests : IDisposable
 {
@@ -100,7 +101,6 @@ public sealed class LuaNumberTests : IDisposable
     [InlineData("(1 / 0) * 0", "0x00000000")]
     [InlineData("(1 / 0) * 2", "0x7f800000")]
     [InlineData("(1 / 0) * 4", "0x80000000")]
-    [InlineData("f(0x7f7fffff) * 2", "0x7fffffff")]
     [InlineData("1e30 * 1e30", "0x00000000")]
     [InlineData("-1e30 * 1e30", "0x00000000")]
     [InlineData("1e20 * 1e20", "0x00000000")]
@@ -133,12 +133,8 @@ public sealed class LuaNumberTests : IDisposable
     [InlineData("tostring(math.sqrt(-1))", "0.0")]
     [InlineData("tostring(1 / 0)", "1.701412e+38")]
     [InlineData("tostring(0.1)", "0.1")]
-    [InlineData("tostring(1 / 3)", "0.3333333")]
-    [InlineData("tostring(12345678.0)", "1.234568e+07")]
-    [InlineData("tostring(0.000012)", "1.2e-05")]
-    [InlineData("tostring(math.huge)", "inf")]
-    [InlineData("tostring(-math.huge)", "-inf")]
     [InlineData("string.format('%.9g', 1 / 0)", "1.70141183e+38")]
+    [InlineData("string.format('%.9g', math.huge)", "inf")]
     [InlineData("string.format('%.9g', f(0x7f7fffff) * 2)", "nan")]
     [InlineData("string.format('%.9g', (1 / 0) * 2)", "inf")]
     [InlineData("string.format('%.9g', (1 / 0) * 4)", "-0")]
@@ -293,11 +289,6 @@ public sealed class LuaNumberTests : IDisposable
     public void Remainders(string x, string y, string game) => Assert.Equal(Expected(game), _lua.Bits(
         $"(function(x, y) local v = x % y if v ~= 0 and x * y < 0 then return v - y end return v end)({x}, {y})"));
 
-    [Theory]
-    [InlineData("7.2 % 0.1", "0x00000000")]
-    [InlineData("math.fmod(7.2, 0.1)", "0x00000000")]
-    [InlineData("5.5 % -2", "-0.5")]
-    public void LuaRemainders(string expression, string game) => Assert.Equal(Expected(game), _lua.Bits(expression));
 
     [Theory]
     [InlineData("math.ceil(0.0)", 1)]
@@ -306,7 +297,6 @@ public sealed class LuaNumberTests : IDisposable
     [InlineData("math.ceil(0.5)", 1)]
     [InlineData("math.ceil(-0.5)", 0)]
     [InlineData("math.ceil(1e-30)", 1)]
-    [InlineData("math.ceil(1.0)", 1)]
     [InlineData("math.ceil(-1.5)", -1)]
     [InlineData("math.floor(0.0)", 0)]
     [InlineData("math.floor(-1.5)", -2)]
@@ -328,6 +318,26 @@ public sealed class LuaNumberTests : IDisposable
     [InlineData("not pcall(function() return -(-2147483648 + 1) & 63 end)")]
     [InlineData("select(2, pcall(function() return -(-2147483648 + 1) & 63 end)):find('number has no integer representation') ~= nil")]
     public void IntegersWrap(string condition) => Assert.Equal(true, _lua.Value(condition));
+
+    [Fact]
+    public void ATimeInMillisecondsIsAFloat() =>
+        Assert.Equal("float", _lua.Value("math.type(os.time() * 1000 % 2147483648)"));
+
+    /// <summary>Not measured in the game: what the model gives (docs/decisions.md), or plain Lua 5.3.</summary>
+    [Theory]
+    [InlineData("bits(f(0x7f7fffff) * 2) == 0x7fffffff")]  // the game printed nan; its bits weren't read
+    [InlineData("math.fmod(7.2, 0.1) == 0")]  // the game's 7.2 % 0.1 was measured, its math.fmod not
+    [InlineData("5.5 % -2 == -0.5")]
+    [InlineData("math.ceil(1.0) == 1")]
+    [InlineData("tostring(1 / 3) == '0.3333333'")]
+    [InlineData("tostring(12345678.0) == '1.234568e+07'")]
+    [InlineData("tostring(0.000012) == '1.2e-05'")]
+    [InlineData("tostring(math.huge) == 'inf' and tostring(-math.huge) == '-inf'")]
+    [InlineData("tostring(f(0x7fffffff)) == 'nan' and tostring(f(-1)) == '-nan'")]
+    // inf and nan honour the format's flags, width and case, as the C library writes them
+    [InlineData("string.format('%10.3f|%-6g|%+g|% g|%010f', math.huge, math.huge, math.huge, math.huge, math.huge) == '       inf|inf   |+inf| inf|       inf'")]
+    [InlineData("string.format('%G|%E|%5.1f|%-5g|', math.huge, -math.huge, f(0x7fffffff), f(-1)) == 'INF|-INF|  nan|-nan |'")]
+    public void NotMeasuredInTheGame(string condition) => Assert.Equal(true, _lua.Value(condition));
 
     [Theory]
     [InlineData("0")]
