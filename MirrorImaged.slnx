@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MirrorImaged.Cli/MirrorImaged.Cli.csproj" />
+    <Project Path="src/MirrorImaged.Data/MirrorImaged.Data.csproj" />
+    <Project Path="src/MirrorImaged.Lua/MirrorImaged.Lua.csproj" />
+    <Project Path="src/MirrorImaged.Natives/MirrorImaged.Natives.csproj" />
+    <Project Path="src/MirrorImaged.World/MirrorImaged.World.csproj" />
+    <Project Path="src/MirrorImaged/MirrorImaged.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MirrorImaged.Tests/MirrorImaged.Tests.csproj" />
+  </Folder>
+</Solution>
