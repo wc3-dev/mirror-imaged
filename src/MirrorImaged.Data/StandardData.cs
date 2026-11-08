@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -119,6 +120,15 @@ public sealed partial class StandardData
     internal Dictionary<string, string> Hotkeys { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// The World Editor strings the game keeps (the locale's <c>ui/worldeditgamestrings.txt</c>) by key, any case: a
+    /// destructable's name is one (<c>WESTRING_DEST_BARREL</c>).
+    /// </summary>
+    internal Dictionary<string, string> EditorStrings { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Each destructable's pathing texture's size in cells, across and up, by its path as the tables write it, any case.</summary>
+    internal Dictionary<string, (int Across, int Up)> PathingSizes { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Reads the standard data from the game's files: <paramref name="file"/> gives a file's bytes by its path in the
     /// game's <c>War3.w3mod</c> (<c>units/unitdata.slk</c>, <c>_balance/custom_v1.w3mod/units/unitdata.slk</c>), or null
     /// when there is none, which is passed over. <paramref name="values"/> is the balance set the values come from and
@@ -185,6 +195,17 @@ public sealed partial class StandardData
             if (File(localized + path) is { } bytes)
                 foreach (Match entry in StringEntry().Matches(Encoding.UTF8.GetString(bytes)))
                     data.Strings.TryAdd(entry.Groups[1].Value, entry.Groups[2].Value);
+
+        foreach (var (name, keys) in Profile(localized + "ui/worldeditgamestrings.txt"))
+            if (name.Equals("WorldEditStrings", StringComparison.OrdinalIgnoreCase))
+                foreach (var (key, value) in keys) data.EditorStrings.TryAdd(key, Tables.Unquoted(value));
+
+        // A pathing texture's size is its TGA header's width and height, a cell a pixel.
+        var pathing = data.Fields[ObjectKind.Destructable].GetValueOrDefault(Ids.Of("bptx"));
+        foreach (var ((kind, _), standard) in data.Objects)
+            if (kind == ObjectKind.Destructable && pathing is not null && standard.Cell(pathing, 0) is { } texture && !data.PathingSizes.ContainsKey(texture)
+                && File(texture.Replace('\\', '/')) is { Length: >= 16 } tga)
+                data.PathingSizes[texture] = (BinaryPrimitives.ReadInt16LittleEndian(tga.AsSpan(12)), BinaryPrimitives.ReadInt16LittleEndian(tga.AsSpan(14)));
 
         // A hotkey is key='C', and in another language key:deDE='W' (or key:esES,itIT=...); the installed language's first.
         foreach (var (name, keys) in Profile("ui/miscui.txt"))

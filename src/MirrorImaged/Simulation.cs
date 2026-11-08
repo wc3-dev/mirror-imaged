@@ -54,6 +54,7 @@ public sealed partial class Simulation : IDisposable
         {
             var (users, computers, others) = Lineup(info, options);
             foreach (var file in data.Map.Unread) _game.Write("map", "left out, as it can't be read: " + file);
+            _natives.Place();
             foreach (var native in NativeMethods.OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())

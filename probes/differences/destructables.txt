@@ -1,0 +1,18 @@
+# Where MirrorImaged differs from the game's lines in expected/destructables.txt, in order, with why (decisions D121): a
+# line starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# A place of 0 less 0: the game's Lua gives 0.0 - 0 as -0.0 (D27's addition drops a zero operand, keeping the other's
+# sign), MirrorImaged's as 0.0. The place itself reads 0.000 in both. For the numbers' model (W1-10).
+- zero place 0.000 0.000 less 0 -0.0 name of nil true []
++ zero place 0.000 0.000 less 0 0.0 name of nil true []
+
+# GetLocationZ on a bridge's deck: the decks are measured in whole units, so most points read up to 0.5 off; between
+# the measured points (LT06 at 300) the blend of the four around (D255, Close).
+- deck YT16 32.000 -1280.000 286.5 277.5 255.0 247.1 198.8 158.2 288.9 0.0 0.0 0.0
++ deck YT16 32.000 -1280.000 287.0 278.0 255.0 247.0 199.0 158.0 289.0 0.0 0.0 0.0
+- deck LT06 -1280.000 32.000 274.2 274.2 0.0 0.0 0.0 0.0 269.3 251.2 250.3 243.5
++ deck LT06 -1280.000 32.000 274.0 274.0 0.0 0.0 0.0 0.0 269.0 251.0 250.0 243.8
+- deck killed 286.5 277.5 255.0 247.1 198.8 158.2 288.9 0.0 0.0 0.0
++ deck killed 287.0 278.0 255.0 247.0 199.0 158.0 289.0 0.0 0.0 0.0
+- deck restored 3 s 286.5 277.5 255.0 247.1 198.8 158.2 288.9 0.0 0.0 0.0
++ deck restored 3 s 287.0 278.0 255.0 247.0 199.0 158.0 289.0 0.0 0.0 0.0

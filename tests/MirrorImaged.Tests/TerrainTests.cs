@@ -50,6 +50,17 @@ public sealed class TerrainTests
         Assert.Equal(0, ground.Height(-256, 0));
     }
 
+    // game-facts: a bridge's deck stands on the ground beneath the water, not on its surface
+    [Fact]
+    public void The_ground_beneath_water_leaves_the_water_out()
+    {
+        var ground = Ground((2, 2, corner => (corner.IsWater, corner.WaterHeight, corner.Height) = (true, 1, -1)));
+
+        Assert.Equal(38.4f, ground.Height(0, 0), 3);
+        Assert.Equal(-128, ground.Ground(0, 0));
+        Assert.Equal(-64, ground.Ground(64, 0));
+    }
+
     // facts: a ramp corner reads 32 higher for each of the four tiles around it with a ramp corner one level higher:
     // 64 with one beside it, 32 with one only diagonal, 96 with an L of them
     [Theory]

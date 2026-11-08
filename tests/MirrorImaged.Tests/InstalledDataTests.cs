@@ -93,6 +93,41 @@ public sealed class InstalledDataTests
         Assert.Equal("24", Data.Constant("DayHours"));
     }
 
+    // probe destructables: the names GetDestructableName read, and the pathing textures whose sizes put each type on
+    // its grid
+    [InstallFact]
+    public void Destructables_read_their_names_and_pathing_textures()
+    {
+        string Name(string id) => Data.EditorString(Data.Object(ObjectKind.Destructable, Id(id))!.Text(Id("bnam"))!)!;
+
+        Assert.Equal(["Summer Tree Wall", "Barrel", "Long Stone Bridge", "Shimmering Portal"], new[] { "LTlt", "LTbr", "YT16", "OTsp" }.Select(Name));
+        Assert.Equal((4, 4), Data.PathingSize(Data.Object(ObjectKind.Destructable, Id("LTlt"))!.Text(Id("bptx"))!));
+        Assert.Equal((32, 18), Data.PathingSize(@"PathTextures\CityBridgeLarge0.tga"));
+        Assert.Equal((8, 2), Data.PathingSize(@"PathTextures\8x2Default.tga"));
+        Assert.Null(Data.Object(ObjectKind.Destructable, Id("OTsp"))!.Text(Id("bptx")));
+    }
+
+    // docs/upstream.md: War3Net refuses (1)SilverpineSprint's war3map.doo for a doodad state 14, which is read here
+    // (decisions D258)
+    [InstallFact]
+    public void SilverpineSprints_doodads_are_read()
+    {
+        using var storage = CascStorage.Open(GameInstall.Require());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".w3x");
+        File.WriteAllBytes(path, storage.Read("War3.w3mod:Maps/ForsakenKingdom/Scenario/(1)SilverpineSprint.w3x")!);
+        try
+        {
+            var map = MapArchive.Read(path);
+
+            Assert.Empty(map.Unread);
+            Assert.Contains(map.Files.Doodads!.Doodads, doodad => (int)doodad.State == 14);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     // game-facts, "Object data": oshm 350 in the base tables, 260 under custom_v0, 335 under custom_v1, 355 under
     // melee_v0; ebsh missing from custom_v0 and melee_v0, fapo from all three sets; and the probes data-sets-melee and
     // data-sets-tft
