@@ -8,7 +8,7 @@ namespace MirrorImaged.Data;
 /// (cliff level - 2) x 128); water, at its surface x 128 - 89.6, where that is above the ground, but in the map's
 /// outermost corners, which read the ground; a ramp corner 32 higher for each of the four tiles around it that has a
 /// ramp corner one cliff level higher. Inside a tile, the bilinear blend of its four corners. Bridges and other
-/// walkable destructables are not part of it.
+/// walkable destructables are not part of it: their decks stand on <see cref="Ground"/>.
 /// </summary>
 public sealed class Terrain
 {
@@ -16,13 +16,14 @@ public sealed class Terrain
 
     readonly int _width, _height;
     readonly float _left, _bottom;
-    readonly float[] _corners;
+    readonly float[] _corners, _ground;
 
     public Terrain(MapEnvironment environment)
     {
         (_width, _height, _left, _bottom) = ((int)environment.Width, (int)environment.Height, environment.Left, environment.Bottom);
         var tiles = environment.TerrainTiles;
         _corners = new float[tiles.Count];
+        _ground = new float[tiles.Count];
         for (var y = 0; y < _height; y++)
             for (var x = 0; x < _width; x++)
             {
@@ -34,6 +35,7 @@ public sealed class Terrain
                             if (HasRampAbove(tiles, tileX, tileY, corner.CliffLevel)) ground += 32;
                 var water = corner.WaterHeight * Tile - 89.6f;
                 var edge = x == 0 || y == 0 || x == _width - 1 || y == _height - 1;
+                _ground[y * _width + x] = ground;
                 _corners[y * _width + x] = corner.IsWater && !edge && water > ground ? water : ground;
             }
     }
@@ -42,11 +44,16 @@ public sealed class Terrain
     /// The ground's height at (<paramref name="x"/>, <paramref name="y"/>); a point off the map reads its nearest edge
     /// (inferred; W2-6 measures it).
     /// </summary>
-    public float Height(float x, float y)
+    public float Height(float x, float y) => Blend(_corners, x, y);
+
+    /// <summary>As <see cref="Height"/>, but the ground beneath any water, on which a bridge's deck stands (game-facts, "Units").</summary>
+    public float Ground(float x, float y) => Blend(_ground, x, y);
+
+    float Blend(float[] corners, float x, float y)
     {
         var (column, u) = Cell((x - _left) / Tile, _width);
         var (row, v) = Cell((y - _bottom) / Tile, _height);
-        float At(int dx, int dy) => _corners[(row + dy) * _width + column + dx];
+        float At(int dx, int dy) => corners[(row + dy) * _width + column + dx];
         return (float)((1 - v) * ((1 - u) * At(0, 0) + u * At(1, 0)) + v * ((1 - u) * At(0, 1) + u * At(1, 1)));
     }
 

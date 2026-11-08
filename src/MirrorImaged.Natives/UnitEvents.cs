@@ -32,11 +32,6 @@ public sealed partial class GameNatives
     public @event? TriggerRegisterPlayerUnitEvent(trigger? whichTrigger, player? whichPlayer, playerunitevent? whichPlayerUnitEvent, boolexpr? filter) =>
         whichPlayer is null ? null : RegisterUnit(whichTrigger, null, whichPlayer, whichPlayerUnitEvent);
 
-    /// <summary>Fires inside the unit's death, before its player-unit and unit events; destructables' come with them (W2-4).</summary>
-    [Native(Level.Exact, Fact = UnitsProbe)]
-    public @event? TriggerRegisterDeathEvent(trigger? whichTrigger, widget? whichWidget) =>
-        RegisterUnit(whichTrigger, whichWidget, null, Convert<widgetevent>(WidgetDeath));
-
     @event? RegisterUnit(trigger? t, widget? w, player? p, eventid? kind)
     {
         if (t is null || w is null && p is null || kind is null) return null;
@@ -70,10 +65,6 @@ public sealed partial class GameNatives
     /// <summary>The unit an event is about, in its widget death event too; nil outside a unit's event.</summary>
     [Native(Level.Exact, Fact = UnitsProbe)]
     public unit? GetTriggerUnit() => Current.Unit?.Unit;
-
-    /// <summary>The unit of a widget death event, seen as a widget (Lua's == holds with the unit); nil in its other events.</summary>
-    [Native(Level.Exact, Fact = UnitsProbe)]
-    public widget? GetTriggerWidget() => Response(WidgetDeath)?.Unit;
 
     /// <summary>The unit of a unit or player-unit death event; nil in the widget death event.</summary>
     [Native(Level.Exact, Fact = UnitsProbe)]

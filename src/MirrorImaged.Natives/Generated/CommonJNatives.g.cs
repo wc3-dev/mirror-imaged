@@ -115,90 +115,6 @@ public sealed partial class GameNatives
     public int BlzConvertColor(int a, int r, int g, int b) => throw new MissingNativeException("BlzConvertColor");
 
     [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructablePitchRoll(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation) => throw new MissingNativeException("BlzCreateDeadDestructablePitchRoll");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructablePitchRollWithColor(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, playercolor? color) => throw new MissingNativeException("BlzCreateDeadDestructablePitchRollWithColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableWithColor(int objectid, float x, float y, float face, float scale, int variation, playercolor? color) => throw new MissingNativeException("BlzCreateDeadDestructableWithColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableWithSkin(int objectid, float x, float y, float face, float scale, int variation, int skinId) => throw new MissingNativeException("BlzCreateDeadDestructableWithSkin");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableWithSkinColor(int objectid, float x, float y, float face, float scale, int variation, int skinId, playercolor? color) => throw new MissingNativeException("BlzCreateDeadDestructableWithSkinColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableWithSkinPitchRoll(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, int skinId) => throw new MissingNativeException("BlzCreateDeadDestructableWithSkinPitchRoll");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableWithSkinPitchRollColor(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, int skinId, playercolor? color) => throw new MissingNativeException("BlzCreateDeadDestructableWithSkinPitchRollColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableZPitchRoll(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation) => throw new MissingNativeException("BlzCreateDeadDestructableZPitchRoll");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableZPitchRollWithColor(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, playercolor? color) => throw new MissingNativeException("BlzCreateDeadDestructableZPitchRollWithColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableZWithColor(int objectid, float x, float y, float z, float face, float scale, int variation, playercolor? color) => throw new MissingNativeException("BlzCreateDeadDestructableZWithColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableZWithSkin(int objectid, float x, float y, float z, float face, float scale, int variation, int skinId) => throw new MissingNativeException("BlzCreateDeadDestructableZWithSkin");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableZWithSkinColor(int objectid, float x, float y, float z, float face, float scale, int variation, int skinId, playercolor? color) => throw new MissingNativeException("BlzCreateDeadDestructableZWithSkinColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableZWithSkinPitchRoll(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, int skinId) => throw new MissingNativeException("BlzCreateDeadDestructableZWithSkinPitchRoll");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDeadDestructableZWithSkinPitchRollColor(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, int skinId, playercolor? color) => throw new MissingNativeException("BlzCreateDeadDestructableZWithSkinPitchRollColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructablePitchRoll(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation) => throw new MissingNativeException("BlzCreateDestructablePitchRoll");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructablePitchRollWithColor(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, playercolor? color) => throw new MissingNativeException("BlzCreateDestructablePitchRollWithColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableWithColor(int objectid, float x, float y, float face, float scale, int variation, playercolor? color) => throw new MissingNativeException("BlzCreateDestructableWithColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableWithSkin(int objectid, float x, float y, float face, float scale, int variation, int skinId) => throw new MissingNativeException("BlzCreateDestructableWithSkin");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableWithSkinColor(int objectid, float x, float y, float face, float scale, int variation, int skinId, playercolor? color) => throw new MissingNativeException("BlzCreateDestructableWithSkinColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableWithSkinPitchRoll(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, int skinId) => throw new MissingNativeException("BlzCreateDestructableWithSkinPitchRoll");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableWithSkinPitchRollColor(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, int skinId, playercolor? color) => throw new MissingNativeException("BlzCreateDestructableWithSkinPitchRollColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableZPitchRoll(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation) => throw new MissingNativeException("BlzCreateDestructableZPitchRoll");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableZPitchRollWithColor(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, playercolor? color) => throw new MissingNativeException("BlzCreateDestructableZPitchRollWithColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableZWithColor(int objectid, float x, float y, float z, float face, float scale, int variation, playercolor? color) => throw new MissingNativeException("BlzCreateDestructableZWithColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableZWithSkin(int objectid, float x, float y, float z, float face, float scale, int variation, int skinId) => throw new MissingNativeException("BlzCreateDestructableZWithSkin");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableZWithSkinColor(int objectid, float x, float y, float z, float face, float scale, int variation, int skinId, playercolor? color) => throw new MissingNativeException("BlzCreateDestructableZWithSkinColor");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableZWithSkinPitchRoll(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, int skinId) => throw new MissingNativeException("BlzCreateDestructableZWithSkinPitchRoll");
-
-    [Native(Level.Missing)]
-    public destructable? BlzCreateDestructableZWithSkinPitchRollColor(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, int skinId, playercolor? color) => throw new MissingNativeException("BlzCreateDestructableZWithSkinPitchRollColor");
-
-    [Native(Level.Missing)]
     public framehandle? BlzCreateFrame(string? name, framehandle? owner, int priority, int createContext) => throw new MissingNativeException("BlzCreateFrame");
 
     [Native(Level.Missing)]
@@ -1231,19 +1147,7 @@ public sealed partial class GameNatives
     public commandbuttoneffect? CreateCommandButtonEffect(int abilityId, string? order) => throw new MissingNativeException("CreateCommandButtonEffect");
 
     [Native(Level.Missing)]
-    public destructable? CreateDeadDestructable(int objectid, float x, float y, float face, float scale, int variation) => throw new MissingNativeException("CreateDeadDestructable");
-
-    [Native(Level.Missing)]
-    public destructable? CreateDeadDestructableZ(int objectid, float x, float y, float z, float face, float scale, int variation) => throw new MissingNativeException("CreateDeadDestructableZ");
-
-    [Native(Level.Missing)]
     public defeatcondition? CreateDefeatCondition() => throw new MissingNativeException("CreateDefeatCondition");
-
-    [Native(Level.Missing)]
-    public destructable? CreateDestructable(int objectid, float x, float y, float face, float scale, int variation) => throw new MissingNativeException("CreateDestructable");
-
-    [Native(Level.Missing)]
-    public destructable? CreateDestructableZ(int objectid, float x, float y, float z, float face, float scale, int variation) => throw new MissingNativeException("CreateDestructableZ");
 
     [Native(Level.Missing)]
     public fogmodifier? CreateFogModifierRadius(player? forWhichPlayer, fogstate? whichState, float centerx, float centerY, float radius, bool useSharedVision, bool afterUnits) => throw new MissingNativeException("CreateFogModifierRadius");
@@ -1387,9 +1291,6 @@ public sealed partial class GameNatives
     public void DestroyUnitPool(unitpool? whichPool) => throw new MissingNativeException("DestroyUnitPool");
 
     [Native(Level.Missing)]
-    public void DestructableRestoreLife(destructable? d, float life, bool birth) => throw new MissingNativeException("DestructableRestoreLife");
-
-    [Native(Level.Missing)]
     public button? DialogAddButton(dialog? whichDialog, string? buttonText, int hotkey) => throw new MissingNativeException("DialogAddButton");
 
     [Native(Level.Missing)]
@@ -1457,9 +1358,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void EndThematicMusic() => throw new MissingNativeException("EndThematicMusic");
-
-    [Native(Level.Missing)]
-    public void EnumDestructablesInRect(rect? r, boolexpr? filter, Action? actionFunc) => throw new MissingNativeException("EnumDestructablesInRect");
 
     [Native(Level.Missing)]
     public void EnumItemsInRect(rect? r, boolexpr? filter, Action? actionFunc) => throw new MissingNativeException("EnumItemsInRect");
@@ -1558,27 +1456,6 @@ public sealed partial class GameNatives
     public gamedifficulty? GetDefaultDifficulty() => throw new MissingNativeException("GetDefaultDifficulty");
 
     [Native(Level.Missing)]
-    public float GetDestructableLife(destructable? d) => throw new MissingNativeException("GetDestructableLife");
-
-    [Native(Level.Missing)]
-    public float GetDestructableMaxLife(destructable? d) => throw new MissingNativeException("GetDestructableMaxLife");
-
-    [Native(Level.Missing)]
-    public string? GetDestructableName(destructable? d) => throw new MissingNativeException("GetDestructableName");
-
-    [Native(Level.Missing)]
-    public float GetDestructableOccluderHeight(destructable? d) => throw new MissingNativeException("GetDestructableOccluderHeight");
-
-    [Native(Level.Missing)]
-    public int GetDestructableTypeId(destructable? d) => throw new MissingNativeException("GetDestructableTypeId");
-
-    [Native(Level.Missing)]
-    public float GetDestructableX(destructable? d) => throw new MissingNativeException("GetDestructableX");
-
-    [Native(Level.Missing)]
-    public float GetDestructableY(destructable? d) => throw new MissingNativeException("GetDestructableY");
-
-    [Native(Level.Missing)]
     public unit? GetDetectedUnit() => throw new MissingNativeException("GetDetectedUnit");
 
     [Native(Level.Missing)]
@@ -1589,9 +1466,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public unit? GetEnteringUnit() => throw new MissingNativeException("GetEnteringUnit");
-
-    [Native(Level.Missing)]
-    public destructable? GetEnumDestructable() => throw new MissingNativeException("GetEnumDestructable");
 
     [Native(Level.Missing)]
     public item? GetEnumItem() => throw new MissingNativeException("GetEnumItem");
@@ -1622,9 +1496,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public unitstate? GetEventUnitState() => throw new MissingNativeException("GetEventUnitState");
-
-    [Native(Level.Missing)]
-    public destructable? GetFilterDestructable() => throw new MissingNativeException("GetFilterDestructable");
 
     [Native(Level.Missing)]
     public item? GetFilterItem() => throw new MissingNativeException("GetFilterItem");
@@ -1721,15 +1592,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public unit? GetLoadedUnit() => throw new MissingNativeException("GetLoadedUnit");
-
-    [Native(Level.Missing)]
-    public float GetLocationX(location? whichLocation) => throw new MissingNativeException("GetLocationX");
-
-    [Native(Level.Missing)]
-    public float GetLocationY(location? whichLocation) => throw new MissingNativeException("GetLocationY");
-
-    [Native(Level.Missing)]
-    public float GetLocationZ(location? whichLocation) => throw new MissingNativeException("GetLocationZ");
 
     [Native(Level.Missing)]
     public item? GetManipulatedItem() => throw new MissingNativeException("GetManipulatedItem");
@@ -1903,9 +1765,6 @@ public sealed partial class GameNatives
     public unit? GetTransportUnit() => throw new MissingNativeException("GetTransportUnit");
 
     [Native(Level.Missing)]
-    public destructable? GetTriggerDestructable() => throw new MissingNativeException("GetTriggerDestructable");
-
-    [Native(Level.Missing)]
     public region? GetTriggeringRegion() => throw new MissingNativeException("GetTriggeringRegion");
 
     [Native(Level.Missing)]
@@ -2012,9 +1871,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public bool IsCineFilterDisplayed() => throw new MissingNativeException("IsCineFilterDisplayed");
-
-    [Native(Level.Missing)]
-    public bool IsDestructableInvulnerable(destructable? d) => throw new MissingNativeException("IsDestructableInvulnerable");
 
     [Native(Level.Missing)]
     public bool IsFoggedToPlayer(float x, float y, player? whichPlayer) => throw new MissingNativeException("IsFoggedToPlayer");
@@ -2233,9 +2089,6 @@ public sealed partial class GameNatives
     public void ItemPoolRemoveItemType(itempool? whichItemPool, int itemId) => throw new MissingNativeException("ItemPoolRemoveItemType");
 
     [Native(Level.Missing)]
-    public void KillDestructable(destructable? d) => throw new MissingNativeException("KillDestructable");
-
-    [Native(Level.Missing)]
     public void KillSoundWhenDone(sound? soundHandle) => throw new MissingNativeException("KillSoundWhenDone");
 
     [Native(Level.Missing)]
@@ -2308,16 +2161,10 @@ public sealed partial class GameNatives
     public void LoadGame(string? saveFileName, bool doScoreScreen) => throw new MissingNativeException("LoadGame");
 
     [Native(Level.Missing)]
-    public location? Location(float x, float y) => throw new MissingNativeException("Location");
-
-    [Native(Level.Missing)]
     public bool MoveLightning(lightning? whichBolt, bool checkVisibility, float x1, float y1, float x2, float y2) => throw new MissingNativeException("MoveLightning");
 
     [Native(Level.Missing)]
     public bool MoveLightningEx(lightning? whichBolt, bool checkVisibility, float x1, float y1, float z1, float x2, float y2, float z2) => throw new MissingNativeException("MoveLightningEx");
-
-    [Native(Level.Missing)]
-    public void MoveLocation(location? whichLocation, float newX, float newY) => throw new MissingNativeException("MoveLocation");
 
     [Native(Level.Missing)]
     public void MoveRectTo(rect? whichRect, float newCenterX, float newCenterY) => throw new MissingNativeException("MoveRectTo");
@@ -2479,13 +2326,7 @@ public sealed partial class GameNatives
     public void QuestSetTitle(quest? whichQuest, string? title) => throw new MissingNativeException("QuestSetTitle");
 
     [Native(Level.Missing)]
-    public void QueueDestructableAnimation(destructable? d, string? whichAnimation) => throw new MissingNativeException("QueueDestructableAnimation");
-
-    [Native(Level.Missing)]
     public void QueueUnitAnimation(unit? whichUnit, string? whichAnimation) => throw new MissingNativeException("QueueUnitAnimation");
-
-    [Native(Level.Missing)]
-    public rect? Rect(float minx, float miny, float maxx, float maxy) => throw new MissingNativeException("Rect");
 
     [Native(Level.Missing)]
     public rect? RectFromLoc(location? min, location? max) => throw new MissingNativeException("RectFromLoc");
@@ -2521,9 +2362,6 @@ public sealed partial class GameNatives
     public void RemoveAllGuardPositions(player? num) => throw new MissingNativeException("RemoveAllGuardPositions");
 
     [Native(Level.Missing)]
-    public void RemoveDestructable(destructable? d) => throw new MissingNativeException("RemoveDestructable");
-
-    [Native(Level.Missing)]
     public void RemoveGuardPosition(unit? hUnit) => throw new MissingNativeException("RemoveGuardPosition");
 
     [Native(Level.Missing)]
@@ -2534,12 +2372,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void RemoveItemFromStock(unit? whichUnit, int itemId) => throw new MissingNativeException("RemoveItemFromStock");
-
-    [Native(Level.Missing)]
-    public void RemoveLocation(location? whichLocation) => throw new MissingNativeException("RemoveLocation");
-
-    [Native(Level.Missing)]
-    public void RemoveRect(rect? whichRect) => throw new MissingNativeException("RemoveRect");
 
     [Native(Level.Missing)]
     public void RemoveRegion(region? whichRegion) => throw new MissingNativeException("RemoveRegion");
@@ -2671,46 +2503,10 @@ public sealed partial class GameNatives
     public void SetDefaultDifficulty(gamedifficulty? g) => throw new MissingNativeException("SetDefaultDifficulty");
 
     [Native(Level.Missing)]
-    public void SetDestructableAnimation(destructable? d, string? whichAnimation) => throw new MissingNativeException("SetDestructableAnimation");
-
-    [Native(Level.Missing)]
-    public void SetDestructableAnimationSpeed(destructable? d, float speedFactor) => throw new MissingNativeException("SetDestructableAnimationSpeed");
-
-    [Native(Level.Missing)]
-    public void SetDestructableColor(destructable? d, playercolor? color) => throw new MissingNativeException("SetDestructableColor");
-
-    [Native(Level.Missing)]
-    public void SetDestructableInvulnerable(destructable? d, bool flag) => throw new MissingNativeException("SetDestructableInvulnerable");
-
-    [Native(Level.Missing)]
-    public void SetDestructableLife(destructable? d, float life) => throw new MissingNativeException("SetDestructableLife");
-
-    [Native(Level.Missing)]
-    public void SetDestructableMaxLife(destructable? d, float max) => throw new MissingNativeException("SetDestructableMaxLife");
-
-    [Native(Level.Missing)]
-    public void SetDestructableOccluderHeight(destructable? d, float height) => throw new MissingNativeException("SetDestructableOccluderHeight");
-
-    [Native(Level.Missing)]
-    public void SetDestructableVertexColor(destructable? whichDestructable, int red, int green, int blue, int alpha) => throw new MissingNativeException("SetDestructableVertexColor");
-
-    [Native(Level.Missing)]
     public bool SetDialogueSpeakerNameKey(sound? soundHandle, string? speakerName) => throw new MissingNativeException("SetDialogueSpeakerNameKey");
 
     [Native(Level.Missing)]
     public bool SetDialogueTextKey(sound? soundHandle, string? dialogueText) => throw new MissingNativeException("SetDialogueTextKey");
-
-    [Native(Level.Missing)]
-    public void SetDoodadAnimation(float x, float y, float radius, int doodadID, bool nearestOnly, string? animName, bool animRandom) => throw new MissingNativeException("SetDoodadAnimation");
-
-    [Native(Level.Missing)]
-    public void SetDoodadAnimationRect(rect? r, int doodadID, string? animName, bool animRandom) => throw new MissingNativeException("SetDoodadAnimationRect");
-
-    [Native(Level.Missing)]
-    public void SetDoodadColor(float x, float y, float radius, int doodadID, bool nearestOnly, playercolor? whichColor) => throw new MissingNativeException("SetDoodadColor");
-
-    [Native(Level.Missing)]
-    public void SetDoodadColorRect(rect? r, int doodadID, playercolor? whichColor) => throw new MissingNativeException("SetDoodadColorRect");
 
     [Native(Level.Missing)]
     public void SetEdCinematicAvailable(int campaignNumber, bool available) => throw new MissingNativeException("SetEdCinematicAvailable");
@@ -3005,9 +2801,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SetUnitUseFood(unit? whichUnit, bool useFood) => throw new MissingNativeException("SetUnitUseFood");
-
-    [Native(Level.Missing)]
-    public void ShowDestructable(destructable? d, bool flag) => throw new MissingNativeException("ShowDestructable");
 
     [Native(Level.Missing)]
     public void ShowImage(image? whichImage, bool flag) => throw new MissingNativeException("ShowImage");

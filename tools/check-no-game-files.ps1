@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 # .NET resolves a relative path against its own current directory, not PowerShell's location.
 $Path = Convert-Path -LiteralPath $Path
 
-$extensions = '.w3x', '.w3m', '.w3n', '.mpq', '.mdx', '.mdl', '.blp', '.dds', '.slk', '.w3e', '.doo',
+$extensions = '.w3x', '.w3m', '.w3n', '.mpq', '.mdx', '.mdl', '.blp', '.dds', '.tga', '.slk', '.w3e', '.doo',
     '.wav', '.mp3', '.flac', '.ogg'
 $names = 'common.j', 'blizzard.j', 'common.ai'
 # HM3W is the header a map puts before its MPQ archive.
