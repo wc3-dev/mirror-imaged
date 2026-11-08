@@ -33,3 +33,21 @@ jobs:
 
       - name: Test
         run: dotnet test MirrorImaged.slnx --no-build --filter "Needs!=Game"
+
+  # The Lua library is committed for every platform; rebuilding it from native/ must give the same bytes.
+  native:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.17.0
+
+      - name: Rebuild the Lua library and compare
+        shell: pwsh
+        run: |
+          ./native/build.ps1
+          git diff --exit-code --stat -- src/MirrorImaged.Lua/runtimes

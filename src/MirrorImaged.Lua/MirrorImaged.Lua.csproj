@@ -1,2 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- Built by native/build.ps1 and committed, so a plain dotnet build needs no zig. -->
+  <ItemGroup>
+    <None Include="runtimes\**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes" />
+  </ItemGroup>
+
 </Project>
