@@ -58,6 +58,16 @@ Parallel lanes, to keep merges painless:
 
 - Handle ids and `GetHandleId`, `tostring` of a handle naming the declared type, argument type errors on a handle of
   another declared type (facts, "Handles and identity"); a Lua error's message starting `war3map.lua:N: `.
+- Left by W1-2 (D72, D73; MirrorImaged's facts "Triggers and threads"): `==` holds between different handles with the
+  same id, whatever their types (`GetTriggerEventId()` with id 4 equals `ConvertPlayerColor(4)`); `Condition(nil)` and
+  `Filter(nil)` are one handle (which also fixes `And(x, Condition(nil))`); after `DestroyCondition` a new condition
+  ran in the destroyed one's place (the probe saw `ran removed`; id reuse inferred). Then `GetTriggerEventId`,
+  `Condition`, `Filter`, `And`, `TriggerEvaluate`, `TriggerRemoveCondition` and `DestroyCondition` can become Exact.
+  Choose knowingly whether `__eq` compares the key (D63) or the game id: a stale handle equal to a new one that reused
+  its id is what the game seems to do.
+- Note the C side still calls the handle key "id" (`native/sandbox.c`, `Native.cs`): rename it when adding the game id.
+- Every native's argument check (D49, D80): a native given nil where it takes a handle, a number for a string, and so
+  on, as the game reports it.
 
 ## W1-8 Probes compared with the game
 
@@ -78,7 +88,14 @@ Needs W1-5 (the probes write through Preload) and W0-4's runner.
   `Asin`, `Acos` and `Atan2` natives need their own domain check (their Exact rows will catch it).
 - W1-2's probes: a periodic trigger event's expiry ran before a timer started later that fell due at the same moment
   (MirrorImaged keeps queue order, D45).
-- Every probe's raw game lines live in `probes/expected/<probe>.txt`; the comparison reads them from there.
+- Every probe's raw game lines live in `probes/expected/<probe>.txt`; the comparison reads them from there. Lines that
+  vary from run to run (W1-2's wait lengths, D71) get a tolerance or are skipped, said in the expected file.
+- W1-2's two measured cases on `TriggerRegisterTimerEvent` (probe `triggers`: the tie at 3.0, the periodic event ran
+  before the timer; `triggers-2`: `periodic zero in 0.1 s` gave 10, MirrorImaged 9) settle its level and the two unit
+  tests that stepped around them (`TriggerTests.cs` 1.1 s and 0.105 s). The trigger probes' 1000 s clock reads
+  (game 0.6000, 0.5001, 1.2501) are evidence for D45's elapsed model.
+- The runner also saves a copy of each account's `Campaigns\*\Campaigns.w3v` before a run, by the same never-overwrite
+  rule as replays (D59), since a game started by a probe loads and rewrites the saved game caches.
 - This closes wave 0's "one probe matches the game".
 
 ## W1-9 Player and game events, filters, the game's end
@@ -99,6 +116,11 @@ Needs W1-2 and W1-4. Decisions D140-D149. What W1-4 left for after the triggers 
 - A probe with a computer slot and a named slot, to settle D91-D93's inferred defaults (a computer's alliances, placed
   state, handicaps, race when selectable, name from `war3map.w3i`, an empty slot's controller), and the time of day
   read back at once against later (the facts' 11-05 "7 reads 6.999999" against the probe's exact 7).
+- From W1-2 (D76): the time-of-day events hook is `_stateEvents`, fired with `Fire` and id 3; MirrorImaged's facts
+  on which set fired the event (at 10, the first 12) are inferred, since the probe logged only the value read inside
+  the event — the probe here logs which set fired. `TriggerRegisterGameStateEvent` becomes Exact here.
+- `TriggerRegisterGameEvent` and its events, and `BlzTriggerInterrupt`/`BlzTriggerIsRunning` if W1-2's fix round
+  didn't add them.
 
 ## W1-7 JASS maps
 
