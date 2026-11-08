@@ -1,0 +1,8 @@
+# Where MirrorImaged differs from the game's lines in expected/handles-2.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# A destroyed handle's id is never given again here; the game gives it again (D111; docs/tasks/later.md, wave 10).
+- new c1 c2 c3, 1 other
++ new 4 other
+- new h1 h2 h3, 1 other
++ new 4 other

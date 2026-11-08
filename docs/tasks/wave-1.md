@@ -173,6 +173,8 @@ Needs W1-8 (part 1, the comparison). Decisions D150-D159. W1-8 split off this pa
   effects (D144) and the time-of-day read-back drift (D149) are in W1-8's list above; settle them here if W1-8 didn't.
 - W1-6's differing-by-decision lines (listed under W1-8) go in `probes/differences/<probe>.txt` (D121), not the
   expected files, which stay the game's raw lines.
+- From W1-6's review: probe a condition place taken twice (c1 destroyed, c2 takes its place, c2 destroyed, c3 takes
+  it): in the model c1, c2 and c3 all run c3's function, and destroying the stale c1 frees c3's place (D115).
 - Differences with no task yet, to accept against A6 or plan, in `docs/tasks/later.md` (wave 10): R2S/R2SW from 2^31
   (D84), S2R past the float range (D83), StringHash/SubString on non-UTF-8 bytes (D82, D38), the random generator
   (D46, D86) incl. `GetRandomReal(3e38, -3e38)`'s tiny negatives.

@@ -189,10 +189,11 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   `__name` is the type, so `tostring` writes `timer: <address>`: the facts measure that it names the type the
   returning native declares. While Lua holds it, the same handle as the same type is the same userdata (a weak table
   per type), so `==` and table keys work (`GetLocalPlayer() == Player(0)`); as another type it is another userdata, as
-  the facts measure for `unit` and `widget`. One Lua let go of is made again at a new address next time; whether the
-  game keeps it is not measured. Its place, so `pairs` and `tostring`, is the same every run (D39). An argument's
+  the facts measure for `unit` and `widget`. One Lua let go of is made again at a new address next time, as the game
+  does (measured since: D112). Its place, so `pairs` and `tostring`, is the same every run (D39). An argument's
   declared type must be the parameter's or below it, else Lua's `bad argument #1 to 'X' (timer expected, got
-  player)`, as the facts measure for `GetUnitTypeId`; a destroyed handle reads as null to the natives.
+  player)`, as the facts measure for `GetUnitTypeId` (the message replaced by D113: no `got`); a destroyed handle
+  reads as null to the natives (but a destroyed `Condition` or `Filter`, D115). `==` is D72's, then D112's.
 - **D42. A Lua function given to C#** becomes a reference in the registry, made by `sandbox.c`'s trampoline before C#
   runs, since C# must not allocate in Lua there. It is let go of when the C# function returns, unless C# keeps it
   (`LuaFunction.Keep`, then `Dispose`). A native's `code` (D20) is a delegate whose target is the kept function's
@@ -249,7 +250,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   D86: from the first bound up by the bounds' distance).
 - **D47. Handle ids** count up from 0x100000, the first agent id the game is said to give (claim), and are never
   reused: the game's reuse isn't measured (facts, "Handles and identity"). The 28 players, slots 0 to 27 (fact), are
-  made first. `GetHandleId` waits for wave 1, with the rest of the core.
+  made first. `GetHandleId` waits for wave 1, with the rest of the core. (Measured since, and kept: D110, D111.)
 - **D48. The run's log** has an entry for each `print`, each text shown to a player, whichever player, and each Lua
   error, as `<seconds to 3 places> <source>: <text>`, the source `print`, `player <n>` or `error`; text of several
   lines stays one entry with that before each line, so every line printed reads on its own. An error's traceback is
@@ -262,7 +263,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   they are. An integer parameter takes a whole float (fact) and refuses another with Lua's "number has no integer
   representation"; a real takes an integer; a boolean is Lua's truth; a string, handle or code takes nil as null (for
   a string, replaced by D80: nil is refused);
-  anything else, a table or a coroutine too, is Lua's `bad argument #n to 'Name' (<type> expected, got <type>)`. A
+  anything else, a table or a coroutine too, is Lua's `bad argument #n to 'Name' (<type> expected, got <type>)`
+  (replaced by D113 for handles, functions, numeral strings and missing arguments). A
   handle is returned as the native's declared type. The game's own Lua functions, Close: `print`, joining `tostring`
   of each argument with tabs, as Lua's does; `FourCC` (facts), a string's bytes big-endian (an object id for 4; other
   lengths not measured); and `__jarray(default)`, which World Editor's scripts make each array variable with
@@ -345,22 +347,25 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   after the natives and before the game's Lua functions and blizzard.j. Not measured: whether the game's are plain
   globals a script can change, as they are here.
 - **D63. Every handle has a key, and Lua's handles hold it.** A handle's key is its own in its game, given when it is
-  made, whatever its type, and never given twice; it is not its id, the number the game shows (`GetHandleId`, W1-6).
-  The userdata Lua holds is made from the key and the type the handle is seen as (`LuaHandle(Type, Key)`; D41's "its
-  id" is now its key): the same key as the same type is the same userdata, as another type another, and `tostring`
-  and the metatable follow the type. A handle passed back is found by its key, so one seen as a parent type, as
-  `GetTriggerEventId`'s `eventid` will give `gameevent`, `limitop` and the other event types, is still found, and
-  `gameevent` 0 and `limitop` 0, both eventids standing for 0, are two handles; a handle that isn't of the parameter's
-  type is refused with D49's bad argument, as the type Lua sees is. Keying by id and type, as the first version did,
-  missed a handle seen as its parent, and an id alone is ambiguous between a converted value and an agent.
+  made, whatever its type, and never given twice; it is not its id, the number the game shows (`GetHandleId`, W1-6). The
+  userdata Lua holds is made from the key and the type the handle is seen as (`LuaHandle(Type, Key)`; D41's "its id" is
+  now its key; D112 adds the id for `==`): the same key as the same type is the same userdata, as another type another,
+  and `tostring` and the metatable follow the type. A handle passed back is found by its key, so one seen as a parent
+  type, as `GetTriggerEventId`'s `eventid` will give `gameevent`, `limitop` and the other event types, is still found,
+  and `gameevent` 0 and `limitop` 0, both eventids standing for 0, are two handles; a handle that isn't of the
+  parameter's type is refused with D49's bad argument, as the type Lua sees is. Keying by id and type, as the first
+  version did, missed a handle seen as its parent, and an id alone is ambiguous between a converted value and an agent.
 - **D64. A Convert native gives the handle standing for its value:** one object per type and value, made the first
   time and kept, whose id is the value, with a key of its own and no game id, so the agents' ids are as before (D47).
   So the same value gives the same userdata and `==` holds, and the same value as another type is another handle
-  (`ConvertRace(0) ~= ConvertPlayerColor(0)`). All 88 are Close. `ConvertPlayerColor` and `ConvertRace` (facts:
+  (`ConvertRace(0) ~= ConvertPlayerColor(0)`; since D112 `==` compares ids, so they are equal, as in the game, and
+  `rawequal` tells them apart). All 88 are Close. `ConvertPlayerColor` and `ConvertRace` (facts:
   `GetPlayerColor` equals `ConvertPlayerColor(n)` and `GetPlayerRace` `RACE_*` with `==`), and `ConvertAttackType`,
   `ConvertDamageType` and `ConvertWeaponType` (the Moonwell.Damage gate's types, made once and compared with `==`)
   become Exact in the tasks that add those getters, which the facts compare them with. Not measured: `GetHandleId` of
-  one (said to be the value; W1-6), and a value common.j doesn't name, which gives a handle like any other.
+  one (said to be the value; W1-6), and a value common.j doesn't name, which gives a handle like any other. (Since
+  measured, probe `handles`: the id is the value, a value common.j doesn't name too, and none is taken, D110; and
+  `ConvertGameEvent` and `ConvertLimitOp` are Exact, D115.)
 - **D65. blizzard.j is transpiled at run time** from the install's `War3.w3mod:scripts/blizzard.j` (the root spells it
   `Scripts/Blizzard.j`; its lookup ignores case, D24), with `common.j` registered first for the natives' return types,
   by the upstream `War3Net.CodeAnalysis.Transpilers` 6.1.1 from nuget.org, rendered by its CSharp.lua with the default
@@ -447,7 +452,7 @@ in `probes/expected`.
   measures; `rawequal` stays false (D41). Called straight from the metatable with anything but two handles, it answers
   false. The game's `==` also holds between different handles with the same id (`GetTriggerEventId()` with id 4 `==`
   `ConvertPlayerColor(4)`; `Condition(nil) == Filter(nil)`), which needs the id in the userdata: left to W1-6
-  (`docs/tasks/wave-1.md`), so `GetTriggerEventId`, `Condition` and `Filter` are Close until then.
+  (`docs/tasks/wave-1.md`), so `GetTriggerEventId`, `Condition` and `Filter` are Close until then. (Replaced by D112.)
 - **D73. Boolexprs:** `And` and `Or` run their second operand only when needed; a nil operand, `Not(nil)` and a nil
   condition are false; a destroyed `Condition` or `Filter` fails without running, while a destroyed `And`, `Or` or `Not`
   still runs. `Condition(nil)` and `Filter(nil)` each give one handle every call, which passes as a trigger's own
@@ -456,6 +461,7 @@ in `probes/expected`.
   condition destroyed while a trigger had it, then a new one added and removed, still ran the new one through the old
   one's place (`ran removed`; handle id reuse inferred), which isn't modelled: `TriggerAddCondition`,
   `TriggerRemoveCondition`, `DestroyCondition` and `TriggerEvaluate` are Close for it, left to W1-6 with the ids.
+  (Measured since: not id reuse but the condition's place, D115; the nil handle is D114.)
 - **D74. A run takes the trigger's actions as it starts** (facts), so an action removed while a run goes on, by
   `TriggerRemoveAction`, `TriggerClearActions` or `DestroyTrigger`, is let go of only once the trigger's last running
   thread has ended. `DestroyTrigger` lets go of its events too and lets a waiting run go on: the claim that it breaks
@@ -529,7 +535,8 @@ functions before it was written.
   for a number below 0 whose text passes 255 bytes: the game closes (0xC0000409, twice), which a run can't copy, so
   the text is cut as above 0 (replaced by D122: the run stops there, as the game closes).
 - **D85. The hashtable natives** keep each key's integer, real, boolean, string and handle apart, as measured; a
-  `Save*Handle` saves nothing and gives false for a null or destroyed handle, and saves a Convert native's value but
+  `Save*Handle` saves nothing and gives false for a null or destroyed handle (but a destroyed `Condition` or `Filter`,
+  which stays in the game, so it is saved and loads, D115), and saves a Convert native's value but
   gives false, as for `FOG_OF_WAR_MASKED` (a handle made by a native that makes objects gave true); a handle destroyed
   after its save loads as null; a save to a destroyed table saves nothing and gives false (not measured: from Lua a
   destroyed table reads as null, D41, which was). `FlushParentHashtable` destroys the table and gives its place back
@@ -734,6 +741,85 @@ measured and say so where not.
   the 255-cache limit (a claim) isn't modelled. `Documents` isn't thread-safe: one run at a time uses it.
 - **D105. After W1-5,** with W1-2, W1-3 and W1-4 merged first: 112 Exact, 276 Close, 11 Recorded, 1,436 Missing.
 
+### Handles and errors (W1-6)
+
+The measurements are four probes, `probes/handles.lua`, `handles-2.lua`, `handles-3.lua` and `arguments.lua`, in
+`docs/facts.md`, "Handles and errors", with their lines in `probes/expected`.
+
+- **D110. Ids as the game gives them, but for where they start and their reuse.** Every handle a native makes takes the
+  next id, whatever its type, a trigger's actions, conditions and events too; a Convert handle's id is its value and it
+  takes none; `GetHandleId` of nil or of nothing is 0, and of a destroyed handle its id, which the Lua handle holds (the
+  binding gives `GetHandleId`, the one native taking any `handle`, a stand-in with the id, as a destroyed handle reads
+  as null to the natives, D41). All measured. Not matched, so `GetHandleId` is Close: where the ids start. The game
+  makes one handle before blizzard.j's globals (0x100001 on) and each player when first asked for, it seems
+  (`Player(0)` in `config` at 0x100008, `Player(25)` next, then 1 to 24, 26 and 27 later); here the 28 players are made
+  first (D47), as other natives read them before the script asks, and the game's own handles aren't known; left to
+  wave 6 (`docs/tasks/later.md`). Ids are `int`, from 0x100000 up, which a map making a thousand handles a second would
+  pass in 24 days. The probe lines with raw ids differ from MirrorImaged by this decision (W1-8's list,
+  `docs/tasks/wave-1.md`).
+- **D111. A destroyed handle's id is never given again.** The game gives it again once the handle is destroyed and Lua
+  has collected every userdata of it, 0.1 to 0.2 s later, the last freed first, with another id, not found, freed with
+  some batches (facts). Not modelled: when Lua collects can't match the game's collector (the allocator and the
+  sizes differ, D39), so a model would only move the ids by a guess, and it needs the userdata counted from `__gc` into
+  C#. What a map can see of it doesn't change: as long as Lua holds a destroyed handle, its id isn't given again, here
+  or in the game, so a stale handle never equals a new one, and `==` by id (D112) is safe. A map that keeps data under
+  `GetHandleId` and forgets to remove it doesn't get it back for a new handle here, as it may in the game. Left to
+  wave 10 (`docs/tasks/later.md`); the probe lines it changes are in W1-8's list (`docs/tasks/wave-1.md`).
+- **D112. `==` compares the game's ids.** A Lua handle holds its key (D63), its game id and whether its declared type is
+  an agent (`LuaHandle(Type, Key, Id, Agent)`, sandbox.c's `Handle`); every type's `__eq` compares the ids, whatever
+  the types (`GetTriggerEventId()` of id 4 `==` `ConvertPlayerColor(4)`, `ConvertRace(1) == ConvertPlayerColor(1)`,
+  `ConvertPlayerColor(n) == t`), and an agent's refuses a second operand that isn't an agent with Lua's `bad argument #2
+  to '__eq' (agent expected)` at the comparing line (`t == ConvertPlayerColor(n)`, `Player(0) == RACE_HUMAN`), as
+  measured; Lua calls the first operand's. The metatables read as `false` through `getmetatable` (`__metatable`), as
+  the game's, so `__eq` can't be called with anything else; it still checks its operands. Keys stay the identity: the
+  same key as the same type is the same userdata, so a table key, and an equal handle of another type is another key,
+  as measured; a handle Lua collected comes back as a new userdata, as measured. This replaces D72; the userdata grew,
+  which moved no address `LuaDeterminismTests` pins.
+- **D113. Arguments are checked as the game reports them** (probe `arguments`): a handle or function parameter takes nil
+  and a missing argument as null and refuses anything else with `bad argument #n to 'X' (<type> expected)`, with no
+  `got`, the type named as `common.j` spells it (`equipmentType`) and `function` for code; a number parameter reads a
+  string as Lua's `luaL_checkinteger` and `luaL_checknumber` do, with Lua's own reader (`LuaState.ToNumber`, sandbox.c's
+  `mirror_tonumber` over `luaO_str2num`), so `"0x10"` is 16 and `"1.5"` has no integer representation; a missing
+  argument to a number or string parameter is `got no value`; a boolean is Lua's truth, a missing one false. Lua's own
+  `got <type>` names a handle's declared type (`got timer`). Measured on `TimerGetTimeout`, `GetHandleId`,
+  `TriggerRegisterVariableEvent`, `I2S`, `R2S`, `StringLength`, `TriggerWaitOnSleeps`, `TriggerAddAction`, `Condition`
+  and `TimerStart`; that every native binds alike is inferred, as in D80. `math.random` takes numeral strings too, as
+  Lua's does; `math.randomseed` still refuses them (Lua's takes them). Not matched, not measured: Lua's own `got` names
+  any value whose metatable has a string `__name`, so the game's `I2S(setmetatable({}, {__name = "x"}))` would say
+  `got x`; here a table is `got table`.
+- **D114. `Condition(nil)` and `Filter(nil)` are one handle in the game:** here two, `conditionfunc` and `filterfunc`,
+  made by the first call of either with one id, so `==` holds, `rawequal` doesn't and the second takes no id, as
+  measured; C#'s types can't make one object both. Their value in an `And`, `Or` or `Not` stays D73's (false; alone as a
+  trigger's condition, true), which matches 15 of the 21 cases measured: the game's depends on what ran before (`And(t,
+  cn)` passes, `And(t, And(u, cn))` passes, `And(t, Not(cn))` fails, `And(Not(cn), t)` fails), and no rule tried fits
+  all 21: the last condition's result, globally or per evaluation, and a value per depth that a condition writes for its
+  depth and below and an `And` or `Or` clears for its operands (19 of 21, missing `And(t, Not(Not(cn)))` and
+  `And(Not(cn), t)`), which mispredicted two of the seven cases the last probe was written to check. It likely reads
+  memory the game left. `TriggerTests` lists the 21, the game's result beside the model's. So `Condition`, `Filter`,
+  `And`, `Or` and `Not` are Close, and `TriggerEvaluate`, which gives those results, too, until the nil condition fits
+  every measured case (wave 10, `docs/tasks/later.md`; the probe lines in W1-8's list). As they are one handle in the
+  game, destroying either destroys both here, also the other when its first call comes after (not measured).
+- **D115. A destroyed condition's place:** a `Condition` or `Filter` keeps its function in a place of its own;
+  destroyed, the place is freed, and the next `Condition` or `Filter` made takes the first freed, so what still holds
+  the destroyed one (a trigger's condition, an `And`, `Or` or `Not`) runs the new one, as the seven cases measured. A
+  timer and a trigger made between don't take it (measured); `Condition(nil)` and a new `And`, `Or` or `Not` don't
+  either (not measured, the model's). `And`, `Or` and `Not` have no place, so a destroyed one still runs its operands
+  (measured: an `Or` made after it didn't take it). The new one is a new handle with its own id. A destroyed condition
+  stays its place's, so given to a native it runs what the place holds: nothing while it is free, the new function once
+  taken (W1-9's probe `events`: a destroyed `Filter` given to `ForceEnumPlayers` after a `Condition` had taken its place
+  ran the new condition for each player). This is the one kind of destroyed handle that doesn't read as null to the
+  natives (D41). Not measured, the model's: destroying it again after its place was taken frees the new function too
+  (a place taken twice, c1 destroyed and taken by c2, c2 destroyed and taken by c3: c1, c2 and c3 all run c3's
+  function, and destroying the stale c1 or c2 frees c3's place; W1-10 is to probe it), and a hashtable saves and
+  loads it (D85's check is that the handle is still in the game). Known limit: a destroyed `Condition` or `Filter`
+  stays in the game for good, about 80 bytes each, which blizzard.j's matching functions, destroying a filter a call,
+  pile up; it can be let go of once Lua has collected its userdata, which needs wave 10's collector-driven id reuse
+  (`docs/tasks/later.md`; the `shortcut:` in `Triggers.cs`'s `Destroy`). No cheaper release is safe: a userdata Lua
+  still holds finds it by its key, and nothing tells C# when the last one is collected. With it, `TriggerAddCondition`,
+  `TriggerRemoveCondition` and `DestroyCondition` are Exact, and so are `GetTriggerEventId` (D112), `ConvertGameEvent`
+  and `ConvertLimitOp` (probe `triggers-2`: equal to the event of id 4; probe `handles`: `ConvertGameEvent(4)` has id
+  4). After W1-6, with W1-5 merged first: 116 Exact, 273 Close, 11 Recorded, 1,435 Missing.
+
 ### Probes compared with the game (W1-8)
 
 - **D120. The comparison** is `ProbeComparison` in `tests/MirrorImaged.GameTests`. Its test without the game runs every
@@ -758,11 +844,13 @@ measured and say so where not.
   stopped without lines, with notes (`# `) giving why and the decision that makes the native Close. The test holds the
   file to the differences exactly, both ways, so a new difference fails and so does one that has gone; its message
   lists every difference with its line and gives the file's lines without notes, to paste. A stop is one entry, not
-  every line, as a Missing native in a probe loses all its lines: `GetHandleId` stops players, triggers, triggers-2 and
-  triggers-3 (W1-6's), `Location` stops strings-2 (wave 2); the lane that brings the native updates the file. One file
-  a probe, so lanes changing different natives seldom touch the same file. Of the 24 probes, 5 stop so, 3 close the
-  game as the game does, and of the 16 that give lines 11 give the game's and 5 differ (strings, strings-4, game-time,
-  lua-config and timers), each where the native or the model is Close.
+  every line, as a Missing native in a probe loses all its lines: `CreateUnit` stops triggers-2 and `Location`
+  strings-2 (wave 2); the lane that brings the native updates the file. One file a probe, so lanes changing different
+  natives seldom touch the same file. With W1-6 merged, of the 28 probes 2 stop so, 3 close the game as the game does,
+  and of the 23 that give lines 12 give the game's and 11 differ: strings, strings-4, game-time, lua-config and timers
+  where the native or the model is Close; handles-2 and handles-3 on ids given again (D111) and `Condition(nil)` (D114);
+  and players, triggers, triggers-3 and handles also where blizzard.j's functions, which the comparison runs without,
+  would act (ids, teams, the neutral victim, `PolledWait`, `GetPlayersAll`), which W1-10 is to settle.
 - **D122. A game that closes is a line.** A probe whose game exits by itself after its map loaded, before the lines
   came, ends `Closed` in the runner (new), and gives the one line `! the game closes`; so does a MirrorImaged run that
   stops with a `GameClosedException` before its lines, and an expected file holds it as any line. `Closed` needs the
@@ -817,4 +905,5 @@ measured and say so where not.
   0.5, perhaps summed timeouts); here the expiries run in the nearest 1/1024 s step, which the clock reads, so 0.00977,
   0.01953, ... Both are recorded as differences for the timers' follow-up: D45's step and order are Close until a
   model matches.
-- **D128. After W1-8:** 111 Exact, 277 Close, 11 Recorded, 1,436 Missing (`SaveFogStateHandle` went to Close, D125).
+- **D128. After W1-8,** with W1-6 merged first: 115 Exact, 274 Close, 11 Recorded, 1,435 Missing (`SaveFogStateHandle`
+  went to Close, D125).

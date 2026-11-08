@@ -22,9 +22,9 @@ public sealed class LuaInteropTests : IDisposable
     [Fact]
     public void AHandleIsAUserdataNamedAfterItsType()
     {
-        _lua.Register("make", _ => [new LuaHandle("timer", 7)]);
-        Assert.Equal(["userdata", true], _lua.Run("return type(make()), tostring(make()):match('^timer: %x+$') ~= nil"));
-        Assert.Equal(new LuaHandle("timer", 7), _lua.Run("return make()")[0]);
+        _lua.Register("make", _ => [new LuaHandle("timer", 7, 1048600, true)]);
+        Assert.Equal(["userdata", true, false], _lua.Run("return type(make()), tostring(make()):match('^timer: %x+$') ~= nil, getmetatable(make())"));
+        Assert.Equal(new LuaHandle("timer", 7, 1048600, true), _lua.Run("return make()")[0]);
     }
 
     // facts, "Handles and identity": the same object returned as another type is another userdata; == holds between
@@ -32,8 +32,8 @@ public sealed class LuaInteropTests : IDisposable
     [Fact]
     public void AHandleIsTheSameUserdataAsOneTypeAndAnotherAsAnother()
     {
-        _lua.Register("timer", args => [new LuaHandle("timer", (int)args[0]!)]);
-        _lua.Register("agent", args => [new LuaHandle("agent", (int)args[0]!)]);
+        _lua.Register("timer", args => [new LuaHandle("timer", (int)args[0]!, (int)args[0]!, true)]);
+        _lua.Register("agent", args => [new LuaHandle("agent", (int)args[0]!, (int)args[0]!, true)]);
         Assert.Equal([true, false, false, true, true, false, true], _lua.Run("""
             local t = {[timer(1)] = 'one'}
             return rawequal(timer(1), timer(1)), timer(1) == timer(2), rawequal(timer(1), agent(1)), t[timer(1)] == 'one',
@@ -42,22 +42,48 @@ public sealed class LuaInteropTests : IDisposable
         Assert.StartsWith("agent: ", (string)_lua.Run("return tostring(agent(1))")[0]!);
     }
 
-    // the metatable's __eq, called straight with anything but two handles, answers false rather than reading them
+    // == compares the game's ids, whatever the types and keys (probe triggers: GetTriggerEventId() with id 4 equals
+    // ConvertPlayerColor(4)); an agent's == refuses a second operand that isn't an agent, as the game's (probe handles-2)
     [Fact]
-    public void AHandlesEqualityIsFalseForAnythingButHandles()
+    public void HandlesAreEqualByTheirIdsAndAnAgentsEqualityRefusesAHandleThatIsntOne()
     {
-        _lua.Register("timer", args => [new LuaHandle("timer", (int)args[0]!)]);
-        Assert.Equal([true, false, false, false, true], _lua.Run("""
-            local eq = getmetatable(timer(1)).__eq
-            local ok, equal = pcall(eq, 1, 2)
-            return ok, equal, eq(timer(1), {}), eq("a", timer(1)), eq(timer(1), timer(1))
+        // each its own key, which Lua's handles are found by; the ids are what == compares
+        _lua.Register("timer", args => [new LuaHandle("timer", (int)args[0]!, (int)args[0]!, true)]);
+        _lua.Register("color", args => [new LuaHandle("playercolor", 1000 + (int)args[0]!, (int)args[0]!, false)]);
+        _lua.Register("race", args => [new LuaHandle("race", 2000 + (int)args[0]!, (int)args[0]!, false)]);
+        Assert.Equal([true, false, true, false, false, true], _lua.Run("""
+            return color(4) == race(4), rawequal(color(4), race(4)), color(9) == timer(9), color(8) == timer(9), timer(9) == {},
+              timer(9) ~= timer(8)
+            """));
+        Assert.Equal([false, "chunk:2: bad argument #2 to '__eq' (agent expected)"], _lua.Run("""
+            return pcall(function()
+              local equal = timer(9) == color(9)
+            end)
             """));
     }
+
+    // as luaL_checkinteger and luaL_checknumber read a string, which the game's natives take for a number (probe arguments)
+    [Theory]
+    [InlineData("5", 5)]
+    [InlineData(" -7\t", -7)]
+    [InlineData("0x10", 16)]
+    [InlineData("0xffffffff", -1)]
+    [InlineData("2.0", 2f)]
+    [InlineData("1.5", 1.5f)]
+    [InlineData("1e2", 100f)]
+    [InlineData("2147483648", 2147483648f)]
+    [InlineData("x", null)]
+    [InlineData("", null)]
+    [InlineData("5x", null)]
+    [InlineData("5\0", null)]
+    [InlineData("inf", null)]
+    [InlineData("nan", null)]
+    public void AStringIsReadAsANumberAsLuaReadsIt(string text, object? number) => Assert.Equal(number, LuaState.ToNumber(text));
 
     [Fact]
     public void ACSharpFunctionReadsTheHandleItIsGiven()
     {
-        _lua.Register("make", _ => [new LuaHandle("player", 3)]);
+        _lua.Register("make", _ => [new LuaHandle("player", 3, 1048584, true)]);
         object? given = null;
         _lua.Register("take", args =>
         {
@@ -65,7 +91,7 @@ public sealed class LuaInteropTests : IDisposable
             return [];
         });
         _lua.Run("take(make())");
-        Assert.Equal(new LuaHandle("player", 3), given);
+        Assert.Equal(new LuaHandle("player", 3, 1048584, true), given);
     }
 
     [Fact]
@@ -80,7 +106,7 @@ public sealed class LuaInteropTests : IDisposable
         object?[] Run()
         {
             using var lua = new LuaState();
-            lua.Register("make", args => [new LuaHandle("timer", (int)args[0]!)]);
+            lua.Register("make", args => [new LuaHandle("timer", (int)args[0]!, (int)args[0]!, true)]);
             return lua.Run(code);
         }
         Assert.Equal(Run(), Run());

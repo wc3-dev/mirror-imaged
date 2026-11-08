@@ -1,5 +1,5 @@
 # Where MirrorImaged differs from the game's lines in expected/triggers-2.txt, in order, with why (decisions D121): a line
 # starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
 
-# GetHandleId is W1-6's (D47).
-! war3map.lua:48: The native GetHandleId is Missing: MirrorImaged does not simulate it yet.
+# CreateUnit is Missing until wave 2: the probe makes a unit to compare it with its widget.
+! war3map.lua:288: The native CreateUnit is Missing: MirrorImaged does not simulate it yet.
