@@ -161,7 +161,7 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
 Probe `probes/players.lua`, one run on 3.0.1.24371, 11-08 (W1-4): MirrorImaged's probe map (D51: one user slot, no
 custom forces, a selectable race, `config` calling `InitGenericPlayerSlots` and `main` calling `InitBlizzard`) started
 with `-loadfile` on a hidden desktop, single player; the probe ran in the first zero-second timer. The run's lines
-are in the pull request of W1-4.
+are in pull request #8.
 
 - Slot 0 is "Local Player", Playing, `MAP_CONTROL_USER`, team 0, start location 0, colour 0. Its race was
   `RACE_UNDEAD` although `config` set `RACE_PREF_HUMAN` with the race selectable: afterwards
