@@ -74,6 +74,9 @@ Needs W2-2.
   armour uses the type's agility, and the nine attribute fields are stored apart: make one attribute state (base,
   bonus, permanent) that life, mana, armour and the fields derive from. Also `BlzResetUnitTalents` (game-facts) and
   `BlzSetHeroProperName`.
+- From W2-4 (D252): finish the widget natives in `Widgets.cs` for items (`GetWidgetLife`, `SetWidgetLife`,
+  `GetWidgetX`, `GetWidgetY`, `TriggerRegisterDeathEvent` stop on an item as Missing and are Close until then), and
+  make them Exact where the facts measure them.
 
 ## W2-4 Destructables, trees and doodads
 
