@@ -1320,8 +1320,9 @@ each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions belo
   joins, conditions, comparisons with null and as arguments; set first, it reads fine). Such a variable starts as
   `MirrorImaged_Unset`, and a read that may come before a set, by the order of its function's statements, goes
   through `MirrorImaged_Read`, whose error names the variable: a set inside a loop counts only there, and inside an
-  `if` only there too, but for one made on every side of an if with an else (a side that returns not counting); a
-  global is checked in every function until set there. An array is never unset: an integer array's elements read 0, a string
+  `if` only there too, but for one made on every side of an if with an else (a side that returns not counting), and
+  one inside a `debug` statement, which never runs, not at all; a global is checked in every function until set
+  there. An array is never unset: an integer array's elements read 0, a string
   array's null (here a plain table, where War3Net's `__jarray("")` would read ""), a handle array's null. A string's `+`
   takes null as "", and null + null is null (`MirrorImaged_Join`), `null` written out too. In a JASS map natives take
   null strings (this replaces D80 there; a Lua map, blizzard.j in it included, still refuses nil, as the game's Lua

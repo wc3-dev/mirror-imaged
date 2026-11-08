@@ -281,6 +281,15 @@ static class Jass
             return true;
         }
 
+        // A debug statement is left out (RewriteStatementList), so what it sets stays unset
+        protected override bool RewriteDebugStatement(JassDebugStatementSyntax statement, out JassStatementSyntax result)
+        {
+            var unset = _unset.ToHashSet();
+            var rewritten = base.RewriteDebugStatement(statement, out result);
+            _unset = unset;
+            return rewritten;
+        }
+
         // After an if with an else, what is still unset at the end of a branch that goes on past the if; without an
         // else, what was before it
         protected override bool RewriteIfStatement(JassIfStatementSyntax statement, out JassStatementSyntax result)

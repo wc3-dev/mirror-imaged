@@ -607,6 +607,7 @@ static int jassdivide (lua_State *L) {
     lua_pushvalue(L, lua_upvalueindex(1));
     lua_pushliteral(L, "The game closes: -2147483648 was divided by -1");
     lua_call(L, 1, 0);
+    return jasserror(L, "-2147483648 was divided by -1");  /* MirrorImaged_Closes raises first; never C's overflow */
   }
   lua_pushinteger(L, a / b);
   return 1;

@@ -145,6 +145,30 @@ public sealed class BlizzardLuaTests : IDisposable
         Assert.Contains("MirrorImaged_Read(one, \"one\")", lua);
     }
 
+    // a debug statement never runs (probe jass-debug), so a set in one leaves the variable unset (decisions D136)
+    [Fact]
+    public void A_set_in_a_debug_statement_leaves_the_variable_unset()
+    {
+        var lua = Jass.ToLua(
+            [War3Net.CodeAnalysis.Jass.JassSyntaxFactory.ParseCompilationUnit("native Show takes string s returns nothing")],
+            """
+            function Read takes boolean b returns nothing
+                local string s
+                debug set s = "a"
+                debug if b then
+                    set s = "b"
+                else
+                    set s = "c"
+                endif
+                call Show(s)
+            endfunction
+            """,
+            rules: true);
+
+        Assert.Contains("MirrorImaged_Read(s, \"s\")", lua);
+        Assert.DoesNotContain("\"a\"", lua);
+    }
+
     [Fact]
     public void The_cache_s_file_is_named_for_the_game_s_build_in_the_user_s_cache()
     {

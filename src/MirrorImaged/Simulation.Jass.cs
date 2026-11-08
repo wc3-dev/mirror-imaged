@@ -10,8 +10,8 @@ public sealed partial class Simulation
 {
     /// <summary>
     /// JASS's operation limit as Lua instructions: the game ends a JASS thread after 3,000,000 of its own operations
-    /// (probe jass-threads), of which a Lua instruction stands for 1.4 to 3 by the code's shape, 1.82 on average over
-    /// the probe's five loops (decisions D135).
+    /// (probe jass-threads); 2,100,100 is the fewest at which none of the probe's eleven loops stops before the game's,
+    /// which then run 1.00 to 2.10 times as often (decisions D135).
     /// </summary>
     internal const int OperationLimit = 2_100_100;
 
