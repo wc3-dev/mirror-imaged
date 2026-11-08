@@ -71,6 +71,9 @@ Needs W2-2.
   leave events (including `SetUnitX`/`SetUnitY`), locations and `GetLocationZ` (facts, "Units", "Groups and
   performance").
 - Left by W1-4: `DefineStartLocationLoc` and `GetStartLocationLoc`.
+- From W1-2's review (D70): every callback runs in a Lua thread of its own, measured only for timers, conditions,
+  actions and `ExecuteFunc`. Probe `ForGroup`, `ForForce`, `Enum*` and filter callbacks: `coroutine.isyieldable`,
+  `coroutine.running`, and a wait inside them (in the game a wait may suspend the whole calling action).
 
 ## W2-7 Abilities on units, without casting
 
