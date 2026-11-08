@@ -4,10 +4,10 @@ Plan sections: 4 (A1, A2, A6), 6 (map and game data, units and heroes, items and
 wave 1. Facts are in `C:\Users\mdlsvensson\Repo\wc3-cs\docs\game-facts.md`; the sections named below are the source
 of the tests, and every native a fact measures is Exact.
 
-Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time; W2-8 after W2-7; W2-9 any time after W2-1.
+Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time; W2-8 after W2-7; W2-9 any time after W2-1; W2-10 after W2-2.
 
 Parallel lanes: decision numbers by range: W2-1 D200-D219, W2-2 D220-D239, W2-3 D240-D249, W2-4 D250-D259,
-W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289, W2-8 D290-D299, W2-9 D300-D309. Generated-file conflicts are resolved by re-running the generator.
+W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289, W2-8 D290-D299, W2-9 D300-D309, W2-10 D310-D319. Generated-file conflicts are resolved by re-running the generator.
 W2-1 started before wave 1 finished (11-08): it touches the data loading, which wave 1's open lanes don't.
 
 ## W2-1 Map files and the game's standard data
@@ -63,6 +63,10 @@ Needs W2-2.
   calls `SaveGameCache`.
 - From W2-1's review: a fixed-order list of a kind's objects in the data model for `ChooseRandomItem`/`Ex` (the facts
   on `pickRandom` and levels), and for `ChooseRandomCreep` and `ChooseRandomNPBuilding` (melee creep drops, A4).
+- From W2-2's review: a hero's most life and mana are fixed at creation from the type's strength and intelligence,
+  armour uses the type's agility, and the nine attribute fields are stored apart: make one attribute state (base,
+  bonus, permanent) that life, mana, armour and the fields derive from. Also `BlzResetUnitTalents` (game-facts) and
+  `BlzSetHeroProperName`.
 
 ## W2-4 Destructables, trees and doodads
 
@@ -75,6 +79,8 @@ Needs W2-1.
   (`WESTRING_DEST_SUMMER_TREE_WALL`): probe `GetDestructableName` and resolve `UI\WorldEditStrings.txt` if the game
   does; `(1)SilverpineSprint.w3x`'s `war3map.doo` that War3Net can't read (D209) — fix the reader (our own handling or
   the fork's fix), since the game makes `.doo` destructables itself (A5).
+- From W2-2's review: `Happening.Unit` is typed `unit` and `GetTriggerWidget` returns it; destructable deaths through
+  `TriggerRegisterDeathEvent` need a widget there, with `GetTriggerUnit` and `GetDyingUnit` nil for them.
 
 ## W2-5 Damage
 
@@ -84,6 +90,11 @@ Needs W2-2.
   `BlzGetEvent*`/`BlzSetEvent*` damage native, the attack and armour table and the armour formula from the constants,
   death inside the call (facts, "Damage"). Abilities that change damage (Hardened Skin, Divine Shield and the rest)
   come with wave 4; record them in that wave's file if you see them.
+- From W2-2's review: `IsUnitType`'s attack kinds and `Armed()` read the type's weapon data, not the unit's weapon
+  fields once those can be set; armour needs a unit armour state for `BlzSetUnitArmor` and the formula; `FireUnit`
+  scans every registration three times per event (fine for deaths, O(registrations) per hit for damage events, A10):
+  index registrations by event. Also `BlzGetUnitArmor`/`BlzSetUnitArmor`, `BlzGetUnitBaseDamage`, the dice natives,
+  `BlzGetUnitAttackCooldown`, `BlzUnitHeal` (game-facts: nil source heals nothing, -30 takes 30).
 
 ## W2-6 Groups, rects, regions and locations
 
@@ -100,6 +111,8 @@ Needs W2-2.
 - From W2-1's review: `(10)DustwallowKeys.w3m`'s `war3map.w3e` that War3Net can't read (D209), an A4 melee map with no
   terrain without it — fix the reader; and measure the off-map edge rule of `Terrain` (a point off the map reads its
   nearest edge, inferred).
+- From W2-2's review: `SetUnitX`/`SetUnitY` write X and Y directly, so enter and leave events need a move hook;
+  `Gone` uses `List.Remove` (O(n)). Also `CreateUnitAtLoc`/`SetUnitPositionLoc`, `BlzGetUnitCollisionSize`.
 
 ## W2-7 Abilities on units, without casting
 
@@ -134,3 +147,17 @@ Needs W2-1. Decisions D300-D309. From W1-7's plan review:
   unknown enum values, or the fork's fix; a draft for War3Net in `docs/upstream.md`), and add a `Needs=Game` test that
   every map in the install's `Maps/` and `Campaign/` (and the campaigns' `.w3n` files) reads and runs to its first
   Missing native (A4, A5).
+
+## W2-10 The rest of the units
+
+Needs W2-2. Decisions D310-D319. From W2-2's review and `later.md`'s former unnamed units item:
+
+- Timed life and summons (`UnitApplyTimedLife` kills 2.0 s later, game-facts), a neutral hostile unit asleep at night
+  (`UnitWakeUp`, `IsUnitSleeping`), `TriggerRegisterUnitStateEvent` and `TriggerRegisterFilterUnitEvent`, unit counts,
+  `CreateUnitByName` and `UnitId`, `IsUnit`, `IsUnitIdType`, `UnitAddType`/`UnitRemoveType`, `SetPlayerUnitsOwner`,
+  `SetUnitUseFood`, `IsUnitIllusion`, `SetUnitRescuable`/`SetUnitRescueRange`, `SetUnitCreepGuard`,
+  `UnitIgnoreAlarm`, `UnitSetUsesAltIcon`, `BlzIsUnitSelectable`, `BlzShowUnitTeamGlow`, and the order events of
+  `KillUnit`/`RemoveUnit`/`PauseUnit`/`SetUnitOwner` (game-facts: `undefend` before death, twice on `RemoveUnit`;
+  `PauseUnit(true)` fires order 851973, `PauseUnit(false)` gives back the move).
+- `CreateCorpse` past 45 s and a body's bone decay (`DecayTime` + `BoneDecayTime`, about 93 s: try a probe, the runner
+  allows 2 minutes); `IsUnitType` kinds that wait for wave 4 (stunned to magic immune) stay listed for W2-7/wave 4.
