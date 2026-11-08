@@ -137,11 +137,14 @@ public sealed partial class GameNatives
         Undefend(u, undefends);
         _game.Remove(u.Key);
         _widgetEvents.Remove(u);
+        _sleepers.Remove(u);
     }
 
-    // Dead: life 0, its pause and timed life over (probe units-more-2: a paused unit's death events read it unpaused)
-    static void Die(unit u)
+    // Dead: life 0, its pause and timed life over (probe units-more-2: a paused unit's death events read it unpaused),
+    // its sleep settled first
+    void Die(unit u)
     {
+        Asleep(u);
         u.Dead = true;
         u.Life = 0;
         u.Paused = false;
@@ -171,8 +174,8 @@ public sealed partial class GameNatives
         var life = u.Life;
         Die(u);
         u.Removed = false;
-        StateChanged(u, LifeState, life, 0);
         Counting(u, -1);
+        StateChanged(u, LifeState, life, 0);
         Undefend(u, Defends(u));
         FireUnit(new(u), UnitDeath, PlayerUnitDeath);
         if (u.Exploded)

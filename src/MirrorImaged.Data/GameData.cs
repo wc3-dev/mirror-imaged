@@ -62,8 +62,11 @@ public sealed class GameData
     /// <summary>The object of <paramref name="kind"/> with <paramref name="id"/>; null when the game has none.</summary>
     public GameObject? Object(ObjectKind kind, int id) => _objects.GetValueOrDefault((kind, id));
 
-    /// <summary>The objects of <paramref name="kind"/> in the order the data has them: the tables' rows, then the map's new ones.</summary>
-    public IEnumerable<GameObject> Objects(ObjectKind kind) => _objects.Values.Where(o => o.Kind == kind);
+    /// <summary>
+    /// The objects of <paramref name="kind"/> in the order of the kind's first table (unitdata.slk for units), then the
+    /// map's new ones by id.
+    /// </summary>
+    public IEnumerable<GameObject> Objects(ObjectKind kind) => _objects.Values.Where(o => o.Kind == kind).OrderBy(o => o.Row).ThenBy(o => o.Id);
 
     /// <summary>
     /// The name of the unit, item, ability or upgrade (its first level's) with <paramref name="id"/>, in that order, also
@@ -167,6 +170,9 @@ public sealed class GameObject
 
     /// <summary>The standard object it is made from: its own id for a standard object.</summary>
     public int BaseId { get; }
+
+    // Its row in its kind's first table; a map's new object comes after them all
+    internal int Row => Id == BaseId ? _standard?.Row ?? int.MaxValue : int.MaxValue;
 
     /// <summary>
     /// Its level count: an ability's levels (<c>alev</c>), an upgrade's (<c>glvl</c>), a destructable's or doodad's

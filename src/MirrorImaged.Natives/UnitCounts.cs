@@ -15,13 +15,24 @@ public sealed partial class GameNatives
     Dictionary<string, int>? _unitIds;
 
     // A living unit counts, and its food, from when it is made until it dies or is gone, for its owner: +1 as it starts,
-    // -1 as it stops. Each food change sets the player's state, firing its events inside the call (probe units-more).
-    void Counting(unit u, int sign)
+    // -1 as it stops. Each food change fires the player's state events inside the call (probe units-more).
+    void Counting(unit u, int sign) => Announce(u.Owner, Count(u.Owner, u, sign));
+
+    // The count and food kept at once, before any event, so a handler that gives the unit away finds them whole
+    (int Used, int Made) Count(player p, unit u, int sign)
     {
-        var (p, type) = (u.Owner, u.Type.Id);
+        var type = u.Type.Id;
         p.UnitCounts[type] = p.UnitCounts.GetValueOrDefault(type) + sign;
-        if (u.UsesFood) Food(p, FoodUsedState, sign * u.Type.Integer(FoodUsed));
-        Food(p, FoodCap, sign * u.Type.Integer(FoodMade));
+        var (used, made) = (u.UsesFood ? sign * u.Type.Integer(FoodUsed) : 0, sign * u.Type.Integer(FoodMade));
+        p.States[FoodUsedState] += used;
+        p.States[FoodCap] += made;
+        return (used, made);
+    }
+
+    void Announce(player p, (int Used, int Made) change)
+    {
+        if (change.Used != 0) PlayerStateChanged(p, Convert<playerstate>(FoodUsedState), p.States[FoodUsedState]);
+        if (change.Made != 0) PlayerStateChanged(p, Convert<playerstate>(FoodCap), p.States[FoodCap]);
     }
 
     void Food(player p, int state, int change)

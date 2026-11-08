@@ -291,6 +291,7 @@ public sealed partial class GameNatives
         if (whichPlayer is null || whichPlayerState is not { Id: >= 0 and < 26 }) return;
         if (whichPlayerState.Id is Gold or Lumber) value = Math.Max(value, 0);
         if (whichPlayer.States[whichPlayerState.Id] == value) return;
+        if (whichPlayerState.Id == NoCreepSleep) SettleSleep(whichPlayer);
         whichPlayer.States[whichPlayerState.Id] = value;
         PlayerStateChanged(whichPlayer, whichPlayerState, value);
     }

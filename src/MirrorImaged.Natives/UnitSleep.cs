@@ -8,12 +8,13 @@ public partial class unit
 
 // Creeps asleep at night, as the probes units-more and units-more-2 measure them (docs/facts.md, "Units"). Whether a unit
 // sleeps is settled as it is made, woken or allowed to sleep, and again when read after the day has turned, so nothing
-// runs for it in between.
+// runs for it in between; a change to what that reads (death, pause, owner, the owner's no creep sleep) settles it first.
 public sealed partial class GameNatives
 {
     const int NeutralAggressive = 24, NoCreepSleep = 25; // the slot, PLAYER_STATE_NO_CREEP_SLEEP
     const double Wakeful = 2; // a woken creep sleeps again just over 2 s later (probe units-more-2: by 2.05 s, not at 2.0)
     static readonly int Sleeps = Code("usle");
+    readonly HashSet<unit> _sleepers = []; // the units that can sleep or sleep, to settle when their owner's no creep sleep changes
 
     // Whether the unit would sleep now: a creep that can sleep, at night, its owner not set to keep creeps awake
     // (inferred: setting that woke none, probe units-more-2), dead or alive
@@ -22,14 +23,24 @@ public sealed partial class GameNatives
     void FallAsleep(unit u)
     {
         u.CanSleep = u.Type.Integer(Sleeps) != 0;
+        if (!u.CanSleep) return;
+        _sleepers.Add(u);
         u.Asleep = Sleepy(u);
         u.SleptAtNight = !IsDay;
+    }
+
+    // Before the player's no creep sleep changes
+    void SettleSleep(player p)
+    {
+        foreach (var u in _sleepers)
+            if (u.Owner == p) Asleep(u);
     }
 
     // At dusk the creeps that can sleep fall asleep, at dawn the living unpaused ones wake; a woken one sleeps again
     // after a while (probes units-more and units-more-2)
     bool Asleep(unit u)
     {
+        if (!u.CanSleep && !u.Asleep) return false;
         var night = !IsDay;
         if (night != u.SleptAtNight)
         {
@@ -77,7 +88,10 @@ public sealed partial class GameNatives
         Asleep(whichUnit);
         whichUnit.CanSleep = add;
         whichUnit.Asleep = add && Sleepy(whichUnit);
+        whichUnit.SleptAtNight = !IsDay;
         whichUnit.WokenAt = null;
+        if (add) _sleepers.Add(whichUnit);
+        else _sleepers.Remove(whichUnit);
     }
 
     /// <summary>False, also after UnitAddSleepPerm true (probe units-more).</summary>

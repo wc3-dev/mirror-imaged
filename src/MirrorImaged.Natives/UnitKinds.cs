@@ -4,7 +4,7 @@ namespace MirrorImaged.Natives;
 
 public partial class unit
 {
-    internal bool IgnoresAlarm, CreepGuard, AltIcon, TeamGlow = true;
+    internal bool IgnoresAlarm;
     internal int? Gold; // what SetResourceAmount and AddResourceAmount left
     internal HashSet<player>? Rescuers;
     internal float RescueRange;
@@ -51,13 +51,16 @@ public sealed partial class GameNatives
         return true;
     }
 
-    /// <summary>False: no unit is an illusion until the abilities that make them (wave 4) (probe units-more).</summary>
-    [Native(Level.Exact, Fact = MoreProbe)]
+    /// <summary>
+    /// False, as for every unit the probe made (probe units-more). Close: the abilities and items that make illusions,
+    /// which read true (game-facts, Units), come with wave 4.
+    /// </summary>
+    [Native(Level.Close)]
     public bool IsUnitIllusion(unit? whichUnit) => false;
 
     /// <summary>
     /// Whether it can be selected: alive, shown and not removed, a paused unit, a hero and a building too (probe
-    /// units-more). Locust takes it away, with W2-7's abilities.
+    /// units-more). Not measured: a unit with Locust, which W2-7 is to probe.
     /// </summary>
     [Native(Level.Exact, Fact = MoreProbe)]
     public bool BlzIsUnitSelectable(unit? whichUnit) => whichUnit is { Dead: false, Hidden: false, Removed: false };
@@ -75,23 +78,20 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = MoreProbe)]
     public bool UnitIgnoreAlarmToggled(unit? whichUnit) => whichUnit?.IgnoresAlarm ?? false;
 
-    /// <summary>Kept on the unit for the creep camps' AI (wave 7), which no native reads back.</summary>
+    /// <summary>Does nothing yet: creep camps guarding and going back are the AI's (wave 7), which will keep and read it.</summary>
     [Native(Level.Close)]
     public void SetUnitCreepGuard(unit? whichUnit, bool creepGuard)
     {
-        if (whichUnit is not null) whichUnit.CreepGuard = creepGuard;
     }
 
-    [Native(Level.Recorded, Reason = "Shows the unit's other icon; kept on the unit, which no native reads back")]
+    [Native(Level.Recorded, Reason = "Shows the unit's other icon; no native reads it back")]
     public void UnitSetUsesAltIcon(unit? whichUnit, bool flag)
     {
-        if (whichUnit is not null) whichUnit.AltIcon = flag;
     }
 
-    [Native(Level.Recorded, Reason = "Shows or hides the unit's team glow; kept on the unit, which no native reads back")]
+    [Native(Level.Recorded, Reason = "Shows or hides the unit's team glow; no native reads it back")]
     public void BlzShowUnitTeamGlow(unit? whichUnit, bool show)
     {
-        if (whichUnit is not null) whichUnit.TeamGlow = show;
     }
 
     [Native(Level.Recorded, Reason = "Gives no unit away, fires nothing and changes nothing a native reads (probe units-more); what the game keeps it for isn't known")]

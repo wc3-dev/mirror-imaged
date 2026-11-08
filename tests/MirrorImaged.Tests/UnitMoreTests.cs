@@ -273,9 +273,90 @@ public sealed class UnitMoreTests : IDisposable
             TriggerRegisterFilterUnitEvent(t, x, EVENT_UNIT_CHANGE_OWNER, nil)
             TriggerAddAction(t, function() print("event", GetHandleId(GetTriggerEventId()), GetTriggerUnit() == v, GetTriggerUnit() == x) end)
             KillUnit(u) SetUnitOwner(v, Player(1), false) SetUnitOwner(w, Player(1), false) SetUnitOwner(x, Player(1), false)
+            local d = make("hfoo")
+            local off = CreateTrigger()
+            TriggerRegisterFilterUnitEvent(off, d, EVENT_UNIT_CHANGE_OWNER, Filter(function() print("disabled runs") return true end))
+            DisableTrigger(off)
+            SetUnitOwner(d, Player(1), false)
+            print("disabled", GetTriggerEvalCount(off), GetTriggerExecCount(off))
             """);
 
-        Assert.Equal(["v runs\ttrue", "event\t287\ttrue\tfalse", "w runs", "event\t287\tfalse\ttrue"], Printed(simulation));
+        // a disabled trigger's filter doesn't run (from the code review); its event is counted, as without a filter
+        Assert.Equal(["v runs\ttrue", "event\t287\ttrue\tfalse", "w runs", "event\t287\tfalse\ttrue", "disabled\t1\t0"], Printed(simulation));
+    }
+
+    // From the code review: a death's life state event, a food event and a stunned order's event that give the unit
+    // away or kill it find the counts and food whole, and SetUnitOwner run again from inside one ends the outer call
+    [Fact]
+    public void Handlers_that_give_a_unit_away_leave_counts_and_food_whole()
+    {
+        using var simulation = Run("""
+            local p9, p10, p11 = Player(9), Player(10), Player(11)
+            local function state(label)
+              print(label, GetPlayerUnitCount(p9, false), GetPlayerUnitCount(p10, false), GetPlayerUnitCount(p11, false),
+                GetPlayerState(p9, PLAYER_STATE_RESOURCE_FOOD_USED), GetPlayerState(p10, PLAYER_STATE_RESOURCE_FOOD_USED), GetPlayerState(p11, PLAYER_STATE_RESOURCE_FOOD_USED))
+            end
+            local d = make("hfoo", p9)
+            local s = CreateTrigger()
+            TriggerRegisterUnitStateEvent(s, d, UNIT_STATE_LIFE, LESS_THAN, 200)
+            TriggerAddAction(s, function() SetUnitOwner(d, p10, false) end)
+            KillUnit(d)
+            state("death given away")
+            local g = make("hfoo", p9)
+            local f, once = CreateTrigger(), true
+            TriggerRegisterPlayerStateEvent(f, p9, PLAYER_STATE_RESOURCE_FOOD_USED, LESS_THAN, 1)
+            TriggerAddAction(f, function() if once then once = false SetUnitOwner(g, p11, false) end end)
+            local c = CreateTrigger()
+            TriggerRegisterPlayerUnitEvent(c, p10, EVENT_PLAYER_UNIT_CHANGE_OWNER, nil)
+            TriggerRegisterPlayerUnitEvent(c, p11, EVENT_PLAYER_UNIT_CHANGE_OWNER, nil)
+            TriggerAddAction(c, function() print("change", pid(GetChangingUnitPrevOwner()), pid(GetOwningPlayer(g))) end)
+            SetUnitOwner(g, p10, false)
+            state("given again inside")
+            local k, l = make("hfoo"), make("hfoo")
+            local o = CreateTrigger()
+            TriggerRegisterUnitEvent(o, k, EVENT_UNIT_ISSUED_POINT_ORDER)
+            TriggerRegisterUnitEvent(o, l, EVENT_UNIT_ISSUED_POINT_ORDER)
+            TriggerRegisterUnitEvent(o, k, EVENT_UNIT_ISSUED_ORDER)
+            TriggerRegisterUnitEvent(o, l, EVENT_UNIT_ISSUED_ORDER)
+            TriggerAddAction(o, function()
+              print("order", GetIssuedOrderId(), GetTriggerUnit() == k)
+              if GetIssuedOrderId() == 851973 then
+                if GetTriggerUnit() == k then KillUnit(k) else PauseUnit(l, false) end
+              end
+            end)
+            PauseUnit(k, true) PauseUnit(l, true)
+            print("end")
+            """);
+
+        Assert.Equal([
+            "death given away\t0\t0\t0\t0\t0\t0",
+            "change\t10\t11",
+            "given again inside\t0\t0\t1\t0\t0\t2",
+            "order\t851973\ttrue", "order\t852056\ttrue",
+            "order\t851973\tfalse",
+            "end",
+        ], Printed(simulation));
+    }
+
+    // From the code review: what changes what a creep's sleep reads settles its sleep first, so dusk and dawn find it as
+    // it was: a creep awake at noon, night set, then no creep sleep set, sleeps; one asleep, day set, then paused, wakes
+    [Fact]
+    public void Sleep_is_settled_before_what_it_reads_changes()
+    {
+        using var simulation = Run("""
+            local na = Player(PLAYER_NEUTRAL_AGGRESSIVE)
+            SetFloatGameState(GAME_STATE_TIME_OF_DAY, 12)
+            local a = make("nmrl", na)
+            SetFloatGameState(GAME_STATE_TIME_OF_DAY, 23)
+            local c = make("nmrl", na)
+            SetPlayerState(na, PLAYER_STATE_NO_CREEP_SLEEP, 1)
+            print("no creep sleep set at night", tf(UnitIsSleeping(a)))
+            SetFloatGameState(GAME_STATE_TIME_OF_DAY, 12)
+            PauseUnit(c, true)
+            print("paused at day", tf(UnitIsSleeping(c)))
+            """);
+
+        Assert.Equal(["no creep sleep set at night\tt", "paused at day\tf"], Printed(simulation));
     }
 
     // probes units-more and units-more-2: the order events of a Defend: a death's undefend before its death events; a

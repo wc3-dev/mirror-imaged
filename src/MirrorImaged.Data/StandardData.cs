@@ -36,6 +36,9 @@ sealed class StandardObject(Dictionary<string, string> rows)
 {
     public Dictionary<(int Field, int Level), string> Values { get; } = [];
 
+    /// <summary>Its place among its kind's rows in the first table (unitdata.slk for units), or among a test's objects.</summary>
+    public int Row { get; init; }
+
     /// <summary>
     /// The field's text at a level in the rows; null for none (blank, or the tables' <c>-</c> and <c>_</c>). A key with
     /// a graphics mode is read as the game reads it in Definitive Edition graphics: <c>:de</c>, else <c>:hd</c>, else the
@@ -159,16 +162,21 @@ public sealed partial class StandardData
         {
             if (!metadata.TryGetValue(meta, out var fields))
                 metadata[meta] = fields = File(meta) is { } bytes ? ReadFields(bytes) : [];
-            data.Fields[kind] = fields;
-            if (kind == ObjectKind.Unit) fields.TryAdd(Ids.Of("name"), new Field(UnitNameColumn, PerLevel.None, -1));
+            // Items share the units' metadata, but not the units' own name
+            data.Fields[kind] = kind == ObjectKind.Unit ? new(fields) { [Ids.Of("name")] = new Field(UnitNameColumn, PerLevel.None, -1) } : fields;
 
             var rows = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+            var order = new List<string>(); // the first table's rows, in order
             for (var table = 0; table < tables.Length; table++)
                 foreach (var (id, cells) in File(InSet(tables[table], values)) is { } bytes ? Tables.Slk(bytes) : [])
                 {
                     // The first table names the objects; another's row of any other id is dropped.
                     if (!rows.TryGetValue(id, out var merged))
-                        if (table == 0) rows[id] = merged = new(StringComparer.OrdinalIgnoreCase);
+                        if (table == 0)
+                        {
+                            rows[id] = merged = new(StringComparer.OrdinalIgnoreCase);
+                            order.Add(id);
+                        }
                         else continue;
                     foreach (var (column, value) in cells) merged[column] = value;
                     // A unit's own name (footman, UnitId's), which the text files' Name would replace: the field 'name'
@@ -193,8 +201,8 @@ public sealed partial class StandardData
                     if (rows.TryGetValue(name, out var merged) || folded.TryGetValue(name, out var id) && rows.TryGetValue(id, out merged))
                         foreach (var (key, value) in keys) merged[key] = value;
 
-            foreach (var (id, merged) in rows)
-                if (id.Length == 4) (absent.Contains(id) ? data.Absent : data.Objects)[(kind, Ids.Of(id))] = new StandardObject(merged);
+            for (var row = 0; row < order.Count; row++)
+                if (order[row] is { Length: 4 } id) (absent.Contains(id) ? data.Absent : data.Objects)[(kind, Ids.Of(id))] = new StandardObject(rows[id]) { Row = row };
         }
 
         foreach (var path in new[] { "units/miscdata.txt", "units/miscgame.txt" })
@@ -281,7 +289,7 @@ public sealed partial class StandardData
     /// </summary>
     internal StandardData Add(ObjectKind kind, string id, IReadOnlyDictionary<string, string>? values = null)
     {
-        var standard = new StandardObject([]);
+        var standard = new StandardObject([]) { Row = Objects.Count };
         foreach (var (key, value) in values ?? new Dictionary<string, string>())
         {
             var parts = key.Split(':');

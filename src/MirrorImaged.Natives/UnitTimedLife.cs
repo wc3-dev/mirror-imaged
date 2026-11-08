@@ -11,8 +11,6 @@ public partial class unit
 // the killer nil, the body decaying as any other.
 public sealed partial class GameNatives
 {
-    const int Summoned = 4; // the classification's flag
-
     /// <summary>
     /// Makes the living unit summoned (its classification, as UnitAddType does) and kills it the duration later, from
     /// the step it is applied; applied again, the sooner end holds (3 then 1 s and 1 then 2 s both kill 1 s later); a
@@ -24,7 +22,7 @@ public sealed partial class GameNatives
     public void UnitApplyTimedLife(unit? whichUnit, int buffId, float duration)
     {
         if (whichUnit is not { Dead: false } u) return;
-        u.Fields[Classification] = BlzGetUnitIntegerField(u, Convert<unitintegerfield>(Classification)) | Summoned;
+        Classify(u, Convert<unittype>(10), true); // UNIT_TYPE_SUMMONED
         if (duration <= 0) return;
         if (u.TimedLeft is { } left) u.TimedLeft = Math.Min(left, duration);
         else if (u.TimedEnd is not { } end || Seconds + duration < end) EndTimedLife(u, Seconds + duration);

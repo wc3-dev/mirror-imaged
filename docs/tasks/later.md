@@ -78,4 +78,6 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 4 (abilities): `IsUnitType`'s stunned, plagued, snared, poisoned, polymorphed, resistant, ethereal and magic
   immune (D230); summon events with `GetSummonedUnit` and `GetSummoningUnit`; illusions for `IsUnitIllusion`; and
   timed life with a summon's buff (`BHwe`: no decay event, the body gone at its decay time, D312) (W2-10).
-- Wave 7 (AI): creep camps guarding and going back, which `SetUnitCreepGuard` keeps a flag for (D314) (W2-10).
+- Wave 7 (AI): creep camps guarding and going back, for `SetUnitCreepGuard`, which does nothing yet (D314); and the
+  creeps' sleep 0.2 to 0.25 s after dusk and waking as long after dawn, where MirrorImaged acts at the hour (D313;
+  `probes/differences/units-more-2.txt`) (W2-10).

@@ -186,8 +186,8 @@ public sealed partial class GameNatives
         foreach (var (kind, registered) in players)
             if (kind == playerKind) Fire(registered, Convert<playerunitevent>(kind), player: owner, unit: happening);
         foreach (var (kind, registered) in own)
-            if (kind == unitKind && (registered.Filter is not { } filter
-                || In(new Firing(registered.Trigger, Convert<unitevent>(kind), Player: owner, Unit: happening), () => Holds(filter, alone: true))))
+            if (kind == unitKind && (registered.Filter is not { } filter || registered.Trigger is not { Destroyed: false, Enabled: true } t
+                || In(new Firing(t, Convert<unitevent>(kind), Player: owner, Unit: happening), () => Holds(filter, alone: true))))
                 Fire(registered, Convert<unitevent>(kind), player: owner, unit: happening);
     }
 }

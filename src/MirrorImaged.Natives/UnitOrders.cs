@@ -38,6 +38,7 @@ public sealed partial class GameNatives
     public void PauseUnit(unit? whichUnit, bool flag)
     {
         if (whichUnit is not { Dead: false } u || u.Paused == flag) return;
+        Asleep(u);
         u.Paused = flag;
         if (flag)
         {
@@ -48,7 +49,8 @@ public sealed partial class GameNatives
                 return;
             }
             FireUnit(new(u, Order: Stunned), UnitIssuedPointOrder, PlayerUnitIssuedPointOrder);
-            Undefend(u, Defends(u));
+            // not when the stunned order's event unpaused or killed it (not measured)
+            if (u is { Paused: true, Dead: false }) Undefend(u, Defends(u));
             return;
         }
         var given = u.GivenWhilePaused;

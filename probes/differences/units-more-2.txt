@@ -2,7 +2,7 @@
 # line starting - is the game's, + MirrorImaged's. A note starts "# ".
 
 # The game puts the creeps to sleep 0.2 to 0.25 s after dusk and wakes them as long after dawn; here at the hour
-# (D313, Close).
+# (D313, Close; later.md, wave 7).
 - sleep  8.75 18.012 w1 t w2 t hidden t
 + sleep  8.50 18.000 w1 t w2 t hidden t
 - sleep  10.75 6.012 w1 f w2 f hidden f
