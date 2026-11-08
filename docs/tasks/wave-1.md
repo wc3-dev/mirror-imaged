@@ -180,6 +180,8 @@ Needs W1-8 (part 1, the comparison). Decisions D150-D159. W1-8 split off this pa
   `GetGameSpeed`, `GetGameDifficulty`, `GetIntegerGameState`, `GetTimeOfDayScale`, the cheat reads,
   `IsPlayerRacePrefSet`, `VersionGet`), are never compared; settle the stand-ins so they are. And fix
   `docs/facts.md`'s wording that no whole binary chunk "can be made" without `string.dump` (none was made; D126).
+- W1-8's D121 already settled `EndGame`'s side files as a game test of their own (`GameProbeTests`): this bullet is
+  covered by it (coordinator, 11-08).
 - Differences with no task yet, to accept against A6 or plan, in `docs/tasks/later.md` (wave 10): R2S/R2SW from 2^31
   (D84), S2R past the float range (D83), StringHash/SubString on non-UTF-8 bytes (D82, D38), the random generator
   (D46, D86) incl. `GetRandomReal(3e38, -3e38)`'s tiny negatives.
