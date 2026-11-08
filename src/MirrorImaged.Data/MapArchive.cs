@@ -1,7 +1,9 @@
 using System.Buffers.Binary;
+using System.Numerics;
 using War3Net.Build;
 using War3Net.Build.Extensions;
 using War3Net.Build.Info;
+using War3Net.Build.Widget;
 using War3Net.IO.Mpq;
 
 namespace MirrorImaged.Data;
@@ -11,10 +13,11 @@ namespace MirrorImaged.Data;
 /// (<c>war3map.w3i</c>), strings (<c>war3map.wts</c>), object data and its skin files, terrain (<c>w3e</c>), pathing
 /// (<c>wpm</c>), doodads and destructables (<c>war3map.doo</c>), placed units (<c>war3mapUnits.doo</c>), regions
 /// (<c>w3r</c>), cameras (<c>w3c</c>), sounds (<c>w3s</c>) and the import list (<c>imp</c>); a file the map lacks is null.
-/// The terrain, doodad and placed-unit files, which no wave reads yet, are null too when War3Net can't read them, and
-/// <see cref="Unread"/> names them (decisions D209). Two kinds of info and sound file War3Net refuses are mended before
-/// it reads them (D300, D301). <c>war3mapMisc.txt</c> is kept as it is, and any other file, such as an FDF or TOC file,
-/// is read by name.
+/// The terrain and placed-unit files, which no wave reads yet, are null too when War3Net can't read them, and
+/// <see cref="Unread"/> names them (decisions D209); a doodad file whose doodad states War3Net refuses is read here
+/// (decisions D258), and is left out only when it can't be read either. Two kinds of info and sound file War3Net
+/// refuses are mended before it reads them (D300, D301). <c>war3mapMisc.txt</c> is kept as it is, and any other file,
+/// such as an FDF or TOC file, is read by name.
 /// </summary>
 public sealed class MapArchive
 {
@@ -50,7 +53,8 @@ public sealed class MapArchive
     /// <summary>The files left out as War3Net can't read them, each with why: <c>war3map.w3e: Value '0' is not ...</c>.</summary>
     public IReadOnlyList<string> Unread { get; }
 
-    // The install's three maps War3Net can't read whole have one of these (D209), which no wave reads yet.
+    // Two of the install's maps have a terrain or placed-unit file War3Net can't read (D209); a doodad file neither it nor
+    // Doodads reads is left out too (D258).
     static readonly string[] LeftOut = ["war3map.w3e", "war3map.doo", "war3mapUnits.doo"];
 
     /// <summary>Reads the map at <paramref name="path"/>.</summary>
@@ -78,7 +82,15 @@ public sealed class MapArchive
             TriggerStrings = Read("war3map.wts", reader => new StreamReader(reader.BaseStream).ReadTriggerStrings()),
             Environment = Read("war3map.w3e", reader => reader.ReadMapEnvironment()),
             PathingMap = Read("war3map.wpm", reader => reader.ReadMapPathingMap()),
-            Doodads = Read("war3map.doo", reader => reader.ReadMapDoodads()),
+            Doodads = Read("war3map.doo", reader =>
+            {
+                try { return reader.ReadMapDoodads(); }
+                catch (ArgumentException)
+                {
+                    reader.BaseStream.Position = 0;
+                    return Doodads(reader);
+                }
+            }),
             Units = Read("war3mapUnits.doo", reader => reader.ReadMapUnits()),
             Regions = Read("war3map.w3r", reader => reader.ReadMapRegions()),
             Cameras = Read("war3map.w3c", reader => reader.ReadMapCameras()),
@@ -120,6 +132,46 @@ public sealed class MapArchive
     /// </summary>
     public string Resolve(string text) =>
         text.StartsWith("TRIGSTR_", StringComparison.Ordinal) && _strings.TryGetValue((uint)Numbers.Integer(text[8..]), out var value) ? value : text;
+
+    // war3map.doo's doodads read as War3Net reads them, but each one's state kept as written: War3Net refuses a state it
+    // doesn't define, as (1)SilverpineSprint's 14 (format 13), which the game loads. What comes after the doodads, the
+    // terrain's own doodads, which nothing reads, is left out.
+    static MapDoodads Doodads(BinaryReader reader)
+    {
+        if (reader.ReadInt32() != MapDoodads.FileFormatSignature) throw new InvalidDataException("war3map.doo doesn't start with W3do");
+        var version = (MapWidgetsFormatVersion)reader.ReadInt32();
+        var subVersion = (MapWidgetsSubVersion)reader.ReadInt32();
+        var doodads = new MapDoodads(version, subVersion, useNewFormat: false);
+        for (var count = reader.ReadInt32(); count > 0; count--)
+        {
+            var doodad = new DoodadData
+            {
+                TypeId = reader.ReadInt32(), Variation = reader.ReadInt32(), Position = Vector(reader), Rotation = reader.ReadSingle(), Scale = Vector(reader),
+            };
+            doodads.UseNewFormat = reader.PeekChar() >= 0x20; // a skin id, as War3Net tells it
+            doodad.SkinId = doodads.UseNewFormat ? reader.ReadInt32() : doodad.TypeId;
+            if (version >= MapWidgetsFormatVersion.v12) doodad.GroupId = reader.ReadUInt32();
+            if (version > MapWidgetsFormatVersion.v6) doodad.State = (DoodadState)reader.ReadByte();
+            doodad.Life = reader.ReadByte();
+            if (version >= MapWidgetsFormatVersion.v8)
+            {
+                doodad.MapItemTableId = reader.ReadInt32();
+                for (var sets = reader.ReadInt32(); sets > 0; sets--)
+                    doodad.ItemTableSets.Add(reader.ReadRandomItemSet(version, subVersion, doodads.UseNewFormat));
+            }
+            if (version >= MapWidgetsFormatVersion.v13) doodad.Unk1 = reader.ReadInt32();
+            doodad.CreationNumber = reader.ReadInt32();
+            if (version >= MapWidgetsFormatVersion.v12)
+            {
+                (doodad.Roll, doodad.Pitch) = (reader.ReadSingle(), reader.ReadSingle());
+                for (var lights = reader.ReadUInt32(); lights > 0; lights--) doodad.DoodadLights.Add(reader.ReadMapDoodadLightData());
+            }
+            doodads.Doodads.Add(doodad);
+        }
+        return doodads;
+    }
+
+    static Vector3 Vector(BinaryReader reader) => new(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
 
     static byte[]? Bytes(MpqArchive archive, string name)
     {

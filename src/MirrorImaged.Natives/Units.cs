@@ -50,7 +50,7 @@ public sealed partial class GameNatives
     const string BonesProbe = "facts.md, Units: probe units-bones (11-08)";
     const float Dying = 0.405f; // a unit whose life is set below it dies (facts, Units)
 
-    static int Code(string id) => id.Aggregate(0, (value, letter) => value << 8 | (byte)letter);
+    static int Code(string id) => Ids.Of(id);
 
     static readonly int HitPoints = Code("uhpm"), ManaMaximum = Code("umpm"), ManaInitial = Code("umpi"), Strength = Code("ustr"),
         Intelligence = Code("uint"), UnitName = Code("unam"), DeathTime = Code("udtm"), IsBuilding = Code("ubdg"), ModelScale = Code("usca");

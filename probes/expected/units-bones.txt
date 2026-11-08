@@ -1,4 +1,4 @@
-# probes/units-bones.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines, one run; each gone time is the first 0.25 s poll after it. The first line is the CreateCorpse corpse's undefend, before its label.
+# probes/units-bones.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines, two runs, the same; each gone time is the first 0.25 s poll after it. The first line is the CreateCorpse corpse's undefend, before its label.
 player order ? 852056 0.00
 player order hfoo 852056 0.00
 hfoo order 852056 0.00 true

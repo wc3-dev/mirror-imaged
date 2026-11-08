@@ -1,4 +1,4 @@
-# probes/units-gold.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines. Two runs: the second added the entangled mine and the barracks to the haunted line, the rest the same.
+# probes/units-gold.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines. Three runs: the last two the same; the first had the haunted line without the entangled mine and the barracks.
 new 12500 0 0 0 0
 set 5000 5000
 add 250 5250

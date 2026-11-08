@@ -273,8 +273,8 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// The state as the game starts it (the players probe: game result 3, food cap ceiling 100, placed 1 for a seated
-    /// slot, bounty from neutral hostile and passive) or as set. The food that units and buildings use and give comes
-    /// with them (W2-2).
+    /// slot, bounty from neutral hostile and passive) or as set; the food used and made add the living units' (probe
+    /// units-more, UnitCounts.cs).
     /// </summary>
     [Native(Level.Close)]
     public int GetPlayerState(player? whichPlayer, playerstate? whichPlayerState) =>

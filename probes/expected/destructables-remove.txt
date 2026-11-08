@@ -1,0 +1,5 @@
+# 3.0.1.24371, 11-08 (W2-4): the probe's lines as the game gave them, two runs
+killed 98 type 0
+removed 98
+pcall 65 nil
+a second later 98 98 65

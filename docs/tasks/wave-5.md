@@ -39,6 +39,8 @@ Close. Recorded natives keep their calls where a test can read them (later.md, w
   text tags (`CreateTextTag`, `SetTextTag*`), lightning (`AddLightning*`, `GetLightning*`), weather, minimap pings and
   icons, cinematic mode, transmissions (`DisplayCineFilter`, `CinematicFilter*`), text messages and
   `ClearTextMessages` (in the run's log as D48 says) — Recorded with getters (facts: "Presentation").
+- From `later.md`: the unit animation natives (`SetUnitAnimation*`, `QueueUnitAnimation`, `SetUnitTimeScale`,
+  `SetUnitBlendTime`, `AddUnitAnimationProperties`) — Recorded unless a getter reads them.
 
 ## W5-4 The interface
 
@@ -49,3 +51,5 @@ Close. Recorded natives keep their calls where a test can read them (later.md, w
   `GetLocalizedString` (later.md, wave 5).
 - Dialogs, multiboards, leaderboards and quests, Recorded with getters (facts: "Initialisation" on when they may be
   made).
+- Timer dialogs (`CreateTimerDialog`, `TimerDialogSetTitle`, `TimerDialogDisplay`, `IsTimerDialogDisplayed`, ...):
+  every melee map's `MeleeInitVictoryDefeat` calls them (W5-1's review).

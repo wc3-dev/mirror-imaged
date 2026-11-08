@@ -1,4 +1,4 @@
-# probes/units-types.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines. Two runs, the same.
+# probes/units-types.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines. Three runs, the same.
 idtype hfoo 000000110000000000000000000
 idtype Hpal 100000110000000000000000000
 idtype hbar 001000000000000100000000000

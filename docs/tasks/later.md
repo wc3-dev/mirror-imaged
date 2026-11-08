@@ -48,7 +48,7 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 3 (orders and movement): the game moves a unit made where others stand off them (D223); `SetUnitPosition`;
   what `PauseUnit` and `BlzPauseUnitEx` hold back; `SetUnitFacing`'s turning eased into its end and on the game's
   frames, and the facing of angles past a turn (D224); orders beyond `SetUnitOwner`'s stop (W2-2).
-- Wave 5 (presentation): the unit animation natives and `SetUnitTimeScale` (W2-2).
+- (The unit animation natives and `SetUnitTimeScale` moved to wave-5.md, W5-3.)
 - Wave 10 (speed): a cross-process cache of the standard data (about 1.2-1.7 s a process) if the benchmark or the
   corpus runs need it; it must live outside the repo and packages (A15) (W2-1).
 - Wave 10 (the number model, W1-10's rest): find the game's `exp`, `log` and `atan` (tables on straight lines, by the
@@ -63,3 +63,19 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
   is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
 - Wave 10 (JASS): a rawcode with a backslash (`'a\bc'`) loads here but the game refuses the map (D137) (W1-7).
+- Wave 10 (accuracy, W2-4): the decks are measured in whole units (D255), so `GetLocationZ` on a bridge is up to 0.5
+  off; measure them to a tenth with the workspace's deck probe, and the fall of a killed deck (over 2 s, its ends left)
+  and the rise of one restored (0.5 s, 7 s with birth), to make it Exact.
+- Wave 10 (doodads, W2-4): the doodad natives by index (`BlzGetDoodad*`, `BlzGetNumDoodads`, `BlzSetSingleDoodad*`)
+  are Missing (D257); with them, measure the placed destructables' life share and whether states 1, 3, 5 and 7 are made
+  and listed (D256). All need a probe map with a `war3map.doo` the game loads: the probe map's (War3Net's `MapFactory`
+  map) closed the game with any doo War3Net wrote (docs/facts.md, "Destructables"), while the way Moonwell's physics
+  gate took works (game-facts, "Units", 10-27): a World Editor map's files with its `war3map.doo` written by War3Net,
+  `MapDoodads.UseNewFormat` set.
+- Wave 3 (orders, combat): `PauseUnit(false)` gives the unit back the order it had (game-facts: the move, 0.016 s
+  later), which W2-10's order events can't (D310); regeneration can bring life or mana across a unit state event's
+  limit, and the game looks at mana a frame (about 0.005 s) after a set (D315) (W2-10).
+- Wave 4 (abilities): `IsUnitType`'s stunned, plagued, snared, poisoned, polymorphed, resistant, ethereal and magic
+  immune (D230); summon events with `GetSummonedUnit` and `GetSummoningUnit`; illusions for `IsUnitIllusion`; and
+  timed life with a summon's buff (`BHwe`: no decay event, the body gone at its decay time, D312) (W2-10).
+- Wave 7 (AI): creep camps guarding and going back, which `SetUnitCreepGuard` keeps a flag for (D314) (W2-10).

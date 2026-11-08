@@ -182,4 +182,27 @@ public sealed class GameDataTests : IDisposable
     {
         Assert.Equal(number, Numbers.Integer(text));
     }
+
+    // docs/facts.md, "Destructables": World Editor numbers a doodad's variations from 1 in war3map.w3d (the install's
+    // maps change dvr1 at variations 1 to 10, never 0), so the file's variation is the field's level
+    [Fact]
+    public void A_doodads_variation_in_the_file_is_its_level_from_1()
+    {
+        var standard = new StandardData().Add(ObjectKind.Doodad, "LOsm", new Dictionary<string, string> { ["dvar"] = "2", ["dvr1:1"] = "255", ["dvr1:2"] = "255" });
+        var data = new GameData(standard, MapArchive.Read(_maps.Build("function main() end", map: map => map.DoodadObjectData = new DoodadObjectData(ObjectDataFormatVersion.v3)
+        {
+            BaseDoodads =
+            {
+                new VariationObjectModification
+                {
+                    OldId = "LOsm".FromRawcode(),
+                    Unk = { 0 },
+                    Modifications = { new VariationObjectDataModification { Id = "dvr1".FromRawcode(), Type = ObjectDataType.Int, Value = 100, Variation = 1 } },
+                },
+            },
+        })));
+        var rock = data.Object(ObjectKind.Doodad, Id("LOsm"))!;
+
+        Assert.Equal(["100", "255", null], new[] { 1, 2, 3 }.Select(variation => rock.Text(Id("dvr1"), variation)));
+    }
 }
