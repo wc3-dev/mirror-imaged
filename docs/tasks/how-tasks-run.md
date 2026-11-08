@@ -60,6 +60,8 @@ commit, push. Report what you changed.
 ## Rules for every subagent
 
 - Never commit or push to `main` or `release/1.0.0`; only to your task's branch.
+- Use absolute paths for every file you write, in every tool, .NET's file APIs inside PowerShell included: a
+  relative path has twice landed in the main clone instead of the worktree.
 - No `README.md`, ever. No agent attribution in commits or pull requests (no `Co-Authored-By`, no "Generated with").
   Commit as the configured git identity. The author's name is only `mdlsvensson`.
 - No game files in git: no maps, models, textures, sounds, SLK tables, `common.j`, `blizzard.j` or `common.ai`, and
