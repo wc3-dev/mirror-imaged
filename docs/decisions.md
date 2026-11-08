@@ -192,7 +192,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   does (measured since: D112). Its place, so `pairs` and `tostring`, is the same every run (D39). An argument's
   declared type must be the parameter's or below it, else Lua's `bad argument #1 to 'X' (timer expected, got
   player)`, as the facts measure for `GetUnitTypeId` (the message replaced by D113: no `got`); a destroyed handle
-  reads as null to the natives. `==` is D72's, then D112's.
+  reads as null to the natives (but a destroyed `Condition` or `Filter`, D115). `==` is D72's, then D112's.
 - **D42. A Lua function given to C#** becomes a reference in the registry, made by `sandbox.c`'s trampoline before C#
   runs, since C# must not allocate in Lua there. It is let go of when the C# function returns, unless C# keeps it
   (`LuaFunction.Keep`, then `Dispose`). A native's `code` (D20) is a delegate whose target is the kept function's
@@ -531,7 +531,8 @@ functions before it was written.
   for a number below 0 whose text passes 255 bytes: the game closes (0xC0000409, twice), which a run can't copy, so
   the text is cut as above 0.
 - **D85. The hashtable natives** keep each key's integer, real, boolean, string and handle apart, as measured; a
-  `Save*Handle` saves nothing and gives false for a null or destroyed handle, and saves a Convert native's value but
+  `Save*Handle` saves nothing and gives false for a null or destroyed handle (but a destroyed `Condition` or `Filter`,
+  which stays in the game, so it is saved and loads, D115), and saves a Convert native's value but
   gives false, as for `FOG_OF_WAR_MASKED` (a handle made by a native that makes objects gave true); a handle destroyed
   after its save loads as null; a save to a destroyed table saves nothing and gives false (not measured: from Lua a
   destroyed table reads as null, D41, which was). `FlushParentHashtable` destroys the table and gives its place back
@@ -793,7 +794,7 @@ The measurements are four probes, `probes/handles.lua`, `handles-2.lua`, `handle
   memory the game left. `TriggerTests` lists the 21, the game's result beside the model's. So `Condition`, `Filter`,
   `And`, `Or` and `Not` are Close, and `TriggerEvaluate`, which gives those results, too, until the nil condition fits
   every measured case (wave 10, `docs/tasks/later.md`; the probe lines in W1-8's list). As they are one handle in the
-  game, destroying either destroys both here (not measured).
+  game, destroying either destroys both here, also the other when its first call comes after (not measured).
 - **D115. A destroyed condition's place:** a `Condition` or `Filter` keeps its function in a place of its own;
   destroyed, the place is freed, and the next `Condition` or `Filter` made takes the first freed, so what still holds
   the destroyed one (a trigger's condition, an `And`, `Or` or `Not`) runs the new one, as the seven cases measured. A
@@ -803,8 +804,14 @@ The measurements are four probes, `probes/handles.lua`, `handles-2.lua`, `handle
   stays its place's, so given to a native it runs what the place holds: nothing while it is free, the new function once
   taken (W1-9's probe `events`: a destroyed `Filter` given to `ForceEnumPlayers` after a `Condition` had taken its place
   ran the new condition for each player). This is the one kind of destroyed handle that doesn't read as null to the
-  natives (D41). Not measured, the model's: destroying it again after its place was taken frees the new function too,
-  and a hashtable saves it (D85's check is that the handle is still in the game). With it, `TriggerAddCondition`,
+  natives (D41). Not measured, the model's: destroying it again after its place was taken frees the new function too
+  (a place taken twice, c1 destroyed and taken by c2, c2 destroyed and taken by c3: c1, c2 and c3 all run c3's
+  function, and destroying the stale c1 or c2 frees c3's place; W1-10 is to probe it), and a hashtable saves and
+  loads it (D85's check is that the handle is still in the game). Known limit: a destroyed `Condition` or `Filter`
+  stays in the game for good, about 80 bytes each, which blizzard.j's matching functions, destroying a filter a call,
+  pile up; it can be let go of once Lua has collected its userdata, which needs wave 10's collector-driven id reuse
+  (`docs/tasks/later.md`; the `shortcut:` in `Triggers.cs`'s `Destroy`). No cheaper release is safe: a userdata Lua
+  still holds finds it by its key, and nothing tells C# when the last one is collected. With it, `TriggerAddCondition`,
   `TriggerRemoveCondition` and `DestroyCondition` are Exact, and so are `GetTriggerEventId` (D112), `ConvertGameEvent`
   and `ConvertLimitOp` (probe `triggers-2`: equal to the event of id 4; probe `handles`: `ConvertGameEvent(4)` has id
   4). After W1-6, with W1-5 merged first: 116 Exact, 273 Close, 11 Recorded, 1,435 Missing.

@@ -54,7 +54,8 @@ public sealed partial class Simulation
         if (type == typeof(Action) && value is LuaFunction code) return (Action)new LuaCode(this, code.Keep()).Run;
         if (type == typeof(Func<bool>) && value is LuaFunction condition) return (Func<bool>)new LuaCode(this, condition.Keep()).Evaluate;
         // Found by its key, whatever type Lua sees it as; one of another type is refused, as the type Lua sees is. A
-        // destroyed one reads as null, but GetHandleId, the one native taking any handle, reads its id (probe handles).
+        // destroyed one reads as null, but GetHandleId, the one native taking any handle, reads its id (probe handles),
+        // and a destroyed Condition or Filter is still found, as its place's (decisions D115).
         if (value is LuaHandle h && typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}") is { } declared && type.IsAssignableFrom(declared)
             && _game.Handle(h.Key) is var found && (found is null || type.IsInstanceOfType(found)))
             return found ?? (type == typeof(handle) ? new handle { Id = h.Id, Key = h.Key } : null);

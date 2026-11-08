@@ -201,6 +201,19 @@ public sealed class TriggerTests : IDisposable
         Assert.Equal(["0.000 true", "0.000 false\tfalse\ttrue\ttrue"], Printed(simulation));
     }
 
+    [Fact]
+    public void Filter_nil_first_asked_for_after_Condition_nil_was_destroyed_is_destroyed()
+    {
+        using var simulation = Load(Cond + """
+            local cn = Condition(nil)
+            DestroyCondition(cn)
+            local fn = Filter(nil)
+            print(evaluate(fn), rawequal(fn, Filter(nil)), GetHandleId(fn) == GetHandleId(cn), GetHandleId(fn) > 0)
+            """);
+
+        Assert.Equal(["0.000 false\ttrue\ttrue\ttrue"], Printed(simulation));
+    }
+
     // facts: a self-removing condition ran
     [Fact]
     public void A_removed_or_destroyed_condition_stops_running_and_a_destroyed_one_fails()
