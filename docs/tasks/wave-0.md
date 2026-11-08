@@ -100,3 +100,13 @@ Needs W0-2 and W0-3.
 - `mirror run <map> --seconds <n> --seed <n>` prints the log.
 - Tests with small Lua maps built in the tests: timers fire in order at the right simulated times, a periodic timer
   doesn't drift, the same seed gives the same log, a Missing native stops with its name and line.
+- From the wave 0 reviews:
+  - Replace all four of `os.clock`, `os.time`, `os.date` and `os.difftime` with versions on the simulated clock
+    (the built-in ones depend on the machine's time zone, C library and clock even when fed simulated time).
+    `os.date('*t')` returns a table, so it needs a Lua wrapper or table support in `LuaState`.
+  - `math.random` and `math.randomseed` were left out of the Lua build: provide them on the same seeded generator as
+    `GetRandomInt` and `GetRandomReal`.
+  - A Missing native's exception must stop the run even inside a map's `pcall`: a map must not be able to swallow it.
+  - Handles become Lua values (userdata or tables): their `pairs` order and `tostring` must be reproducible run to run
+    (W0-3's allocator work covers this if it merged; check).
+  - The generated handle classes are `partial`; add ids and world members in separate files, never in `Generated/`.
