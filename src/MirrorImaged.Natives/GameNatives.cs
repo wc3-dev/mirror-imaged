@@ -1,3 +1,4 @@
+using MirrorImaged.Data;
 using MirrorImaged.World;
 
 namespace MirrorImaged.Natives;
@@ -23,6 +24,9 @@ public sealed partial class GameNatives
         _players = MakePlayers();
         _local = _players[0];
     }
+
+    /// <summary>The game's data the natives read: the standard objects and constants with the map's changes, and its files.</summary>
+    public GameData Data { get; init; } = new(new StandardData());
 
     T Make<T>(T handle) where T : handle
     {

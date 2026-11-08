@@ -121,6 +121,7 @@ public sealed class PlayerNativesTests
         }
         Assert.Same(_natives.ConvertPlayerSlotState(0), _natives.GetPlayerSlotState(P(0)));
         Assert.Equal("Player 4", _natives.GetPlayerName(P(3)));
+        Assert.Equal("Computer (Normal)", _natives.GetPlayerName(P(5))); // docs/facts.md, The game's data
     }
 
     // decisions D91: inferred, as the game likely seats them

@@ -35,7 +35,7 @@ public sealed class GameProbeTests
     [MemberData(nameof(Probes))]
     public void A_probe_gives_the_games_lines_in_the_game_and_in_MirrorImaged(string name)
     {
-        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), ProbeComparison.Longest, ProbeComparison.WithComputer(name));
+        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), ProbeComparison.Longest, ProbeComparison.WithComputer(name), ProbeComparison.Change(name));
         Assert.True(run.State is ProbeState.Done or ProbeState.Closed, $"{run.State}: {run.Detail}");
         IReadOnlyList<string> lines = run.State == ProbeState.Closed ? [ProbeComparison.Closes] : run.Lines;
         Assert.True(File.Exists(ProbeComparison.Expected(name)), $"""
