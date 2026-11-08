@@ -4,10 +4,10 @@ Plan sections: 4 (A1, A2, A6), 6 (map and game data, units and heroes, items and
 wave 1. Facts are in `C:\Users\mdlsvensson\Repo\wc3-cs\docs\game-facts.md`; the sections named below are the source
 of the tests, and every native a fact measures is Exact.
 
-Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time; W2-8 after W2-7; W2-9 any time after W2-1; W2-10 after W2-2.
+Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time; W2-8 after W2-7; W2-9 any time after W2-1; W2-10 after W2-2; W2-11 any time after W2-1.
 
 Parallel lanes: decision numbers by range: W2-1 D200-D219, W2-2 D220-D239, W2-3 D240-D249, W2-4 D250-D259,
-W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289, W2-8 D290-D299, W2-9 D300-D309, W2-10 D310-D319. Generated-file conflicts are resolved by re-running the generator.
+W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289, W2-8 D290-D299, W2-9 D300-D309, W2-10 D310-D319, W2-11 D320-D329. Generated-file conflicts are resolved by re-running the generator.
 W2-1 started before wave 1 finished (11-08): it touches the data loading, which wave 1's open lanes don't.
 
 ## W2-1 Map files and the game's standard data
@@ -77,6 +77,10 @@ Needs W2-2.
 - From W2-4 (D252): finish the widget natives in `Widgets.cs` for items (`GetWidgetLife`, `SetWidgetLife`,
   `GetWidgetX`, `GetWidgetY`, `TriggerRegisterDeathEvent` stop on an item as Missing and are Close until then), and
   make them Exact where the facts measure them.
+- From W5-1's review (every map reaches these): `InitBlizzard`'s `InitNeutralBuildings` calls `SetAllItemTypeSlots` and
+  `SetAllUnitTypeSlots`; at 120 s the restock timer needs `IsItemIdSellable`, `AddItemToStock`, `GetItemLevel`,
+  `GetItemType` and `ChooseRandomItemEx` (with the group natives from W2-6). Include the other stock natives
+  (`AddUnitToStock`, `RemoveItemFromStock`, `SetItemTypeSlots`, ...).
 
 ## W2-4 Destructables, trees and doodads
 
@@ -187,3 +191,12 @@ Needs W2-2. Decisions D310-D319. From W2-2's review and `later.md`'s former unna
   `PauseUnit(true)` fires order 851973, `PauseUnit(false)` gives back the move).
 - `CreateCorpse` past 45 s and a body's bone decay (`DecayTime` + `BoneDecayTime`, about 93 s: try a probe, the runner
   allows 2 minutes); `IsUnitType` kinds that wait for wave 4 (stunned to magic immune) stay listed for W2-7/wave 4.
+
+## W2-11 Blight and terrain changes
+
+Needs W2-1 (terrain). Decisions D320-D329. From W5-1's review: every undead melee start calls `SetBlightLoc`.
+
+- Blight: `SetBlight`, `SetBlightRect`, `SetBlightPoint`, `SetBlightLoc`, `IsPointBlighted`, `CreateBlightedGoldmine`.
+- Terrain types and pathing as state: `GetTerrainType`, `SetTerrainType`, `GetTerrainVariance`, `IsTerrainPathable`,
+  `SetTerrainPathable` (pathing types read from the map's `war3map.wpm` and the tiles), `TerrainDeformation*`
+  (Recorded unless a getter reads them: `GetLocationZ` does — measure).
