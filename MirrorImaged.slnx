@@ -10,6 +10,9 @@
   <Folder Name="/probes/">
     <Project Path="probes/MirrorImaged.Probes.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/MirrorImaged.NativesGenerator/MirrorImaged.NativesGenerator.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MirrorImaged.GameTests/MirrorImaged.GameTests.csproj" />
     <Project Path="tests/MirrorImaged.Tests/MirrorImaged.Tests.csproj" />
