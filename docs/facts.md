@@ -1094,8 +1094,9 @@ same. The two closing probes each closed the game once, as the units probe's run
   `GetOrderedUnit` the unit; then the change, the new owner's `EVENT_PLAYER_UNIT_CHANGE_OWNER` (270) then the unit's
   `EVENT_UNIT_CHANGE_OWNER` (287), `GetChangingUnit` the unit, `GetChangingUnitPrevOwner` the old owner and
   `GetTriggerPlayer` the new; then the footman's `undefend` (852056, its Defend) on the new owner's and the unit's
-  order events. Given to the owner it has, nothing fires. A dead footman given away fires no stop, an `undefend` on its
-  old owner's order registration (not its own unit's) and its change.
+  order events. Given to the owner it has, nothing fires. A dead footman given away fires no stop and its change; the
+  `undefend` line before it is the footman's death (its `KillUnit` came after the player's order registration and
+  before its own; read so in W2-10, against W2-2's reading).
 - Removal: a removed unit reads, in the same callback, its type, life 420, alive and owner; a dead one removed reads
   dead. After a 0 s timer the dead one reads type 0. A living unit removed and then killed in the same callback fires
   its death (unit and widget events) and stays: after the 0 s timer it reads its type id, life 0, not alive, its new
@@ -1123,6 +1124,104 @@ same. The two closing probes each closed the game once, as the units probe's run
   on a footman closes the game (probe `units-attribute` and the units probe's first two runs), and so does setting a
   footman's primary attribute to 3 (`units-primary` and the units probe's third run); 7 is refused there.
 
+### The rest of the units (W2-10)
+
+Probes `probes/units-more.lua`, `units-more-2.lua`, `units-types.lua`, `units-bones.lua` and `units-gold.lua`, on
+3.0.1.24371, 11-08 (W2-10), on the same probe map, started the same way. `units-more` ran five times and `units-more-2`
+six, the last two of each the same to the last digit; `units-types` three times, the same; `units-bones` twice, the
+same (it takes 94 s of the runner's 2 minutes); `units-gold` three times, the last two the same (the first had one line
+less). The players 0 to 15 are made passive to each
+other in `units-more` and `units-more-2`: before that, footmen given to Player 1 fought Player 0's and died at 9 to 12 s.
+
+- Names: `UnitId` reads `unitui.slk`'s `name` in any case ("footman", "Footman" and "FOOTMAN" are `hfoo`; "paladin" is
+  `Hpal`, the first of the two types with that name in the tables, not `Hssa`); an id ("hfoo"), "" and an unknown name
+  give 0. `UnitId2String` gives the name, and "" in Lua for an item (`phea`), an ability (`AHhb`), `zzzz` and 0.
+  `CreateUnitByName` makes the unit by that name in any case, where asked and facing as given; nil for "hfoo".
+- `IsUnit(u, u)` and `IsUnit(nil, nil)` are true, `IsUnit(u, v)`, `(u, nil)` and `(nil, u)` false. `IsUnitIllusion` is
+  false for a footman, a Paladin, a dead footman and nil. `BlzIsUnitSelectable` is true for a living footman, a Paladin,
+  a paused footman and a barracks; false for a dead one, a `CreateCorpse` corpse, a hidden one, one removed in the same
+  callback, and nil.
+- `UnitIgnoreAlarm` on a barracks or a town hall answers true and `UnitIgnoreAlarmToggled` then reads the flag set (true,
+  then false again); on a footman it answers false and the toggle stays false; false at first and for nil.
+  `SetUnitCreepGuard`, `UnitSetUsesAltIcon`, `BlzShowUnitTeamGlow` and `SetPlayerUnitsOwner(p, 14)` change nothing read:
+  the last gave no unit away, living or dead, and fired no order or owner event.
+- `IsUnitIdType` (types 0 to 26) reads the type as `IsUnitType` reads a unit, but ground (4) and dead (1) are never true:
+  `hfoo` 6 and 7, `Hpal` 0, 6 and 7, `hbar` 2 and 15, `hgry` 3, 5, 6 and 8, `hpea` 6, 7 and 16, `ugho` 6, 7 and 14,
+  `hmtm` 6 and 8, `otau` 6, 7 and 20, `ugol` 2, 14 and 15, `ewsp` 16, `hrif` 5, 6 and 8, `nmrl` and `hkni` 6 and 7;
+  `nshe`, `zzzz`, `phea` and 0 none, and false for a nil type.
+- `UnitAddType` on a footman answers true for giant, summoned, undead, mechanical, peon, sapper, townhall, ancient and
+  tauren (9, 10, 14 to 20), which `IsUnitType` then reads and `UNIT_IF_UNIT_CLASSIFICATION` holds (1, 4, 2, 8, 16, 32,
+  64, 128, 2048), on that unit only (its type and another footman unchanged); `UnitRemoveType` answers true for them and
+  takes them off, a barracks' own mechanical too. Every other type answers false both ways and changes nothing, the ones
+  the footman has (ground, attacks ground, melee) too, and so do nil units and types.
+- Food (Player 9's states, a player no one plays): a footman made adds 2 to `PLAYER_STATE_RESOURCE_FOOD_USED`, a Paladin
+  5; a farm 6 and a town hall 12 to `PLAYER_STATE_RESOURCE_FOOD_CAP` (108 with 18 farms, above the ceiling of 100); each
+  change fires the player's state events inside the call. A death gives the food back, before the death events; a
+  hero's too. A removed footman keeps its food until it is gone after the step. `CreateCorpse` adds the food and takes it
+  back (two events). `SetUnitOwner` moves it to the new owner. `SetUnitUseFood(u, false)` takes the food used back once
+  (again does nothing), true adds it; a farm's food made stays. A state set to 50 is added to (52). `GetFoodUsed` of
+  `hfoo` 2, `Hpal` 5, 0 0; `GetFoodMade` of `hhou` 6, `htow` 12.
+- Counts (Player 11): `GetPlayerUnitCount` counts the living units that aren't structures, a hero, a hidden and a paused
+  one too, and a removed one until it is gone; `GetPlayerStructureCount` the living structures; `includeIncomplete`
+  changes nothing without construction. `GetPlayerTypedUnitCount` reads the type by `UnitId`'s name ("Footman" too,
+  "hfoo" 0), with `includeUpgrades` the types it upgrades to as well ("townhall" 1, with upgrades 3 for a town hall, a
+  keep and a castle; "keep" 2). `GetPlayerTechCount` of a unit type counts its units the same way, `specificonly` false
+  adding the upgrades (`htow` 1 and 3). A dead unit and a corpse don't count; a unit given away counts for its new owner.
+- Timed life: `UnitApplyTimedLife(u, 'BTLF', 1)` kills 1 s later (the death events, killer nil), and the body decays its
+  death time later as any other; applied again, the sooner end holds (3 then 1 s, and 1 then 2 s, both 1 s); 0 and -1
+  never kill; a dead unit gets nothing; a Paladin dies too; buff 0 and `BHwe` kill too, but `BHwe`'s footman had no decay
+  event and got its body's `undefend` at its decay time. It makes the unit summoned: `IsUnitType` and the classification
+  (4), also with 0; `UnitRemoveType` takes that off. `UnitPauseTimedLife` true at 0.5 s left and false 1.5 s later: it
+  died 0.5 s after; true before any timed life does nothing. `BlzUnitCancelTimedLife` kills at once, paused or not, and
+  does nothing without one. A timer due in the step of the deaths ran before them; a removed unit never died.
+- Unit state events (`EVENT_UNIT_STATE_LIMIT` 59, `GetTriggerPlayer` the owner, `GetEventUnitState` the state, life 0
+  and mana 2; outside an event the state with id 0): a life set or death fires inside the call when the life goes from
+  failing the comparison to passing it (`LESS_THAN` 200: 420 to 150 fires, 100 not, 250 then 150 fires again, 420 to
+  199.5 fires; `GREATER_THAN` 300: 350 fires; `GREATER_THAN_OR_EQUAL` 420: 400 then 420 fires; a `KillUnit` from 420
+  fires `LESS_THAN` 200 reading life 0). `EQUAL` 500 (a set to 500), `NOT_EQUAL` 300, the most life above 700
+  (`BlzSetUnitMaxHP` 800) and the most mana below 200 (`BlzSetUnitMaxMana` 150) never fired; nor did a registration made
+  while its comparison already passed. Mana (`LESS_THAN_OR_EQUAL` 100, from 255 to 100) fires inside the set and once
+  more in the next frame (0.0549 s after a set at 0.0500), also after a later life set, then not again; one set to 100,
+  50, 150 and 100 in one callback fired twice inside and once in the frame.
+- `TriggerRegisterFilterUnitEvent`: an owner change fires with a nil filter and with one that passes, the filter running
+  first; one that fails holds it back. A death never fires, with a nil filter, a passing or failing `Filter` or a
+  `Condition`, and the filter doesn't run.
+- Order events (a footman has Defend, a rifleman and a Paladin none): `PauseUnit(true)` fires the stunned order 851973
+  as a point order (39 then 76), the unit already paused, then `undefend` (38 then 75); paused again, nothing.
+  `PauseUnit(false)` fires `undefend` a frame later (0.01 s, twice), the unit unpaused; again, nothing; a rifleman's pause
+  fires only the stunned order and its unpause nothing; paused again before that frame, the `undefend` comes at once,
+  paused, with no stunned order. A paused footman given away fires no stop and no `undefend`, only its owner change;
+  unpaused, it gets a stop (851972) a frame later on its new owner's registration instead of `undefend`. A death
+  (`KillUnit`, a life of 0, timed life) fires `undefend` on the owner's and the unit's order events, the unit dead with
+  life 0 and unpaused, then the death events; a dead unit's pause and a second kill fire nothing. `RemoveUnit` of a
+  living footman fires nothing inside the call; after the callback, in the same frame, `undefend` twice, reading dead,
+  life 0, unpaused and its type id; again for a removed paused one; a dead one removed gets it once, an exploded one once
+  after the step (and once at its death). `CreateCorpse` fires `undefend` on its owner's registration inside the call,
+  and no death event.
+- Bones (`units-bones`, polled every 0.25 s, the kills at 0): a footman decays at 3.04 and gets `undefend` at 93.04,
+  gone by 93.25; a rifleman decays at 1.70 and is gone by 91.75; a footman whose timed life ended at 1.00 decays at 4.04,
+  `undefend` at 94.04; a `CreateCorpse` corpse gets `undefend` at 90.00 and is gone by 90.25 (no decay event); two
+  footmen whose decay was suspended right after the kill decayed at 3.04 and went at 93.04 as the others, one of them let
+  go only after that. So a body goes `DecayTime` 2 plus `BoneDecayTime` 88 after its decay, and a corpse that long after
+  it is made; `UnitSuspendDecay` there changed nothing.
+- Rescue: a neutral passive footman `SetUnitRescuable` by Player 0, with a footman of Player 0 made 100 away at 1.40,
+  fired `EVENT_PLAYER_UNIT_RESCUED` (19) on its owner's registration (`GetTriggerPlayer` 27, not Player 0's) then
+  `EVENT_UNIT_RESCUED` (63) at 1.90, `GetRescuer` Player 0's footman, and stayed neutral passive (blizzard.j's action
+  gives it away); one with `SetUnitRescueRange` 50 and one 800 away weren't rescued in 10 s. `GetRescuer` is nil outside.
+- Sleep (the game starts at midnight, night until 6): a neutral hostile murloc (`nmrl`, `canSleep` 1) made at night is
+  asleep at once (`UnitIsSleeping` and `IsUnitType(UNIT_TYPE_SLEEPING)`), dead, a corpse, hidden or paused too; a
+  neutral hostile footman (`canSleep` 0), Player 0's murloc and a neutral passive one never sleep (`UnitCanSleep` true for
+  Player 0's murloc). `UnitWakeUp` wakes it at once; it is asleep again by 2.05 s later, not at 2.0. `UnitAddSleep(u,
+  false)` wakes it at once and `UnitCanSleep` reads false; true at night puts it to sleep at once. `UnitCanSleepPerm`
+  reads false, also after `UnitAddSleepPerm(u, true)`, which changed nothing. `PLAYER_STATE_NO_CREEP_SLEEP` of neutral
+  hostile is 0; set to 1 it woke none. Setting the time to 12 wakes every living unpaused one at once (a dead, a corpse
+  and a paused one stay asleep), to 23 puts them all to sleep at once, one made at noon too. Running from 17.95, they
+  fell asleep 0.2 to 0.25 s after 18 (by 8.75 s at 18.012); from 5.95 they woke as long after 6.
+- Gold (`units-gold`): `GetResourceAmount` of a new gold mine (`ngol`, whose `Agld` has Max Gold `Gld1` 12500) is 12500;
+  of a haunted (`ugol`) or entangled (`egol`) mine, a footman, a barracks and nil 0. `SetResourceAmount` and
+  `AddResourceAmount` keep any amount on a mine (5000, 5250, -750, -5; 2147483647 plus 1 is -2147483648), and 0 doesn't
+  kill it (alive 1 s later); a haunted mine keeps 300 and an entangled one 400, a footman and a barracks nothing (0). A
+  killed mine reads 12500 in its death event and after, and keeps a set (70).
 ## Sounds
 
 Probes `probes/sounds.lua` (seven runs) and `sounds-2.lua` (seven runs, the last with a line checking the sound stopped

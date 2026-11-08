@@ -1,0 +1,103 @@
+# probes/units-more-2.lua on 3.0.1.24371, single player, 11-08 (W2-10): the game's lines. Two runs, the same; two before with times to 4 places (the mana's second event at 0.0549, the stop after unpausing at 0.6100, dusk's sleep seen at 8.7500 and dawn's waking at 10.7499), the same to the last digit; two before the players were made passive to each other also had two deaths of Player 1's units in fights at 9.0 to 12.0 s.
+state
+set a 150
+state a event 150.0000 0.0000 420.0000 0.05
+set b 100
+state b event 650.0000 100.0000 650.0000 0.05
+set c 500
+set d 800
+set e 100
+state e event 650.0000 100.0000 650.0000 0.05
+set e life 500
+kill k
+state k event 0.0000 0.0000 420.0000 0.05
+set m 150
+set n 400
+set n 420
+state n event 420.0000 0.0000 420.0000 0.05
+set q 350
+set q 300
+set q 250
+state end 0.05
+state 0s 0.05
+state b event 650.0000 100.0000 650.0000 0.05
+state e event 500.0000 100.0000 650.0000 0.05
+filter
+filter v runs
+filter event 287 v
+filter w runs
+filter done
+food
+food event 2
+food event 7
+kill footman
+food event 5
+food death 5
+kill hero
+food event 0
+food death 0
+food hero dead 0
+food event 5
+food event 0
+food hero corpse 0
+food event 2
+food event 0
+food removed 0
+food cap 108 100
+food after step 0
+timed
+timed class 4 t tf
+timed cancel a
+timed a death 0.40
+timed cancel without
+timed zero t
+timed paused cancelled death 0.40
+timed made 0.40
+timed tiny death 0.41
+alarm
+alarm hbar f tt tf
+alarm htow f tt tf
+alarm hfoo f ff ff
+state 0.5s 0.55
+paused
+pause f
+> f 39 851973 0 paused t 0.60
+> f 38 852056 0 paused t 0.60
+give paused f
+> f 270 0 1 paused t 0.60
+unpause f 0.60
+> g 39 851973 0 paused t 0.60
+> g 38 852056 0 paused t 0.60
+kill paused g
+> g 38 852056 0 paused f 0.60
+> g 20 0 0 paused f 0.60
+> m 39 851973 0 paused t 0.60
+> m 38 852056 0 paused t 0.60
+unpause and pause m
+> m 38 852056 0 paused t 0.60
+> h 39 851973 0 paused t 0.60
+> h 38 852056 0 paused t 0.60
+unpause and kill h
+> h 38 852056 0 paused f 0.60
+> h 20 0 0 paused f 0.60
+paused end 0.60
+> f 38 851972 1 paused f 0.61
+sleep
+sleep made 1.00 0.050 w1 t w2 t off t passive f dead t corpse t hidden t paused t mine f
+> ? 38 852056 0 paused f 1.40
+> ? 20 0 0 paused f 1.40
+timed zero death 1.40
+> ? 38 852056 0 paused f 1.40
+> ? 20 0 0 paused f 1.40
+timed then zero death 1.40
+sleep woke w1 1.50 0.075 w1 f
+sleep woke w2, off 1.80 0.090 w2 f off f
+sleep  3.55 0.177 w1 t
+sleep  3.85 0.192 w2 t
+sleep no creep sleep 5.50 0.275 
+sleep creep sleep 6.50 0.325 
+sleep 17.95 7.50 17.950 w1 f w2 f hidden f
+sleep  8.75 18.012 w1 t w2 t hidden t
+sleep 5.95 9.50 5.950 
+sleep  10.75 6.012 w1 f w2 f hidden f
+sleep end 12.50 6.100 

@@ -30,13 +30,6 @@
 - strength 30 850.0 850 30
 + strength 30 650.0 650 30
 
-# The footman's Defend gives it undefend (852056) after an owner change, which comes with abilities (W2-7; D226).
-- order 38 852056 true true owner 1 player 1
-- order 75 852056 true true owner 1 player 1
-- order 38 852056 true true owner 0 player 0
-- order 75 852056 true true owner 0 player 0
-- order 38 852056 false false owner 0 player 0
-
 # A hero's permanent attribute set (W2-3; D227, Close).
 - set Hpal true 1
 + set Hpal true 13

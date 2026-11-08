@@ -164,23 +164,34 @@ public sealed partial class GameNatives
     public bool IsUnitEnemy(unit? whichUnit, player? whichPlayer) => whichUnit is not null && IsPlayerEnemy(whichUnit.Owner, whichPlayer);
 
     /// <summary>
-    /// Gives the unit to the player (the units probe; the facts' "Orders and events"): a living unit first gets a stop
-    /// (order 851972), whose order events read the old owner, then changes hands, then its owner-change events fire on
-    /// the new owner's registrations, reading the old one from GetChangingUnitPrevOwner; given to its owner, nothing
-    /// happens. A dead unit changes hands with no stop. The colour is the new owner's when asked. Close: the undefend
-    /// order (852056) a unit with Defend gets after the change comes with abilities (W2-7, W2-10); and when a stop's
-    /// event gives the unit away first, this call changes nothing more (not measured).
+    /// Gives the unit to the player (the units probes; the facts' "Orders and events"): a living unit first gets a stop
+    /// (order 851972), whose order events read the old owner, then changes hands with its food and count, then its
+    /// owner-change events fire on the new owner's registrations, reading the old one from GetChangingUnitPrevOwner,
+    /// then it gets undefend (852056) for each Defend. A paused one gets neither order (it gets the stop when unpaused),
+    /// and a dead one neither. Given to its owner, nothing happens. The colour is the new owner's when asked. When a
+    /// stop's event gives the unit away first, this call changes nothing more (not measured).
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = UnitsProbe + "; " + MoreProbe)]
     public void SetUnitOwner(unit? whichUnit, player? whichPlayer, bool changeColor)
     {
         if (whichUnit is null || whichPlayer is null || whichUnit.Owner == whichPlayer) return;
-        var previous = whichUnit.Owner;
-        if (!whichUnit.Dead) FireUnit(new(whichUnit, Order: 851972), UnitIssuedOrder, PlayerUnitIssuedOrder);
-        if (whichUnit.Owner != previous) return;
-        whichUnit.Owner = whichPlayer;
-        if (changeColor) whichUnit.Color = whichPlayer.Color;
-        FireUnit(new(whichUnit, Previous: previous), UnitChangeOwner, PlayerUnitChangeOwner);
+        var (u, previous) = (whichUnit, whichUnit.Owner);
+        if (!u.Dead && !u.Paused) FireUnit(new(u, Order: Stop), UnitIssuedOrder, PlayerUnitIssuedOrder);
+        if (u.Owner != previous) return;
+        Asleep(u);
+        // The count and food move before any food event; a food event that gives the unit away or kills it ends this call,
+        // and one that stops its food use leaves the new owner's food used unannounced (not measured)
+        var (dead, usesFood) = (u.Dead, u.UsesFood);
+        var (lost, gained) = dead ? default : (Count(previous, u, -1), Count(whichPlayer, u, 1));
+        u.Owner = whichPlayer;
+        if (changeColor) u.Color = whichPlayer.Color;
+        Announce(previous, lost);
+        if (u.Owner != whichPlayer || u.Dead != dead) return;
+        Announce(whichPlayer, (u.UsesFood == usesFood ? gained.Used : 0, gained.Made));
+        if (u.Owner != whichPlayer || u.Dead != dead) return;
+        FireUnit(new(u, Previous: previous), UnitChangeOwner, PlayerUnitChangeOwner);
+        if (u.Paused) u.GivenWhilePaused = true;
+        else if (!u.Dead) Undefend(u, Defends(u));
     }
 
     /// <summary>The level of the unit's type, a hero's its hero level (facts, Units: a footman's is 2).</summary>
@@ -237,41 +248,44 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// The unit's kinds (probe units): hero, dead, structure, flying and ground (neither flying nor a structure), from
-    /// its enabled weapons attacks ground, attacks flying, melee (a weapon of type normal) and ranged, and its type's
-    /// classification. Close: stunned, plagued, snared, poisoned, polymorphed, sleeping, resistant, ethereal and magic
-    /// immune need buffs and abilities (wave 4) and read false.
+    /// The unit's kinds (probes units, units-more): hero, dead, structure, flying and ground (neither flying nor a
+    /// structure), from its enabled weapons attacks ground, attacks flying, melee (a weapon of type normal) and ranged,
+    /// its classification (its type's, with UnitAddType's and timed life's changes), and sleeping (UnitIsSleeping).
+    /// Close: stunned, plagued, snared, poisoned, polymorphed, resistant, ethereal and magic immune need buffs and
+    /// abilities (wave 4) and read false.
     /// </summary>
     [Native(Level.Close)]
-    public bool IsUnitType(unit? whichUnit, unittype? whichUnitType)
+    public bool IsUnitType(unit? whichUnit, unittype? whichUnitType) =>
+        whichUnit is not null && whichUnitType is not null && Is(whichUnit.Type, whichUnit, whichUnitType.Id);
+
+    // The classification's kinds, unittype's ids to Categories' words
+    static readonly Dictionary<int, string> Classes = new()
     {
-        if (whichUnit is null || whichUnitType is null) return false;
-        var type = whichUnit.Type;
-        bool Is(string category) => (BlzGetUnitIntegerField(whichUnit, Convert<unitintegerfield>(Classification)) & Categories[category]) != 0;
+        [9] = "giant", [10] = "summoned", [14] = "undead", [15] = "mechanical", [16] = "peon", [17] = "sapper", [18] = "townhall", [19] = "ancient", [20] = "tauren",
+    };
+
+    // A kind of a unit, or of its type alone (u null): a type is never ground (probe units-types)
+    bool Is(GameObject type, unit? u, int kind)
+    {
         // Its enabled weapons, of 1 and 2: their type and the flags of their targets
         IEnumerable<(string? Kind, int Targets)> Weapons() => Enumerable.Range(1, 2).Where(n => (type.Integer(WeaponsOn) & n) != 0)
             .Select(n => (type.Text(Code($"ua{n}w")), Flags(type.Text(Code($"ua{n}g")), TargetFlags)));
-        return whichUnitType.Id switch
+        bool Building() => u is null ? type.Integer(IsBuilding) != 0 : IsBuildingNow(u);
+        bool Flying() => u is null ? MoveTypes.GetValueOrDefault(type.Text(MoveType) ?? "") == 2 : Flies(u);
+        int Classification() => u is null ? Flags(type.Text(GameNatives.Classification), Categories) : BlzGetUnitIntegerField(u, Convert<unitintegerfield>(GameNatives.Classification));
+        return kind switch
         {
             0 => IsHero(type.Id),
-            1 => whichUnit.Dead,
-            2 => IsBuildingNow(whichUnit),
-            3 => Flies(whichUnit),
-            4 => !Flies(whichUnit) && !IsBuildingNow(whichUnit),
+            1 => u is { Dead: true },
+            2 => Building(),
+            3 => Flying(),
+            4 => u is not null && !Flying() && !Building(),
             5 => Weapons().Any(w => (w.Targets & TargetFlags["air"]) != 0),
             6 => Weapons().Any(w => (w.Targets & TargetFlags["ground"]) != 0),
             7 => Weapons().FirstOrDefault().Kind is "normal",
-            8 => Weapons().FirstOrDefault().Kind is { } kind && kind != "normal",
-            9 => Is("giant"),
-            10 => Is("summoned"),
-            14 => Is("undead"),
-            15 => Is("mechanical"),
-            16 => Is("peon"),
-            17 => Is("sapper"),
-            18 => Is("townhall"),
-            19 => Is("ancient"),
-            20 => Is("tauren"),
-            _ => false,
+            8 => Weapons().FirstOrDefault().Kind is { } weapon && weapon != "normal",
+            23 => u is not null && Asleep(u),
+            _ => Classes.TryGetValue(kind, out var name) && (Classification() & Categories[name]) != 0,
         };
     }
 }

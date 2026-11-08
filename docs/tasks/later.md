@@ -71,3 +71,12 @@ Each item names the wave whose file it goes into when that file is written.
   map) closed the game with any doo War3Net wrote (docs/facts.md, "Destructables"), while the way Moonwell's physics
   gate took works (game-facts, "Units", 10-27): a World Editor map's files with its `war3map.doo` written by War3Net,
   `MapDoodads.UseNewFormat` set.
+- Wave 3 (orders, combat): `PauseUnit(false)` gives the unit back the order it had (game-facts: the move, 0.016 s
+  later), which W2-10's order events can't (D310); regeneration can bring life or mana across a unit state event's
+  limit, and the game looks at mana a frame (about 0.005 s) after a set (D315) (W2-10).
+- Wave 4 (abilities): `IsUnitType`'s stunned, plagued, snared, poisoned, polymorphed, resistant, ethereal and magic
+  immune (D230); summon events with `GetSummonedUnit` and `GetSummoningUnit`; illusions for `IsUnitIllusion`; and
+  timed life with a summon's buff (`BHwe`: no decay event, the body gone at its decay time, D312) (W2-10).
+- Wave 7 (AI): creep camps guarding and going back, for `SetUnitCreepGuard`, which does nothing yet (D314); and the
+  creeps' sleep 0.2 to 0.25 s after dusk and waking as long after dawn, where MirrorImaged acts at the hour (D313;
+  `probes/differences/units-more-2.txt`) (W2-10).
