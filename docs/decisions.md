@@ -134,10 +134,10 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   written as arena offsets), `lstate.c` (the string hash seed is 0 instead of the time and addresses; the game's seed
   is unknown), `lmathlib.c` (`math.log` with a base, `math.modf`, `math.rad` and `math.deg` use the game's arithmetic
   instead of C operators), `ldo.c` (binary chunks refused, D36), `lapi.c` and `ltable.c` (a C function is hashed and
-  written by its place in the library, D39).
+  written by its place in the library, D39), `loslib.c` (the time functions on the simulated clock, D44).
 - **D36. The sandbox** leaves out `math.random` and `math.randomseed`: the game's are its own generator, shared with
   `GetRandomInt` (fact), which the world provides (W0-5). `os.clock`, `os.time` and `os.date` read the real clock, as the
-  game's do, until the world replaces them. Binary chunks are refused by every `load`, whatever its mode: Lua 5.3 never
+  game's do, until the world replaces them (done in W0-5, D44). Binary chunks are refused by every `load`, whatever its mode: Lua 5.3 never
   checks bytecode, so a map could crash the process with one. Whether the game loads them isn't measured;
   `string.dump` stays, harmless without them.
 - **D37. The native build** uses zig 0.17.0 (`native/build.ps1`) for win-x64 (MinGW), linux-x64 (glibc 2.17) and
@@ -181,3 +181,66 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   `os.time` as the PC's seconds, `os.date` in local time, long calls not stopped, slow ticks made up): they are about
   the real clock and the game loop, which belong to the world (W0-5); only `os.time` being an integer and `os.date`'s
   options are tested. `math.random` sharing the game's generator: W0-5.
+
+### Running a Lua map (W0-5)
+
+- **D41. A handle in Lua is a full userdata** holding its id and declared type, with one metatable per type whose
+  `__name` is the type, so `tostring` writes `timer: <address>`: the facts measure that it names the type the
+  returning native declares. While Lua holds it, the same handle as the same type is the same userdata (a weak table
+  per type), so `==` and table keys work (`GetLocalPlayer() == Player(0)`); as another type it is another userdata, as
+  the facts measure for `unit` and `widget`. One Lua let go of is made again at a new address next time; whether the
+  game keeps it is not measured. Its place, so `pairs` and `tostring`, is the same every run (D39). An argument's
+  declared type must be the parameter's or below it, else Lua's `bad argument #1 to 'X' (timer expected, got
+  player)`, as the facts measure for `GetUnitTypeId`; a destroyed handle reads as null to the natives.
+- **D42. A Lua function given to C#** becomes a reference in the registry, made by `sandbox.c`'s trampoline before C#
+  runs, since C# must not allocate in Lua there. It is let go of when the C# function returns, unless C# keeps it
+  (`LuaFunction.Keep`, then `Dispose`). A native's `code` (D20) is a delegate whose target is the kept function's
+  wrapper; a native letting go of a callback disposes the target if it can (`TimerStart` again, `DestroyTimer`), so a
+  map starting timers with new closures doesn't grow. When a later argument can't be read (a table), a function read
+  before it isn't let go of: a small leak on an error.
+- **D43. A Missing native halts the run** (`LuaState.Halts`): its error is raised at the calling line, and from then on
+  every Lua instruction in every thread raises it again (a count hook on every thread; a new thread takes its
+  creator's), so no `pcall`, `xpcall` handler, `coroutine.resume`, `load` reader, `string.gsub` callback or C# that
+  swallows the error carries on. Replacing `pcall`, `xpcall` and `coroutine.resume` instead misses the others, and in
+  Lua it would move `pcall(error, "", 2)`'s position (facts). The run's call throws a `LuaException` starting with the
+  line (`war3map.lua:4: The native CreateUnit is Missing...`), whose inner exception is the `MissingNativeException`,
+  and the simulation can't run on.
+- **D44. os.clock, os.time, os.date and os.difftime read the simulated clock** (`LuaState.Clock`, whole milliseconds,
+  in the main thread's extra space so every coroutine reads it). `os.clock` is the run's time; the game's is the
+  process's real time, which runs with game time in single player. `os.time` and `os.date` add it to 2026-01-01
+  00:00:00 UTC, the same every run, and local time is UTC (`isdst` false, `%z` +0000, `%Z` UTC). The conversions are
+  written out in `native/mitime.c` (dates to days and back, `mktime`'s carrying over, Windows's list of conversions in
+  the "C" locale as its C library writes them, `%#c` and `%#x` from its documentation), not the C library's, which
+  reads the machine's zone and differs between platforms; `loslib.c` calls them in place of `clock`, `time`, `mktime`,
+  `strftime` and `difftime`. Not measured in the game: `%c`, `%x`, `%#c`, `%Z`.
+- **D45. The clock's step is 1/1024 s.** The facts measure timers in game time down to 1/256 s: a periodic 1/256 s
+  timer and a one-shot started again every 1/256 s each run 256 times a game second. With 1 ms steps the one-shot
+  would restart every 4 ms (250 a second); with 1/1024 s, 1/256 s is 4 steps. A timer's expiries are its start plus
+  whole timeouts, each rounded to the nearest step, so it doesn't drift; the clock reads the step during its callback,
+  and a 0 s timer started there runs in the same step (fact). Timers due in one step run in the order they were
+  started (not measured). A periodic timer runs at most once a step, so a periodic 0 s one runs every step (not
+  measured). Elapsed is the timeout less the remaining time in single floats, as the facts infer, with C#'s rounding
+  to nearest. Not matched: the game ran timers due at 0.5, 2 and 3.25 s 0.0001 s early. `Game.Advance` jumps to what
+  falls due instead of visiting every step: the same run, faster.
+- **D46. The random generator is SplitMix64** from the run's seed: the game's isn't known, and .NET doesn't promise
+  `System.Random`'s seeded numbers across versions. `GetRandomInt`, `GetRandomReal`, `SetRandomSeed`, `math.random` and
+  `math.randomseed` share it, as the game's do (fact). `math.random(m, n)` is `GetRandomInt(m, n)` and `math.random()`
+  a float from 0 below 1, with Lua 5.3's argument checks; `math.randomseed(x)` seeds with `x` cut to an integer.
+  `GetRandomInt` takes its bounds in either order.
+- **D47. Handle ids** count up from 0x100000, the first agent id the game is said to give (claim), and are never
+  reused: the game's reuse isn't measured (facts, "Handles and identity"). The 28 players, slots 0 to 27 (fact), are
+  made first. `GetHandleId` waits for wave 1, with the rest of the core.
+- **D48. The run's log** has a line for each `print`, each text shown to a player, whichever player, and each Lua
+  error, as `<seconds to 3 places> <source>: <text>`, the source `print`, `player <n>` or `error`; an error's
+  traceback is left out. The game shows text only to the local player and loses what is printed before `main`
+  (facts); the log keeps it all, as the test's record. A Lua error in the script, `config`, `main` or a timer goes in
+  the log and the run carries on, as the game drops errors in callbacks (fact); a map without `config` or `main` logs
+  the error of calling nil.
+- **D49. The natives become Lua globals** by reflection over `GameNatives`'s `[Native]` methods, sorted by name, so the
+  global table fills the same way every run; a Missing native throws before reading its arguments. An integer
+  parameter takes a whole float (fact) and refuses another with Lua's "number has no integer representation"; a real
+  takes an integer; a boolean is Lua's truth; a string, handle or code takes nil as null; anything else is Lua's
+  `bad argument #n to 'Name' (<type> expected, got <type>)`. A handle is returned as the native's declared type. The
+  game's own Lua additions known from the facts: `print`, a Lua function joining `tostring` of each argument with
+  tabs, as Lua's does, and `FourCC`, a string's characters big-endian (an object id for 4; other lengths not
+  measured). After W0-5: 1 Exact (`GetLocalPlayer`), 14 Close, 2 Recorded, 1,818 Missing.

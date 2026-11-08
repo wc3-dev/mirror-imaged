@@ -1,3 +1,5 @@
+using System.Globalization;
+using MirrorImaged;
 using MirrorImaged.Natives;
 
 if (args is ["coverage"])
@@ -6,9 +8,49 @@ if (args is ["coverage"])
     return 0;
 }
 
-Console.Error.Write("""
-    usage:
-      mirror coverage    How many natives are at each trust level, and which are Missing
+if (args is ["run", var map, .. var options])
+{
+    double seconds = 60;
+    int seed = 0;
+    for (int i = 0; i < options.Length; i += 2)
+    {
+        var value = i + 1 < options.Length ? options[i + 1] : "";
+        var known = options[i] switch
+        {
+            "--seconds" => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out seconds) && seconds >= 0,
+            "--seed" => int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out seed),
+            _ => false,
+        };
+        if (!known) return Usage();
+    }
 
-    """);
-return 2;
+    try
+    {
+        using var simulation = Simulation.Load(map, new SimulationOptions { Seed = seed });
+        try { simulation.Advance(TimeSpan.FromSeconds(seconds)); }
+        finally
+        {
+            foreach (var line in simulation.Log) Console.Write(line + "\n");
+        }
+        return 0;
+    }
+    catch (Exception e)
+    {
+        Console.Error.Write(e.Message + "\n");
+        return 1;
+    }
+}
+
+return Usage();
+
+static int Usage()
+{
+    Console.Error.Write("""
+        usage:
+          mirror coverage                                  How many natives are at each trust level, and which are Missing
+          mirror run <map> [--seconds <n>] [--seed <n>]    Runs a Lua map for n simulated seconds (60) with a seed (0),
+                                                           then prints its log
+
+        """);
+    return 2;
+}

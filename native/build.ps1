@@ -21,7 +21,7 @@ $flags = @('-shared', '-O2', '-g0', '-s', '-DLUA_USE_C89', '-ffp-contract=off', 
 
 Push-Location $PSScriptRoot
 try {
-    $sources = @(Get-ChildItem lua/*.c | Sort-Object Name | ForEach-Object { "lua/$($_.Name)" }) + 'arena.c', 'mifloat.c', 'sandbox.c'
+    $sources = @(Get-ChildItem lua/*.c | Sort-Object Name | ForEach-Object { "lua/$($_.Name)" }) + 'arena.c', 'mifloat.c', 'mitime.c', 'sandbox.c'
     foreach ($t in $targets) {
         $out = "../src/MirrorImaged.Lua/runtimes/$($t.Rid)/native"
         $tmp = Join-Path ([IO.Path]::GetTempPath()) "mirrorlua-$($t.Rid)-$PID"
