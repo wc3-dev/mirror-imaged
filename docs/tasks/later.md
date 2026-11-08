@@ -16,3 +16,11 @@ Each item names the wave whose file it goes into when that file is written.
   `Preloader` reads the files on disk as they are while watching (data-probe-2; D104 says not simulated) (W1-5).
 - Wave 8 (test tools): the CLI and the Lua test API can't keep `Documents` from one process to the next, and the
   saved caches are internal, so they can't be saved or seeded from outside (W1-5).
+- Wave 6 (players and input): `TriggerRegisterPlayerEvent`'s input events register but never fire (D143):
+  `EVENT_PLAYER_LEAVE` when a player leaves (never for `RemovePlayer`, facts), chat, end cinematic, the arrow keys,
+  the mouse and the keys (W1-9).
+- Wave 6: `GetWinningPlayer` is Missing (D145): no run fires `EVENT_GAME_VICTORY`; probe it outside an event and make
+  it at least Close (A1) (W1-9).
+- Wave 6: the lobby's placement of players on start locations isn't simulated (D98, D141: teams-together placement
+  moved slots 0 and 1 at random), so `GetPlayerStartLocation` is Close; place them from the run's seed and let a test
+  choose (W1-9).

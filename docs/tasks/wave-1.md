@@ -66,6 +66,11 @@ Parallel lanes, to keep merges painless:
   Choose knowingly whether `__eq` compares the key (D63) or the game id: a stale handle equal to a new one that reused
   its id is what the game seems to do.
 - Note the C side still calls the handle key "id" (`native/sandbox.c`, `Native.cs`): rename it when adding the game id.
+- From W1-9's events probe: a destroyed Filter given to `ForceEnumPlayers` after a Condition had taken its place ran
+  the new condition for each player (`events.txt` "destroyed c,c>0 1"). With D115's places, a destroyed condition
+  given to a native runs its place's current function; then the four `ForceEnum*` become Exact. D146 and
+  `docs/facts.md` ("the destroyed handle's id was reused (inferred)") should say "the condition's place". Whichever of
+  W1-6 and W1-9 merges second fixes the coverage counts.
 - Every native's argument check (D49, D80): a native given nil where it takes a handle, a number for a string, and so
   on, as the game reports it.
 
@@ -88,6 +93,14 @@ Needs W1-5 (the probes write through Preload) and W0-4's runner.
   `Asin`, `Acos` and `Atan2` natives need their own domain check (their Exact rows will catch it).
 - W1-2's probes: a periodic trigger event's expiry ran before a timer started later that fell due at the same moment
   (MirrorImaged keeps queue order, D45).
+- From W1-9: `TriggerRegisterGameStateEvent` stays Close for three frame effects D144 names (settle or model them),
+  and the time-of-day read-back drift D149 leaves open (0.1 reads 3dccccc0 and 23.9 reads 41bf3332 at once while
+  suspended; 7 reads 40e0000a after a frame), which keeps `SetFloatGameState`/`GetFloatGameState` Close. The lobby and
+  events probes are built with `ProbeMap`'s `withComputer` (D140) in both runs. `EndGame`'s evidence is in side files
+  (`events-after.pld`, `events-timer.pld` written, `events-end.pld` not): compare those too.
+- From W1-6: probe lines that differ from MirrorImaged by decision, not bug: `handles`' "first" and "blizzard" lines
+  and `handles-3`'s two "players" lines (D110, starting ids), the id-reuse lines in `handles-2` and `handles-3` (D111),
+  `handles-3`'s "predicted" and `handles`' "after a pass" lines (D114). Mark them in the expected files.
 - Every probe's raw game lines live in `probes/expected/<probe>.txt`; the comparison reads them from there. Lines that
   vary from run to run (W1-2's wait lengths, D71) get a tolerance or are skipped, said in the expected file.
 - W1-2's two measured cases on `TriggerRegisterTimerEvent` (probe `triggers`: the tie at 3.0, the periodic event ran
