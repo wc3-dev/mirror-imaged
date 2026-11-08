@@ -1,0 +1,23 @@
+# probes/cameras-4.lua on 3.0.1.24371, single player, 11-08: the game's lines. Where a target or a field is part way
+# through a move, a few hundredths off where it lands, or shaken by the noise, its number varies with the game's frames
+# and is a {t}. In a line, each {t} stands for a number, the rest exact (decisions D71, D124). The first run's numbers
+# for them: rotate 1s 160.3088 -366.8922, eye 980.9630 -1126.7037; apply force with z 0.5s 402.3694 201.1765 125.7441,
+# 1.5s 799.9731 399.9768; noise 800.1199 399.7100 249.7332, eye 800.2667 -1278.1356 2736.5791; rotation 350 to 10 0.5s
+# 0.0010.
+fog true mask true
+fog set false mask false
+fog again true mask true
+rotate now 0.0000 0.0000 0.0000 rotation 1.5708
+rotate 0s 0.0000 0.0000 0.0000 rotation 1.5708
+rotate 1s {t} {t} 0.0000 rotation 1.5708 eye {t} {t} 1658.0752
+rotate 2.5s 500.0000 -500.0000 0.0000 rotation 1.5708 eye 1618.3857 -499.9999 1658.0752
+reset after rotate 500.0000 -500.0000 10.0000 rotation 1.5708
+apply with z now 500.0000 -500.0000 10.0000 zoffset 0.0000
+apply with z 0.5s 800.0000 400.0000 0.0000 zoffset 0.0000
+apply with z 1.5s 800.0000 400.0000 0.0000 zoffset 0.0000
+apply force with z now 0.0000 0.0000 0.0000 zoffset 0.0000
+apply force with z 0.5s {t} {t} {t} zoffset 0.0000
+apply force with z 1.5s {t} {t} 250.0000 zoffset 0.0000
+noise {t} {t} {t} eye {t} {t} {t}
+rotation 350 to 10 0.5s {t}
+rotation 350 to 10 1.5s 0.1745
