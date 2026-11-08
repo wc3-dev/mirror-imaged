@@ -62,7 +62,8 @@ public sealed class MapArchive
         T? Read<T>(string name, Func<BinaryReader, T> read, Func<byte[], byte[]>? mend = null) where T : class
         {
             if (Bytes(archive, name) is not { } bytes) return null;
-            try { return read(new BinaryReader(new MemoryStream(mend?.Invoke(bytes) ?? bytes))); }
+            // A file is mended only when War3Net can't read it whole as it is (D300)
+            try { return mend is not null && Whole(read, bytes) is { } plain ? plain : read(new BinaryReader(new MemoryStream(mend?.Invoke(bytes) ?? bytes))); }
             catch (Exception e) when (e is not OutOfMemoryException)
             {
                 if (!LeftOut.Contains(name)) throw new InvalidDataException($"{name} in {path} can't be read: {e.Message}", e);
@@ -159,7 +160,7 @@ public sealed class MapArchive
     }
 
     // war3map.w3s repeats each sound's name and file after its settings, and War3Net 6.1.2 refuses a sound whose repeat
-    // differs (Human09 has g_snd_H09Arthas16, then gg_snd_H09Arthas16, its script's): the name is taken as repeated
+    // differs (15 in four of Reforged's maps: g_snd_X, then gg_snd_X, the scripts' name): the name is taken as repeated
     // (D301).
     static byte[] SoundNamesRepeated(byte[] bytes)
     {
@@ -183,6 +184,14 @@ public sealed class MapArchive
 
         output.Write(bytes, at, bytes.Length - at);
         return output.ToArray();
+    }
+
+    // What War3Net reads from bytes when it reads every one of them; null when it throws or stops short
+    static T? Whole<T>(Func<BinaryReader, T> read, byte[] bytes) where T : class
+    {
+        var reader = new BinaryReader(new MemoryStream(bytes));
+        try { return read(reader) is var value && reader.BaseStream.Position == bytes.Length ? value : null; }
+        catch (Exception e) when (e is not OutOfMemoryException) { return null; }
     }
 
     static int Int(byte[] bytes, int at) => BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(at));

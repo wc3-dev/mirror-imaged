@@ -1361,30 +1361,32 @@ each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions belo
 
 The install's 466 maps, `War3.w3mod:Maps/` (273) and `War3.w3mod:Campaign/` (193: `Classic` and `Reforged`, each
 `ROC` and `TFT`), read 11-08 from 3.0.1.24371's storage. The install has no `.w3n`: its campaigns are folders of maps
-(`Campaign/Classic/ROC/Human01.w3m`). Of the 193, War3Net 6.1.2 refused 131: 130 for D300 and one for D301. Neither is
-an enum value War3Net doesn't know, so W2-1's three files (D209) are another fix, left to W2-4 and W2-6 as before: a
-doodad state with bit 3 set, a cliff type 0 and a random unit mode 641, each in a reader D300 and D301 don't touch.
+(`Campaign/Classic/ROC/Human01.w3m`). Of the 193, War3Net 6.1.2 refused 131: 130 for D300 (three of them, Human03,
+Undead05 and OrcX01_02, also have D301's sounds) and Human09 for D301 alone. Neither is an enum value War3Net doesn't
+know, so W2-1's three files (D209) are another fix, left to W2-4 and W2-6 as before: a doodad state with bit 3 set, a
+cliff type 0 and a random unit mode 641, each in a reader D300 and D301 don't touch.
 
 - **D300. A format-39 `war3map.w3i` of World Editor before 6140 has no race HUD in its players.** War3Net reads format
   39 as 3.0 writes it, with a race HUD after each player's race, and so took the player's flags from the first four
   bytes of its name (`TRIG` of `TRIGSTR_`, the `PlayerFlags` value 0x47495254; for an empty name its 0 and three bytes
   of its start, 0x34000000 and 0x3C000000). World Editor 6117 (one map) and 6127 (129; both 2.0.4.23839) wrote format
-  39 without it; the install's maps of 6140 (2.0.4.24127), 7000 and 7003 have it. Such a file is given a race HUD of
-  none in each player before War3Net reads it (`MapArchive`), the map's own race HUD, which 6127 wrote too, kept; then
-  all 466 info files read to their last byte. The 130 are 37 of Classic's Reign of Chaos campaign, 42 of Reforged's and
-  Reforged's 51 of The Frozen Throne. Inferred: the line is the editor version, at 6140; the install has no map of 6128
-  to 6139.
+  39 without it; the install's maps of 6140 (2.0.4.24127), 7000 and 7003 have it. A format-39 file of an editor before
+  6140 that War3Net can't read whole as it is (it throws, or stops before the last byte) is given a race HUD of none in
+  each player and read again (`MapArchive`), the map's own race HUD, which 6127 wrote too, kept; one it reads whole,
+  as a tool writing the field with an older editor version may make, is kept as it is. Then all 466 info files read to
+  their last byte. The 130 are 37 of Classic's Reign of Chaos campaign, 42 of Reforged's and Reforged's 51 of The
+  Frozen Throne. Inferred: the line is the editor version, at 6140; the install has no map of 6128 to 6139.
 - **D301. A sound whose name differs where `war3map.w3s` repeats it takes the name as repeated.** War3Net refuses such
-  a sound; Reforged's Human09 names one `g_snd_H09Arthas16` and repeats it `gg_snd_H09Arthas16`, the variable its
-  script makes it in (`CreateSound`, as the game makes a map's sounds; nothing reads the sound file yet, D212). The
-  repeat is put in the first name's place before War3Net reads the file; all 223 of the install's sound files read to
-  their last byte.
+  a sound. 15 sounds in 4 maps have one, each `g_snd_X` repeated `gg_snd_X`: Reforged's Human03 (1), Human09 (1),
+  Undead05 (12) and OrcX01_02 (1); their files repeat every path as it is. The repeat is put in the first name's place
+  before War3Net reads the file, as for D300 only when War3Net can't read the file whole as it is; all 223 of the
+  install's sound files then read to their last byte. Inferred, not probed: that the game keeps the repeated name.
+  Each of the 15 is the variable the map's script makes the sound in (`CreateSound`, as the game makes a map's
+  sounds), and none of the first names is in a script; nothing reads the sound file yet (D212).
 - **D302. Where the shipped maps stop.** `ShippedMapTests` reads each of the 466 from the install's storage into a
-  temporary file, and runs each map with a script to its first Missing native or through 10 minutes; a map that
-  doesn't read or load, or stops otherwise, fails it. It passes over a map with no script, as JASS maps are until W1-7
-  merges, and takes them then unchanged, since `MapArchive.Script` gives their `war3map.j`. On `release/1.0.0` 49 maps
-  run (Lua) and 417 are JASS: 48 stop at `GetCameraMargin` (wave 5), the first line of `main`, and
-  `ForsakenKingdom/Scenario/(1)ForgottenHollow.w3x` at `Location` before it. With W1-7's branch (d0a8c14) merged: 465
-  stop at `GetCameraMargin` and ForgottenHollow at `Location`, none with a script error before; the run takes 70 s.
-  So every shipped map runs its script and `config`, and where they stop after `main`'s first line shows only once
-  `GetCameraMargin` exists.
+  temporary file and runs it to its first Missing native or through 10 minutes; a map that doesn't read or load, stops
+  otherwise, or logs a script error fails it (A5). On `release/1.0.0` with W1-7 merged (11-08), every one runs, JASS as
+  well as Lua: 465 stop at `GetCameraMargin` (wave 5), the first line of `main`, and
+  `ForsakenKingdom/Scenario/(1)ForgottenHollow.w3x` (Lua) at `Location` before it; none logs a script error, and the
+  run takes 70 to 90 s. So every shipped map runs its script and `config`, and where they stop after `main`'s first line
+  shows only once `GetCameraMargin` exists.

@@ -58,7 +58,9 @@ puts a race HUD of none in each player of such a file before War3Net reads it (d
 ## War3Net.Build.Core: a sound whose repeated name differs is refused
 
 Draft, not posted. War3Net.Build.Core 6.1.2 throws "Expected sound's Name and FilePath to be repeated." for a
-`war3map.w3s` sound whose name, repeated after its settings, differs from the first. 3.0.1.24371's
-`Campaign/Reforged/ROC/Human09.w3x` has one: `g_snd_H09Arthas16`, repeated `gg_snd_H09Arthas16`, which is the name
-its `war3map.j` gives the sound; the game loads the map. Expected: the file read, keeping both names or the repeated
-one. MirrorImaged puts the repeated name in the first one's place before War3Net reads the file (decisions D301).
+`war3map.w3s` sound whose name, repeated after its settings, differs from the first. 3.0.1.24371's install has 15
+such sounds in 4 of Reforged's campaign maps (`Campaign/Reforged/ROC/Human03.w3x`, `Human09.w3x`, `Undead05.w3x`
+with 12, and `Campaign/Reforged/TFT/OrcX01_02.w3x`), each named `g_snd_X` and repeated `gg_snd_X`
+(`g_snd_H09Arthas16`, `gg_snd_H09Arthas16`); the repeated name is the one the map's `war3map.j` gives the sound, and
+the maps ship with the game. Expected: the file read, keeping both names or the repeated one. MirrorImaged puts the
+repeated name in the first one's place before War3Net reads the file (decisions D301).

@@ -23,9 +23,10 @@ public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
     const PlayerRaceHud Marker = (PlayerRaceHud)0x1F2E3D4C;
 
     // D300: World Editor 6117 and 6127 (2.0.4's campaign maps) wrote format 39 without the race HUD each player has
-    // from 6140
+    // from 6140; one of 6127 that has them, as another tool may write, reads them
     [Theory]
     [InlineData(6127, false)]
+    [InlineData(6127, true)]
     [InlineData(6140, true)]
     public void A_format_39_info_file_has_a_race_hud_in_each_player_from_world_editor_6140(int editor, bool huds)
     {
@@ -46,7 +47,7 @@ public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
         Assert.All(read.Players, player => Assert.Equal(huds ? Marker : 0, player.RaceHud));
     }
 
-    // D301: Human09's war3map.w3s names a sound g_snd_H09Arthas16 and repeats it gg_snd_H09Arthas16, its script's name
+    // D301: 15 sounds in four Reforged maps are named g_snd_X and repeated gg_snd_X, the name their scripts use
     [Fact]
     public void A_sound_whose_repeated_name_differs_takes_the_name_as_repeated()
     {
@@ -63,7 +64,7 @@ public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
     }
 
     // A4, A5: every map in the install's Maps and Campaign folders reads, and each runs to its first Missing native or
-    // through its first 10 minutes; where they stop is D302's
+    // through its first 10 minutes without a script error; where they stop is D302's
     [InstallFact]
     [Trait("Needs", "Game")]
     public void Every_shipped_map_reads_and_runs_to_its_first_missing_native()
@@ -87,12 +88,6 @@ public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
             File.WriteAllBytes(path, storage.Read(name) ?? throw new InvalidDataException($"{name} isn't stored locally"));
             try
             {
-                if (MapArchive.Read(path).Script is null)
-                {
-                    stops.Add(("not run: no war3map.lua", name));
-                    continue;
-                }
-
                 using var simulation = Simulation.Load(path);
                 if (simulation.Stopped is null)
                     try { simulation.Advance(TimeSpan.FromMinutes(10)); }
@@ -110,8 +105,8 @@ public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
 
         foreach (var stop in stops.GroupBy(s => s.Stop).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal))
             output.WriteLine($"{stop.Count(),4} {stop.Key}: {string.Join(", ", stop.Take(3).Select(s => s.Map))}{(stop.Count() > 3 ? ", ..." : "")}");
-        foreach (var error in errors) output.WriteLine(error);
         Assert.Empty(failures);
+        Assert.Empty(errors);
     }
 
     static PlayerData Player(int id, PlayerController controller, PlayerRace race, PlayerFlags flags, string name, Vector2 start, int priorities) => new()
