@@ -1,0 +1,35 @@
+# probes/units-camera-2.lua on 3.0.1.24371, single player, 11-08: the game's lines, two runs. Where a target is part
+# way through a move, or a few hundredths off where it lands, its number varies with the game's frames and is a {t}.
+# In a line, each {t} stands for a number, the rest exact (decisions D71, D124). The first run's numbers for them: half
+# swept 145.8846 -352.9905; the position during the sweep 145.9400 -353.0460 twice; the follow during the sweep
+# 498.3289 -499.9972; stopped 147.5239 -354.6274, then 147.5792 -354.6823; the pan with z 499.9875 499.9875, also after
+# the reset; stopped at x 501.4033, z 210.5672; the smoothed pan 299.9521, 902.8547, 1199.9858; the cinematic camera's
+# target at 0.5 and 2.5 s -0.0000 0.0242 119.3960, its eye -0.0000 213.3765 131.2118 and -0.0000 251.0898 151.0173,
+# and after the reset 0.0000 0.0242 10.0000, eye 0.0000 -1118.3616 1668.0752.
+rotated 500.0000 -500.0000 0.0000
+position after the sweep 500.0000 -500.0000 0.0000
+half swept {t} {t} 0.0000
+position during the sweep 0.5s {t} {t} 0.0000
+position during the sweep 1.5s {t} {t} 0.0000
+setup after the sweep -400.0000 -300.0000 0.0000
+pan after the sweep 300.0000 300.0000 10.0000
+follow during the sweep 0.5s {t} {t} 0.0000
+follow during the sweep 1.5s 500.0000 -500.0000 0.0000
+stopped during the sweep now {t} {t} 0.0000
+stopped during the sweep 1s {t} {t} 0.0000
+pan with z {t} {t} 300.0000
+pan with z reset {t} {t} 10.0000
+pan with z follow -600.0000 -600.0000 300.0000
+pan with z stopped now {t} 0.0000 {t}
+pan with z stopped 1s {t} 0.0000 10.0000
+depth of field now 500.0000 2.0000
+depth of field 0.5s 500.0000 2.0000
+smoothed pan {t} 0.0000 10.0000, {t} 0.0000 10.0000, {t} 0.0000 10.0000
+blocker position 600.0000 0.0000 10.0000
+blocker pan 200.0000 0.0000 10.0000
+blocker off 400.0000 0.0000 10.0000
+cinematic now 0.0242 0.0000 109.3960 eye 203.9340 0.0000 116.2530
+cinematic 0.5s {t} {t} {t} eye {t} {t} {t}
+cinematic fields 2000.0000 5300.0000 5.3058 1.2217 -0.0000 1.5708 10.0000 16.0000 -0.0000 -0.0000 -0.0000 500.0000 2.0000 0.0000
+cinematic 2.5s {t} {t} {t} eye {t} {t} {t}
+cinematic reset {t} {t} 10.0000 eye {t} {t} 1668.0752

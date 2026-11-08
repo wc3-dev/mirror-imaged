@@ -62,6 +62,12 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
   is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
 - Wave 10 (JASS): a rawcode with a backslash (`'a\bc'`) loads here but the game refuses the map (D137) (W1-7).
+- Wave 10 (cameras, W5-1): a position set as the game starts lands 0.2 to 0.25 s later in the game, here in the next
+  step (D502); the bounds held the target 200 along the view past their corner, in every run, after pans with a z made
+  while the bounds were 0, then bounds of 200 each way and a position at (1000, 1000) at rotation 120 (the cameras
+  probe, D502): find the rule; the game's cos(300 degrees) in the eye (D503); a followed unit's move reaches the
+  target a frame later (D504); a cinematic camera's target and eye, read from the camera in its model (D505). Each is
+  in `probes/differences`.
 - Wave 10 (accuracy, W2-4): the decks are measured in whole units (D255), so `GetLocationZ` on a bridge is up to 0.5
   off; measure them to a tenth with the workspace's deck probe, and the fall of a killed deck (over 2 s, its ends left)
   and the rise of one restored (0.5 s, 7 s with birth), to make it Exact.

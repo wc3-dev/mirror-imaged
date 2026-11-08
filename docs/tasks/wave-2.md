@@ -133,6 +133,8 @@ Needs W2-2.
 - Left by W2-2 (D223, D225): `GetFilterUnit` for the enumerations (a player-unit event's filter never runs), the map's
   playable area for `SetUnitPosition` and for `CreateUnit` off the map (the game put one asked at (5000, -5000) on the
   32 by 32 probe map at (2032, -2000)), and `GetUnitLoc`.
+- Left by W5-1 (D505): the camera's location natives, `GetCameraTargetPositionLoc`, `GetCameraEyePositionLoc` and
+  `CameraSetupGetDestPositionLoc`, the X and Y natives' values as a new location.
 - From W1-2's review (D70): every callback runs in a Lua thread of its own, measured only for timers, conditions,
   actions and `ExecuteFunc`. Probe `ForGroup`, `ForForce`, `Enum*` and filter callbacks: `coroutine.isyieldable`,
   `coroutine.running`, and a wait inside them (in the game a wait may suspend the whole calling action).

@@ -1,0 +1,8 @@
+# Where MirrorImaged differs from the game's lines in expected/units-camera.txt, in order, with why (decisions D121): a
+# line starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts
+# "# ".
+
+# A followed unit moved: the game's target follows it a frame later, here at once, as the unit's place before isn't
+# kept (D504, Close).
+- unit moved now 300.0000 150.0000 10.0000
++ unit moved now 700.0000 -250.0000 10.0000

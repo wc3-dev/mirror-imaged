@@ -1,0 +1,37 @@
+# probes/cameras-3.lua on 3.0.1.24371, single player, 11-08: the game's lines. Where a target or a field is part way
+# through a move, or a few hundredths off where it lands, its number varies with the game's frames and is a {t}. In a
+# line, each {t} stands for a number, the rest exact (decisions D71, D124). The first run's moving reads: the position
+# set at the game's start 0 0 at 0.05 to 0.2 s, 499.9935 299.9961 at 0.25 and 0.3 s, 500 300 from 0.4 s;
+# PanCameraTo(-500, -300) from (500, 300) at 0, 0.05, 0.1, 0.2, 0.3, 0.5 and 1 s: 500 300, 368.8030 221.2812, 240.1785
+# 144.1060, -14.4985 -8.7013, -279.4630 -167.6814, -500.0073 -300.0089 twice; PanCameraTo(1500, -300) on at 0.05, 0.1,
+# 0.2, 0.3, 0.5 and 1 s: x -335.0100, -194.0121, 120.9827, 426.9775, 1020.9597, 1499.9851; the quick setup pan from
+# (0, 0) to (-800, 600) at 0.05, 0.1, 0.2, 0.3 and 0.5 s: -115.1854 86.3872, -237.5760 178.1787, -479.9473 359.9534,
+# -719.9150 539.9253, -800.0035 599.9905; the setup's field over 2 s at 1 and 2.5 s 2501.9700 and 2999.9998, applied
+# with the timed pan at 1 s -147.9799 549.8135 2498.4353 and at 2.5 s -800.0249 599.9399; the quick pan's field at
+# 0.5 s 2250.4690.
+position {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000
+panto 1100 {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000
+panto 2000 {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000, {t} {t} 10.0000
+pan timed 0 0.0000 0.0000 10.0000, 0.0000 0.0000 10.0000, 0.0000 0.0000 10.0000
+rotation 45 now 0.0000 -1118.3857 1668.0752
+rotation 45 0s 0.0000 -1118.3857 1668.0752
+rotation 45 0.05s -790.8182 -790.8182 1668.0752
+nearz at distance 3000 9500.0000
+nearz at farz 2000 9500.0000
+distance at farz 100 10000.0000
+clamped rotation 120 distance 3000 200.0000 200.0000 10.0000
+clamped rotation 120 distance 2000 200.0000 200.0000 10.0000
+clamped rotation 45 -200.0000 200.0000 10.0000
+diamond bounds -1000.0000 -1000.0000 1000.0000 1000.0000
+diamond 900 900 900.0000 900.0000 10.0000
+reset target 500.0000 500.0000 10.0000
+setup timed field 3000.0000
+apply no pan now 500.0000 500.0000 10.0000 2000.0000
+apply no pan 1s 500.0000 500.0000 0.0000 {t}
+apply no pan 2.5s 500.0000 500.0000 0.0000 {t}
+apply timed now 500.0000 500.0000 0.0000 2000.0000
+apply timed 1s {t} {t} 0.0000 {t}
+apply timed 2.5s {t} {t} 0.0000 3000.0000
+apply quick now 0.0000 0.0000 0.0000 2000.0000
+apply quick {t} {t} 0.0000, {t} {t} 0.0000, {t} {t} 0.0000, {t} {t} 0.0000, {t} {t} 0.0000
+apply quick distance {t}

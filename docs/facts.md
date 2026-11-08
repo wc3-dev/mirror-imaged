@@ -1124,6 +1124,91 @@ same. The two closing probes each closed the game once, as the units probe's run
   on a footman closes the game (probe `units-attribute` and the units probe's first two runs), and so does setting a
   footman's primary attribute to 3 (`units-primary` and the units probe's third run); 7 is refused there.
 
+## Cameras
+
+Probes `probes/cameras.lua`, `cameras-2.lua`, `cameras-3.lua`, `cameras-4.lua`, `units-camera.lua` and
+`units-camera-2.lua`, on 3.0.1.24371, 11-08 (W5-1): MirrorImaged's probe map (D51: 32 by 32, flat ground at height 0, a
+start location at (0, 0), and a `main` that sets no camera bounds), started with `-loadfile` on a hidden desktop,
+single player. Each ran at least twice (`units-camera` first as `cameras-units`), the first four probes three or four
+times; their lines are in `probes/expected`, where the numbers that varied, or that a pan or a change over a time reads
+part way, are marked. Angles are read with `%.4f`, in radians.
+
+- The margins: `GetCameraMargin` reads 512 for `CAMERA_MARGIN_LEFT` and `RIGHT`, 256 for `TOP` and `BOTTOM`, and 0 for
+  4 and -1. All 466 shipped maps' `main` sets bounds that, with these margins, are the camera bounds of their
+  `war3map.w3i` (read from the install).
+- The bounds: they read 0 each way until the script sets them, though the probe map's `war3map.w3i` has bounds of
+  (-768, -1280) to (768, 768); and while they are 0 the target stays at (0, 0), whatever is set. `GetCameraBoundMinX`
+  and the rest read the least and most of the four corners given to `SetCameraBounds`, in any order, a diamond too,
+  and they aren't cut to the map (100000 reads 100000).
+- The game camera at the start: distance 2000, far z 5300, angle of attack 304 degrees (5.3058), field of view 70
+  (1.2217), roll -0, rotation 90 (1.5708), z offset 10, near z 16, the local pitch, yaw and roll -0, the depth of field
+  fields 0 and z absolute 0; the target at (0, 0) and height 10, the eye at (0, -1118.3857, 1668.0752). Every field
+  reads controlled by input, the camera type 0, the hotkey lock true; each reads back a set.
+- Fields read back at once when set without a time, the angles in radians. The limits: distance 0.5 to 10000, far z
+  from 100 (100000 kept), the field of view 5 to 120 degrees, the z offset -4096 to 4096, near z 16 to 9500 (9500 at a
+  distance of 3000 and at a far z of 2000 too), the depth of field fields from 0, z absolute as set (0.5, -1, 2). An
+  angle comes round to a turn: 400 reads 40 degrees, -30 330, 361 1; a whole number of turns reads 2π above 0 (360,
+  720, 1080 and 359.9999) and -0 at 0 and below (0, -360, -720); the field of view comes round first, then is held, so
+  361 reads 5 degrees. `ResetToGameCamera` puts back every field but z absolute, and leaves the target.
+  `AdjustCameraField` adds to the field at once.
+- A field set over a time moves in a straight line from where it is, reading the old value in the same instant (a
+  distance of 2000 to 3000 over 2 s read 2250.97 at 0.5 s and 2499.93 at 1 s); an angle goes the shorter way round
+  (350 to 10 degrees over 1 s read 0.06 degrees at 0.5 s). `ResetToGameCamera` over a time does the same.
+- The eye reads as the game last drew it: a rotation set to 45 left the eye where it was in the same instant and in a
+  0 s timer, and moved it by 0.05 s, to (-790.8182, -790.8182, 1668.0752). It is the distance back from the target
+  along the angle of attack and the rotation (with distance 1650 and z offset 50, (0, -922.6683, 1417.9121)); at 300
+  degrees the game's cos reads 0.5000004 (the eye at -500.0004 for a distance of 1000). The target's height is the z
+  offset over the flat ground; the eye's z is the target's less the distance times the sine of the angle of attack.
+- A position set mid-game lands within 0.05 s (`PanCameraToTimed(.., 0)`), and as the game starts 0.2 to 0.25 s later
+  (0 at 0.2 s, 499.9935 at 0.25 s, 500 at 0.4 s). A timed pan moves in a straight line (52 % of the way at 1 s of
+  2 s), `PanCameraTo` at about 3000 a second whatever the distance (1100 and 2000 measured), and `StopCamera` stops a
+  pan where it is. A position or a pan sets the target's height back to the z offset; `PanCameraToWithZ` and
+  `PanCameraToTimedWithZ` move the target's height to the z given (199.9994 of 200 1 s later, 300), while the z offset
+  field reads 10; inside bounds of 0, where the target can't move, `PanCameraToWithZ` left its height alone.
+- The bounds hold the target in their box: a position outside bounds of 200 each way read (200, 200), (-200, -200),
+  (0, 200), (200, 0) at rotations 0, 45, 90 and 120 and distances 1000 to 3000, and a diamond held (900, 900) where its
+  box allows it. One case reads otherwise in every run of the cameras probe: after pans with a z made while the
+  bounds were 0, then bounds of 200 each way and a position at (1000, 1000) at rotation 120, it read (100, 373.2051),
+  200 along the view past the corner; cameras-2 and cameras-3, without the earlier pans, didn't repeat it.
+- A camera blocker (`AddCameraBlocker` of a rect from (200, -200) to (600, 200)) keeps the target out: a position set
+  at (400, 0) from (0, 0) read (600, 0), past it along the move, and a pan from (0, 0) to (1000, 0) over 1 s stopped
+  at (200, 0), where it entered. `EnableCameraBlocker(r, false)` let a position at (400, 0) in.
+- Camera setups: a new one reads distance 3000, far z 5400, angle of attack 304, field of view 70, roll 0, rotation
+  90, z offset 0, near z 16 and 0 for the rest, in degrees as set; its place (0, 0) and label "". A field reads back as
+  set, angles as given (400, -30, 720), the distance, far z, near z and depth of field fields below 0 as 0 (near z 0,
+  not 16); the place and label too. `BlzCameraSetupGetCameraType` reads a number of its own each run (1367777792,
+  -1842721280, -251714816, ...), the same before and after `BlzCameraSetupSetCameraType`.
+- Applying a setup sets every field, each over the time it was set with, `doPan` or not; `doPan` moves the target to
+  its place, over the place's time when `panTimed` (0 lands within 0.5 s), else at about 3000 a second. Without
+  `doPan` the target stays. `CameraSetupApplyForceDuration` does it all over the time given; with `WithZ` and a time,
+  the target's height goes to the z with the pan (125.7 half way, 250), with no time it stays the z offset (0).
+  `CameraSetupApplyWithZ` pans as an untimed `CameraSetupApply` and leaves the height at the z offset.
+- `SetCameraRotateMode(500, 0, π/2, 2)` with the target at (0, 0): the target goes round (500, 0) counterclockwise to
+  (500, -500) in 2 s, at a height of 0 (no z offset), while the rotation field reads 90 degrees; the eye turns with it,
+  (1618.3857, -499.9999, 1658.0752) at the end. A position set then and `ResetToGameCamera` in the same instant left
+  the target there, at height 10 again. Over 1 s (units-camera-2): a position set after the sweep left the target
+  where the turn had it, at height 0; one set half way through stopped the turn there (it moved 0.06 more) and held it;
+  `StopCamera` half way did the same, the height staying 0; a unit controller given half way was dropped, the turn
+  going on to (500, -500); a timed pan after the sweep moved the target, at height 10 again, and a setup's timed pan
+  moved it, at the setup's z offset of 0.
+- `CameraSetSourceNoise` and `CameraSetTargetNoise` of 50 move the target and the eye a little and at random: in one
+  run the target read 0.1 to 0.3 off (800.12, 399.71, 249.73 for (800, 400, 250)) and the eye 0.3 to 0.6, in the other
+  two the target up to 2.8 and the eye up to 5.6. `SetCameraQuickPosition` changes nothing read.
+- `CameraSetFocalDistance(500)` and `CameraSetDepthOfFieldScale(2)` read back at once as the depth of field fields,
+  500 and 2. `CameraSetSmoothingFactor(1)` left `PanCameraTo`'s target as without it (300 at 0.1 s, 903 at 0.3 s).
+- `SetCinematicCamera("Objects\\CinematicCameras\\CameraZoomOut.mdx")` moves the target and the eye to the model's
+  camera at once: the target (0.0242, 0, 109.40), the eye (203.93, 0, 116.25), then, moving, the target about
+  (0, 0.0242, 119.40) and the eye (0, 213.38, 131.21) at 0.5 s and (0, 251.09, 151.02) at 2.5 s; the fields read as
+  they were. `ResetToGameCamera` ends it: the target (0, 0.0242, 10), the eye as the game camera's.
+- A pan's height: `PanCameraToTimedWithZ(.., 300, 0.5)`'s target read 300 a second later, and 10 after
+  `ResetToGameCamera`; following a unit after such a pan kept it (-600, -600, 300); `StopCamera` half way through one
+  to 410 read 210.57 in the same instant and 10 a second later.
+- `SetCameraTargetController(u, 100, 50, false)` puts the target at the unit and the offsets from the next frame, and
+  it follows the unit's moves a frame later; after `RemoveUnit` it stays where the unit was. `PanCameraToTimed`,
+  `ResetToGameCamera` and `SetCameraPosition` at the target end it. `SetCameraOrientController(u, 0, 0)` moved the
+  target to the unit at those offsets; neither it nor `inheritOrientation` nor the unit's facing changed the rotation
+  field.
+- The fog flags: `IsFogEnabled` and `IsFogMaskEnabled` read true at the start, then what was set.
 ### The rest of the units (W2-10)
 
 Probes `probes/units-more.lua`, `units-more-2.lua`, `units-types.lua`, `units-bones.lua` and `units-gold.lua`, on

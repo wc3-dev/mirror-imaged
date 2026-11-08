@@ -1,0 +1,110 @@
+-- The local player's camera, third part: when a position set lands and how fast PanCameraTo goes; when the eye
+-- follows a field; the limits that may depend on other fields; what the bounds hold at other rotations and as a
+-- diamond; setups applied without a pan and over their own durations. Each step runs after the wait before it.
+local function F(x) return string.format("%.4f", x) end
+local function target() return F(GetCameraTargetPositionX()) .. " " .. F(GetCameraTargetPositionY()) .. " " .. F(GetCameraTargetPositionZ()) end
+local function eye() return F(GetCameraEyePositionX()) .. " " .. F(GetCameraEyePositionY()) .. " " .. F(GetCameraEyePositionZ()) end
+local function field(i) return F(GetCameraField(ConvertCameraField(i))) end
+local function set(i, v, d) SetCameraField(ConvertCameraField(i), v, d or 0) end
+local function wide() SetCameraBounds(-2000, -2000, 2000, 2000, -2000, 2000, 2000, -2000) end
+
+local steps, a, b = {}, nil, nil
+local function step(wait, f) steps[#steps + 1] = {wait, f} end
+local function run(i)
+  if i > #steps then done() return end
+  TimerStart(CreateTimer(), steps[i][1], false, guard(function() steps[i][2]() run(i + 1) end))
+end
+-- Reads the target after each wait in turn, on one line.
+local function reads(name, waits, after)
+  local t = {}
+  for n, w in ipairs(waits) do
+    step(w, function()
+      t[#t + 1] = target()
+      if n == #waits then out(name .. " " .. table.concat(t, ", ")) if after then after() end end
+    end)
+  end
+end
+
+wide()
+SetCameraPosition(500, 300)
+reads("position", {0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.1}, function() PanCameraTo(-500, -300) end)
+reads("panto 1100", {0, 0.05, 0.05, 0.1, 0.1, 0.2, 0.5}, function() PanCameraTo(1500, -300) end)
+reads("panto 2000", {0.05, 0.05, 0.1, 0.1, 0.2, 0.5}, function() PanCameraToTimed(0, 0, 0) end)
+reads("pan timed 0", {0.05, 0.1, 0.35}, function()
+  set(5, 45)
+  out("rotation 45 now " .. eye())
+end)
+step(0, function() out("rotation 45 0s " .. eye()) end)
+step(0.05, function()
+  out("rotation 45 0.05s " .. eye())
+  set(0, 3000)
+  set(7, 100000)
+  out("nearz at distance 3000 " .. field(7))
+  set(1, 2000)
+  set(7, 100000)
+  out("nearz at farz 2000 " .. field(7))
+  set(1, 100)
+  set(0, 100000)
+  out("distance at farz 100 " .. field(0))
+  ResetToGameCamera(0)
+  SetCameraBounds(-200, -200, 200, 200, -200, 200, 200, -200)
+  set(5, 120)
+  set(0, 3000)
+  SetCameraPosition(1000, 1000)
+end)
+step(0.5, function()
+  out("clamped rotation 120 distance 3000 " .. target())
+  set(0, 2000)
+  SetCameraPosition(1000, 1000)
+end)
+step(0.5, function()
+  out("clamped rotation 120 distance 2000 " .. target())
+  set(5, 45)
+  SetCameraPosition(-1000, 1000)
+end)
+step(0.5, function()
+  out("clamped rotation 45 " .. target())
+  set(5, 90)
+  SetCameraPosition(0, 0)
+  SetCameraBounds(0, -1000, 0, 1000, -1000, 0, 1000, 0)
+  out("diamond bounds " .. F(GetCameraBoundMinX()) .. " " .. F(GetCameraBoundMinY()) .. " " .. F(GetCameraBoundMaxX()) .. " " .. F(GetCameraBoundMaxY()))
+  SetCameraPosition(900, 900)
+end)
+step(0.5, function()
+  out("diamond 900 900 " .. target())
+  wide()
+  SetCameraPosition(500, 500)
+end)
+step(0.5, function()
+  ResetToGameCamera(0)
+end)
+step(0.5, function()
+  out("reset target " .. target())
+  a = CreateCameraSetup()
+  CameraSetupSetField(a, CAMERA_FIELD_TARGET_DISTANCE, 3000, 2)
+  out("setup timed field " .. F(CameraSetupGetField(a, CAMERA_FIELD_TARGET_DISTANCE)))
+  CameraSetupSetDestPosition(a, -800, 600, 2)
+  CameraSetupApply(a, false, false)
+  out("apply no pan now " .. target() .. " " .. field(0))
+end)
+step(1, function() out("apply no pan 1s " .. target() .. " " .. field(0)) end)
+step(1.5, function()
+  out("apply no pan 2.5s " .. target() .. " " .. field(0))
+  set(0, 2000)
+  CameraSetupApply(a, true, true)
+  out("apply timed now " .. target() .. " " .. field(0))
+end)
+step(1, function() out("apply timed 1s " .. target() .. " " .. field(0)) end)
+step(1.5, function()
+  out("apply timed 2.5s " .. target() .. " " .. field(0))
+  SetCameraPosition(0, 0)
+  set(0, 2000)
+end)
+step(0.5, function()
+  CameraSetupApply(a, true, false)
+  out("apply quick now " .. target() .. " " .. field(0))
+end)
+reads("apply quick", {0.05, 0.05, 0.1, 0.1, 0.2}, function()
+  out("apply quick distance " .. field(0))
+end)
+run(1)
