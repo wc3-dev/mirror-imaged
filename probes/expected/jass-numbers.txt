@@ -1,3 +1,5 @@
+# probes/jass-numbers.j on 3.0.1.24371, single player, 11-08 (W1-7), in the game's JASS machine: the game's lines.
+# Two runs, the same (the second by the game probe tests).
 add -2147483648 2147483647 -2 -2147483648
 mul -2 0 -2147479015 -2147483648 1
 div 3 -3 -3 3 0 0 -1073741824 -2147483647

@@ -1,4 +1,5 @@
 using MirrorImaged.Lua;
+using MirrorImaged.Natives;
 using War3Net.Build.Info;
 
 namespace MirrorImaged.Tests;
@@ -203,6 +204,26 @@ public sealed class JassMapTests : IDisposable
         Assert.Matches(@"^0\.000 error: war3map\.lua:\d+: the thread passed JASS's operation limit$", simulation.Log[0]);
         Assert.StartsWith("1.000 player 0: later ", simulation.Log[1]);
         Assert.InRange(int.Parse(simulation.Log[1][22..]), Simulation.OperationLimit / 4 - 10, Simulation.OperationLimit / 4);
+    }
+
+    // probe jass-divide-overflow: the game closed; the stop names the JASS's line
+    [Fact]
+    public void Dividing_the_lowest_integer_by_minus_one_closes_the_game()
+    {
+        var map = _maps.Build("""
+            function config takes nothing returns nothing
+            endfunction
+
+            function main takes nothing returns nothing
+                local integer low = -2147483647 - 1
+                call I2S(low / -1)
+            endfunction
+            """, ScriptLanguage.Jass);
+
+        using var simulation = Simulation.Load(map, "");
+
+        Assert.IsType<GameClosedException>(simulation.Stopped?.InnerException);
+        Assert.Matches(@"^war3map\.lua:\d+: The game closes: -2147483648 was divided by -1", simulation.Stopped.Message);
     }
 
     // The game doesn't load a map whose JASS doesn't compile (probe jass-rawcode-backslash: the loaded mark never came)

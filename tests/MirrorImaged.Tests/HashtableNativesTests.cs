@@ -112,6 +112,7 @@ public sealed class HashtableNativesTests : IDisposable
         Assert.True(_natives.HaveSavedHandle(_table, 8, 8));
     }
 
+    // The game gave false in W1-3's run of the hashtables probe and true in W1-8's (decisions D125): false here.
     [Fact]
     public void A_converted_value_is_saved_but_gives_false()
     {

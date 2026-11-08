@@ -1,3 +1,5 @@
+# probes/jass-equal.j on 3.0.1.24371, single player, 11-08 (W1-7), in the game's JASS machine: the game's lines.
+# Two runs, the same (the second by the game probe tests).
 0 above 1073741 1073741 below 1073741 1073741 steps 2^-30 2^-30
 1 above 8388 8388 below 16777 16777 steps 2^-23 2^-24
 0.25 above 33554 33554 below 67108 67108 steps 2^-25 2^-26

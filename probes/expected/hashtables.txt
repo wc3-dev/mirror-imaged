@@ -1,3 +1,7 @@
+# probes/hashtables.lua on 3.0.1.24371, single player, 11-08: the game's lines. Two runs, W1-3's and W1-8's.
+# In a line, each {w} stands for a word (ASCII letters, digits and underscores), the rest exact (decisions D71, D124).
+# SaveFogStateHandle of FOG_OF_WAR_MASKED gave false in W1-3's run and true in W1-8's (D125); the other lines were the
+# same.
 InitHashtable = hashtable
 LoadInteger missing = i 0
 LoadReal missing = f 00000000
@@ -39,7 +43,7 @@ LoadTimerHandle 4 4 is the timer = true
 HaveSavedHandle 4 4 after RemoveSavedHandle = false
 SavePlayerHandle 5 5 = true
 LoadPlayerHandle 5 5 is Player(0) = true
-SaveFogStateHandle 6 6 = false
+SaveFogStateHandle 6 6 = {w}
 LoadFogStateHandle 6 6 is FOG_OF_WAR_MASKED = true
 LoadPlayerHandle 6 6 holding a fogstate = nil
 HaveSavedHandle 6 6 = true

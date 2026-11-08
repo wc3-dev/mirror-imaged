@@ -636,6 +636,128 @@ probe's zero-second timer unless timed; times are a 1000 s timer's elapsed time.
   started 1 s later ended, and so did the next step's; a trigger waiting 1.5 s, started 0.5 s before such a destroy,
   ended, while a new trigger's wait started beside the destroy in the same instant never did; the next step's ended.
 
+## Probes compared
+
+The probes run again by W1-8's comparison (`docs/decisions.md`, D120), 3.0.1.24371, single player, 11-08, by the game
+runner from the PowerShell tool. Each probe's lines are in `probes/expected`, and where MirrorImaged differs, in
+`probes/differences`.
+
+- `game-time`: a 100000 s timer and a 1 s periodic timer started in the same callback; at the periodic timer's first 7
+  ticks the clock's `TimerGetElapsed` printed with `%.2f` read 1.01 to 7.01, and from the 8th to the 20th 8.00 to 20.00
+  (1 run; W0-4's runs read 1.01 to 20.00 too). Near 99999 a float's step is 0.0078125, so 1.01 is 1.0078125: the
+  remaining time was a step under 99999, as if the tick came a little after the whole second, and from 8 s on it didn't.
+  Inferred, since the game's elapsed time is the timeout less the remaining time, cut toward zero (D45).
+- The six one-call `R2SW` probes of W1-3 (`probes/r2sw-*.lua`), each run once more, gave what the facts above say:
+  widths 2147483640 and 2147483644 255 bytes of spaces and the number cut off, precisions -100 and -2147483647 `1.5` and
+  `1.25`, and -1.5 at widths 254 and 1000 closed the game before the probe's line. So did `files-text`, `Preloader` of
+  a file whose line is `not jass` (now `probes/files-text.lua`).
+- `hashtables`: `SaveFogStateHandle(ht, 6, 6, FOG_OF_WAR_MASKED)` gave true, where W1-3's run gave false; the fogstate
+  loaded back with `==` holding both times, and every other line was the same. So that answer isn't the same every run.
+- `players`: slots 0 to 23 had other races than in W1-4's run (slot 0 human, where it was undead), every other line the
+  same: the lobby's races are random each game.
+
+Two new probes, each run twice with the same lines:
+
+- `lua-config`, the Lua build: `math.log(8, 2)` 3.00000024 (`40400001`), `math.log(3, 2)` 1.58496189 (`3fcae008`),
+  `math.log(1024, 2)` 10.000001, `math.log(100, 10)` 1.99999964 (`3ffffffd`), `math.log(1000, 10)` 2.99999189; the
+  numerals `0x1.0000011p0` 1, `0xA.8p0` 10.5, `0x.1p4` 1, `tonumber('0x1p-2')` 0.25; `%a` of 0.1 `0xc.ccccdp-7`, of 1.0
+  `0x8p-3`, `%A` of -2.5 `-0XAP-2`; `os.date` with `%F`, `%e` and `%Ey` raises "bad argument #1 to 'os.date' (invalid
+  conversion specifier '%F')" and the like, and `%#x` of time 0 is `Thursday, January 01, 1970`. None of `math.pow`,
+  `math.ldexp`, `math.frexp`, `math.cosh`, `math.sinh`, `math.tanh`, `math.log10`, `math.mod`, `bit32`, `unpack`,
+  `loadstring`, `table.maxn`, `table.getn`, `setfenv`, `module`, `string.gfind`, `string.dump` and `require` exists;
+  `utf8`, `table.move`, `math.ult` and `rawlen` do. `load` of the start of a binary chunk (`'\27Lua\83\0'`) gives
+  "truncated precompiled chunk", with mode `b` too: the chunk reached Lua's bytecode reader, so the game reads
+  bytecode (inferred; no whole chunk was loaded, as without `string.dump` none can be made). An integer made a float (`i + 0.0`,
+  `i / 1`) rounds to nearest, ties to even: 16777217 is 16777216, 16777219 and 16777221 are 16777220, 16777223 is
+  16777224, 33554435 and 33554437 are 33554436, 2147483647 and -2^31 are ±2^31; `16777219 == 16777220.0` is false and
+  `16777219 < 16777220.0` true. `pairs` over the 20 string keys `a` to `h`, `one` to `five`, `alpha`, `beta`, `gamma`,
+  `x1`, `x2`, `x10` and `Footman`, set in that order, visits them as `three four one f e d c b a five x10 two Footman
+  x2 x1 beta gamma h g alpha` in both runs; Lua 5.3 with string hash seed 0 visits them otherwise. Inferred: the
+  game's seed is fixed and isn't 0 (another hash function or table growth would change the order too).
+- The three closing probes (`r2sw-negative-254`, `r2sw-negative-1000`, `files-text`), run again: each wrote its
+  `started.pld` before the game closed (on disk after two of the runs; the runner's check after the third).
+- `timers`: six timers due at 1.0 ran as resumed (started at 0 for 1 s, paused and resumed at 0.25), first (started
+  at 0), periodic (0.25 s from 0, its fourth expiry), second (started at 0 after first), late (started at 0.5 for 0.5)
+  and restarted (started at 0 for 2 s, started again at 0.5 for 0.5); they were made in the order late, restarted,
+  periodic, resumed, second, first. A 3600 s timer read every 0.01 s from a 0.01 s periodic timer started with it gave
+  elapsed times 0.01001, 0.02002, ..., 0.24023, 0.25024, 0.26001, ..., 0.50024, ..., 0.75000, ..., 1.00000 (with
+  `%.5f`), and its remaining time after 100 reads 3599.00000.
+
+## The game's data
+
+Probes `probes/data.lua`, `data-objects.lua`, `data-tags.lua`, `data-names.lua` and `data-sets-melee.lua`,
+`data-sets-tft.lua` and `data-sets-fk.lua`, on 3.0.1.24371, 11-08 (W2-1): MirrorImaged's probe map (D51: info format
+28, which has no data version, the Default data set, the melee flag cleared) started with `-loadfile` on a hidden
+desktop, single player, each changed by `DataProbeMaps` (`tests/MirrorImaged.GameTests`). For `data`, `data-objects`
+and `data-tags`: slot 0 named `TRIGSTR_001` and a computer slot 2 named `TRIGSTR_002` in `war3map.w3i`, the computer
+seated in `config` (`SetPlayers(2)`, its controller, colour, race and start location, as World Editor writes them),
+six strings in `war3map.wts` (0 "Zero String", 1 "Probe Alpha", 2 "The Horde", 3 "Probe Footman", 4 "Fourth string",
+5 "42"), `war3map.w3u` renaming hfoo `TRIGSTR_003` and hkni "Main Knight" and making h000 from hfoo,
+`war3mapSkin.w3u` renaming hkni "Skin Knight", `war3map.w3a` giving Holy Light's level 1 250 healing, and
+`war3map.w3q` giving Rhme 5 levels and making R000 from Rhme. For `data-names`, W1-9's map with a computer (D140,
+custom forces with fixed player settings) with its computer named `TRIGSTR_001` and string 1 "The Horde". For
+`data-sets-melee` the melee flag set; for `data-sets-tft` that in info format 31 with The Frozen Throne's data
+version; for `data-sets-fk` info format 31 with Forsaken Kingdom's, not melee. The runs' lines are in
+`probes/expected`, as the game gave them; the data, tags and set probes ran two or three times as they grew, the
+lines they kept the same each time.
+
+- Names: slot 0, the one person, is "Local Player" and the seated computer "Computer (Normal)", the strings
+  `LOCAL_PLAYER` and `COMPUTER_NORMAL`; neither reads its `war3map.w3i` name, and an unseated slot is "Player N". On
+  the map with fixed player settings the computer named `TRIGSTR_001` reads "The Horde", its string (`data-names`),
+  as W1-9's lobby probe read "Probe Computer", written plainly; custom forces without fixed settings aren't measured.
+  Without the `config` lines the computer slot of `war3map.w3i` isn't seated at all: `MAP_CONTROL_NONE`, Empty,
+  "Player 3" (first run).
+- Object data (`data-objects`): `GetObjectName` reads hfoo "Probe Footman" (the `TRIGSTR_` resolved), hkni "Skin
+  Knight" (the skin file's change over the main file's) and h000 "Footman". `GetPlayerTechMaxAllowed` reads Rhme 5,
+  R000 3 (its standard base's, not the map's change to Rhme) and Rhar 3; `AddPlayerTechResearched` of 9 stops each at
+  those (`data`). Each object of a format 3 file has one set flag, 0, as World Editor writes it; the first runs, whose
+  ids were in War3Net's byte order reversed (`oofh`), loaded and changed nothing, and one of them with no set flag
+  closed the game with `BlizzardError` as it loaded (not separated which of the two closed it).
+- `GetLocalizedString`: `TRIGSTR_001`, `TRIGSTR_1`, `TRIGSTR_0001` and `TRIGSTR_001 ` (a space after) give string 1,
+  and `TRIGSTR_`, `TRIGSTR_abc` and `TRIGSTR_000` string 0, as C's `atoi` reads the rest; `TRIGSTR_999`, which the
+  file doesn't have, `TRIGSTR_-1` and `trigstr_001` come back as they are. `PLAYER` gives "Player", `player` "player"
+  (a key is found in its case); `GAMEOVER_CONTINUE` gives "|CFFFFFFFFC|Rontinue", `KEY_HOTKEYS` "|CffffffffH|Rotkeys",
+  `AGILITY` "Agility" (`InfoPanelStrings.fdf`), `ERROR_ID_INVALIDPARAMS` "The parameters provided are invalid."
+  (`NetworkStrings.fdf`), `MONTH_01` "January" (`DateStrings.fdf`); `WESTRING_APPNAME`, a World Editor string,
+  `NO_SUCH_KEY_ZZ` and `""` come back as they are.
+- `GetLocalizedHotkey` reads `UI\MiscUI.txt`'s `[Hotkeys]` (`GAMEOVER_CONTINUE='C'`), in any case: `GAMEOVER_CONTINUE`
+  and `gameover_continue` 67, `GAMEOVER_QUIT_GAME` 81, `GAMEOVER_OK` 79, `KEY_DELETE` 68; `MinimapTerrain`, which has
+  only a `:deDE` line, 0, and so `PLAYER`, `ACCEPT`, `KEY_HOTKEYS` (a coloured letter in its string but no hotkey line),
+  `TRIGSTR_001` and `""`.
+- A `TRIGSTR_` given to other natives: `SetPlayerName(Player(5), "TRIGSTR_002")` then reads "The Horde",
+  `StringCase("TRIGSTR_001", false)` gives "probe alpha" and `StringCase` of `TRIGSTR_`, `TRIGSTR_abc` and
+  `TRIGSTR_000` "zero string", of `TRIGSTR_-1` "trigstr_-1"; `StringLength("TRIGSTR_")` is 11, "Zero String"'s. But
+  `StringHash("TRIGSTR_001")` (-896862224) isn't `StringHash("Probe Alpha")` (577683974), `S2I("TRIGSTR_005")` is 0 and
+  `S2R` of it 0 where string 5 is "42", `SubString("TRIGSTR_001", 0, 5)` is "TRIGS", and a string saved with `SaveStr`
+  loads back as `TRIGSTR_001`. `ParseTags("TRIGSTR_001")` gives "TRIGSTR_001".
+- `ParseTags` replaces each `<id,column>` by the object's value in that column of its table, as a whole number, the
+  map's change included: `<AHhb,DataA1>` 250 (the map's), `<AHhb,DataA2>` 400, `<AHhb,Cool1>` 5, `<AHhb,levels>` 3,
+  `<AHhb,DataA4>` 600, `<AHtb,Dur1>` 5, `<Rhme,base1>` 1, `<hfoo,HP>` and `<hfoo,realHP>` 420; `,%` after the column
+  multiplies by 100 (`<AHhb,DataA1,%>` 25000, `<Aslo,DataA1,%>` 60, `<Aslo,DataB1,%>` 25) and anything else there is
+  ignored (`<AHhb,DataA2,x>` 400); a fraction is cut (`<Aslo,DataA1>` 0, from 0.6). 0 for an unknown object
+  (`<zzzz,DataA1>`), an id or column in another case (`<ahhb,dataa2>`), a text column (`<AHhb,Name>`), a `-` cell
+  (`<Aslo,Area1>`), and for hfoo's `spd`, `dmgplus1` and `cool1` and Hpal's `STR` (not separated why `HP` reads and
+  these don't). `<AHhb>` gives "", an unclosed `<AHhb,DataA2` drops the rest of the text, `<<AHhb,DataA2>>` gives
+  "0>", and text outside tags, `%d` included, stays as it is.
+- Balance sets: the probe map (format 28, Default, not melee) reads oshm 335, ebsh 1000 and fapo 0, `custom_v1`
+  (`data-objects`), so format 28 reads The Frozen Throne's data; with the melee flag it reads 350, 1000 and 0, the base
+  tables' values with `custom_v1`'s objects, as Melee with The Frozen Throne does (game-facts), and so does format 31
+  with The Frozen Throne's data and the melee flag. So the Default data set reads as Melee on a melee map and as Custom
+  on another. On both melee maps the item ckdk and the ability AA12, which only the base tables have, can't be made
+  (`CreateItem` gives nil, `UnitAddAbility` false and level 0), while phea and AHhb can; on the Forsaken Kingdom map
+  (base tables) all four can, and fapo has 400. `GetObjectName` reads every one's name on every map, fapo's
+  "Apothecary" too where it doesn't exist, so a name doesn't show that an object exists.
+- Constants by balance set: 100 pierce damage (`UnitDamageTarget`, `ATTACK_TYPE_PIERCE`, `DAMAGE_TYPE_NORMAL`) to a
+  footman (heavy armour, 2) took 89.29 on the `custom_v1` map and 80.36 on both melee maps and the Forsaken Kingdom map:
+  `DamageBonusPierce`'s heavy entry is 1.00 in `custom_v1`'s `MiscGame.txt` and 0.9 in the base file's, so Melee with
+  The Frozen Throne takes the base file's constants, as it takes the base tables' values.
+- The install's 273 maps: War3Net 6.1.2 reads every file of 270 of them; `(10)DustwallowKeys.w3m`'s `war3map.w3e`,
+  `(1)SilverpineSprint.w3x`'s `war3map.doo` and `(4)Roundabout.w3x`'s `war3mapUnits.doo` it refuses (an enum value it
+  doesn't know; `docs/upstream.md`). 257 read the base tables' values with `custom_v1`'s objects (melee maps), 14 the
+  base tables (Forsaken Kingdom's data) and 2 `custom_v1`. Read 11-08.
+- The install's text files have sections with words after the bracket (`[Hleo] leonid`, `[Scth] Scarlet Crusade
+  Captain Hero`, `[AHw2] - T2 - Spell Blade`). Read 11-08.
+
 ## JASS maps
 
 Eleven JASS probes and one Lua probe on 3.0.1.24371, 11-08 (W1-7), single player, `-loadfile`, one run each: the

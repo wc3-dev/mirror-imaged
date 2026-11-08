@@ -139,7 +139,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   `GetRandomInt` (fact), which the world provides (W0-5). `os.clock`, `os.time` and `os.date` read the real clock, as the
   game's do, until the world replaces them (done in W0-5, D44). Binary chunks are refused by every `load`, whatever its mode: Lua 5.3 never
   checks bytecode, so a map could crash the process with one. Whether the game loads them isn't measured;
-  `string.dump` stays, harmless without them.
+  `string.dump` stays, harmless without them (replaced by D126: the game has no `string.dump`, so it is dropped, and
+  seems to read binary chunks, which stay refused).
 - **D37. The native build** uses zig 0.17.0 (`native/build.ps1`) for win-x64 (MinGW), linux-x64 (glibc 2.17) and
   osx-arm64, with `-DLUA_USE_C89` (D33), `-ffp-contract=off` (arm64 would fuse multiply-adds and x64 not) and `-s`
   (without it the DLL holds a hash of the folder it was built in). The output is the same bytes from any folder and
@@ -297,7 +298,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   first zero-second timer, before the probe. While `loaded.pld` is there and `started.pld` isn't, the runner posts a
   space key to the game's window every 3 s (facts: the loading screen waits; a posted key passes it). These marks, not
   `War3Log.txt`, say the map loaded, because the game holds the log back while it runs and loses it when killed
-  (facts). A run with no lines is `NoOutput` when the map loaded; `AtLogin` when the game still ran but never logged in
+  (facts). A run with no lines is `NoOutput` when the map loaded (`Closed` when the game exited by itself after
+  `started.pld` came, D122); `AtLogin` when the game still ran but never logged in
   (it rewrites `War3Preferences.txt` once it has, facts), with its detail starting "needs Sven: ..." and saying what is
   known: it was seen every time the runner ran under Claude Code's Bash tool and never from PowerShell (facts); and
   `Queued` otherwise. What the game shows can't be captured on the hidden desktop (facts), so `AtLogin` is told from the
@@ -442,7 +444,9 @@ in `probes/expected`.
   `probes/expected/<probe>.txt` marks the lines they reach: a line starting `# ` is a note; one starting `~ ` varies
   from run to run, each `{t}` in it standing for a number and the rest exact, and a run gives it once, anywhere, as its
   time decides its place; every other line comes in order, exactly; a `~ ` line without a `{t}` is refused. W1-8's
-  comparison reads the same format (`docs/tasks/wave-1.md`); `ExpectedLines` in `GameProbeTests.cs` reads it now.
+  comparison reads the same format (`docs/tasks/wave-1.md`); `ExpectedLines` in `GameProbeTests.cs` reads it now
+  (updated by W1-8: `ProbeComparison.Compare` reads it, D120, and D124 adds `{w}` and lets both stand in a line that
+  keeps its place).
 - **D72. `==` holds for the same handle seen as two types:** each handle type's metatable has an `__eq` comparing the
   handles' keys (D63), so `GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED` and a widget equal to its unit, as the game
   measures; `rawequal` stays false (D41). Called straight from the metatable with anything but two handles, it answers
@@ -529,7 +533,7 @@ functions before it was written.
   float as `inf`: there MirrorImaged writes the float's exact digits, unpadded, as the game's algorithm wasn't found
   (dividing by ten repeatedly or by a power of ten made by multiplying, then taking digits, matched none). Close too
   for a number below 0 whose text passes 255 bytes: the game closes (0xC0000409, twice), which a run can't copy, so
-  the text is cut as above 0.
+  the text is cut as above 0 (replaced by D122: the run stops there, as the game closes).
 - **D85. The hashtable natives** keep each key's integer, real, boolean, string and handle apart, as measured; a
   `Save*Handle` saves nothing and gives false for a null or destroyed handle (but a destroyed `Condition` or `Filter`,
   which stays in the game, so it is saved and loads, D115), and saves a Convert native's value but
@@ -605,8 +609,8 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
   a map with custom forces (inferred from the lobby, which offers no other there; replaced by D141: melee), and custom
   forces with fixed player settings set `MAP_LOCK_ALLIANCE_CHANGES` (facts); `SetMapFlag` is Close, as only that flag
   set false was measured. `war3map.w3i` is read with War3Net's `ReadMapInfo` from `War3Net.Build.Core`, now a package of
-  `MirrorImaged.Data` too. Player names from `war3map.w3i` aren't used yet (replaced by D141: a computer's is): they are
-  `TRIGSTR_n` until the strings file is read (W2-1), so `GetPlayerName` is Close.
+  `MirrorImaged.Data` too. Player names from `war3map.w3i` aren't used yet (replaced by D141: a computer's is; and by
+  D210: only with fixed player settings, its `TRIGSTR_n` read from the strings file), so `GetPlayerName` is Close.
 - **D94. Forces are a mask of slots,** so `ForForce` goes in slot order (measured). It runs over the players the force
   holds as it starts: one the callback adds isn't visited and one it removes still is (not measured; the simplest
   reading of a mask copied at the start). The enumerations clear the force first and take the playing players of slots 0
@@ -631,7 +635,7 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
   12; the scale and suspending are Exact. The workspace's facts saw a 7 read 6.999999 (11-05, a Moonwell check map)
   where the probe read 7 back exactly; the facts' read may have come later than the set, and W1-9's probe is to separate
   them (answered by D149: neither read gives 6.999999). A day is the standard 24 hours of 480 s until the game's data
-  (W2-1) gives a map's own (the facts' `DayHours=30` cases).
+  (W2-1) gives a map's own (the facts' `DayHours=30` cases; done in D208).
 - **D97. Events wait for the triggers (W1-9):** `TriggerRegisterPlayerEvent` (victory, defeat, leave),
   `TriggerRegisterPlayerStateEvent`, `TriggerRegisterPlayerAllianceChange` and `TriggerRegisterGameStateEvent` stay
   Missing, and with them the events the facts measure inside `RemovePlayer`, `SetPlayerAlliance` and `SetPlayerState`
@@ -695,8 +699,8 @@ measured and say so where not.
   reading of the four characters, a negative one in parentheses (`-'éab'` would read as a Lua comment). War3Net reads a
   byte from 0x80 up after the first as signed: `'éab'` (UTF-8 `C3 A9 61 62`) is -1029086878, where its bytes, and the
   old `FourCC`, give -1012309662. Neither that nor the game's reading of a backslash in a rawcode is measured: W1-7's
-  JASS probes are to settle rawcodes with high bytes (settled by D137: War3Net's reading is the game's). This reaches blizzard.j's rawcodes too, with the same values for
-  its rawcodes, which are all ASCII. The file runs in a Lua thread of its own, as W1-2 runs a callback; a wait in it
+  JASS probes are to settle rawcodes with high bytes (settled by D137: War3Net's reading is the game's). This reaches
+  blizzard.j's rawcodes too, with the same values for its rawcodes, which are all ASCII. The file runs in a Lua thread of its own, as W1-2 runs a callback; a wait in it
   (`TriggerSleepAction`) lets the rest of the file go (not measured). The Lua is loaded as the chunk named by the
   file's path, so an error in it reads `MyMap\save.pld:N:` (N the transpiled Lua's line, as D65's are), and runs with
   those natives and globals as they were before blizzard.j and the map ran, and `__jarray`, which War3Net makes a JASS
@@ -931,12 +935,228 @@ The measurements are three probes, `probes/lobby.lua`, `events.lua` and `forforc
   binary fractions of 24 hours stay exact), left to W1-8. D96's model stays, reading back as set, Close. After W1-9,
   with W1-5 and W1-6 merged first: 131 Exact, 266 Close, 11 Recorded, 1,427 Missing.
 
+### Probes compared with the game (W1-8)
+
+- **D120. The comparison** is `ProbeComparison` in `tests/MirrorImaged.GameTests`. Its test without the game runs every
+  probe in `probes/` in MirrorImaged and compares its lines with the game's in `probes/expected/<probe>.txt` (D71's
+  format), so CI does it on all three platforms. A probe's map runs through the seam without blizzard.j (D65), as rule
+  5 of `docs/tasks/how-tasks-run.md` asks, with the three blizzard.j functions the map's `config` and `main` call
+  (`SetPlayerSlotAvailable`, `InitGenericPlayerSlots`, `InitBlizzard`) given as functions that do nothing. With the
+  installed blizzard.j it would be no closer: `InitBlizzard` stops at `IsFogEnabled`, Missing, and the rest of it needs
+  sounds, rects and units (later waves). So a probe reading what those three set (players) or calling another blizzard.j
+  function (`PolledWait` in triggers and triggers-2, `GetPlayersAll` in players) differs there, recorded as below. The
+  run is advanced a second at a time, for at most the 2 minutes the game runner gives a probe (its hidden desktop runs
+  game time as real time), until the probe's Preload file is in the run's documents; the run stopping after it
+  (`EndGame` is Missing until W1-9) is the game ending there. The lines that differ are found by the longest common run
+  of lines, and those between the same two common lines are paired in order, so each difference names the expected
+  file's line and both values. The test with the game (`Needs=Game`) runs each probe in the game first and fails when the
+  game no longer gives the expected lines (a stale record), then runs it in MirrorImaged as above; one probe: `dotnet
+  test tests/MirrorImaged.GameTests --filter 'Needs=Game&DisplayName~name: \"triggers\"'` from PowerShell. It replaces
+  the four trigger probes' tests and `hello`'s, now that every probe has an expected file: `hello` and `game-time` were
+  recorded (11-08), `game-time`'s real seconds as `{t}`.
+- **D121. MirrorImaged's differences are recorded per probe** in `probes/differences/<probe>.txt`, in the comparison's
+  order: the game's line after `- `, MirrorImaged's after `+ `, or `! ` and the first line of the message when its run
+  stopped without lines, with notes (`# `) giving why and the decision that makes the native Close. The test holds the
+  file to the differences exactly, both ways, so a new difference fails and so does one that has gone; its message
+  lists every difference with its line and gives the file's lines without notes, to paste. A stop is one entry, not
+  every line, as a Missing native in a probe loses all its lines: `CreateUnit` stops triggers-2 and `Location`
+  strings-2 (wave 2); the lane that brings the native updates the file. One file a probe, so lanes changing different
+  natives seldom touch the same file. With W1-6 and W1-9 merged, of the 31 probes 2 stop so, 3 close the game as the
+  game does, and of the 26 that give lines 12 give the game's and 14 differ: strings, strings-4, game-time, lua-config,
+  timers and events where the native or the model is Close; handles-2 and handles-3 on ids given again (D111) and
+  `Condition(nil)` (D114); and players, lobby, triggers, triggers-3, handles and forforce-wait also where blizzard.j's
+  functions, which the comparison runs without, would act (ids, teams, the neutral victim, `PolledWait`,
+  `GetPlayersAll`), which W1-10 is to settle. The lobby and events probes run on W1-9's map with a computer (D140) in
+  MirrorImaged as in the game; the events probe's side files (D147) stay a game test of their own.
+- **D122. A game that closes is a line.** A probe whose game exits by itself after its map loaded, before the lines
+  came, ends `Closed` in the runner (new), and gives the one line `! the game closes`; so does a MirrorImaged run that
+  stops with a `GameClosedException` before its lines, and an expected file holds it as any line. `Closed` needs the
+  probe's `started.pld`, written in the probe's first timer before the probe runs, so a game that exits as its map
+  loads isn't a probe closing it: the three closing probes run again (11-08) each wrote it before the game closed.
+  `R2SW` of a number below 0 whose text passes 255 bytes now throws it, replacing D84's cut, as the game closed on
+  -1.5 at widths 254 and 1000; the check sees the length as it wraps, so a width whose length passes a 32-bit integer
+  still gives `""` below 0, as above 0 (not measured below 0; a test pins it). W1-3's six one-call `R2SW` probes are committed as `probes/r2sw-*.lua`, and W1-5's `files-text` (`Preloader` of
+  a file that isn't JASS) as `files-text.lua`; each was run again (11-08) and gave what the facts say, the two at -1.5
+  and files-text closing the game.
+- **D123. The runner copies the account's campaign files too:** before a run, each account's
+  `Campaigns\*\Campaigns.w3v` and each campaign's profile, named after its folder (`Classic\Classic.w3p`,
+  `Reforged\Reforged.w3p`, `ForsakenKingdom\ForsakenKingdom.w3p`), as D59 copies `LastReplay.w3g`, to `Saved by
+  MirrorImaged\<name> <write time><extension>` beside it, never over a file, and not when its hash is one a probe run
+  made; after the run the hashes of those that changed join the same list, still `probe-replays.txt`, so the hashes
+  noted before stay. Every game rewrites the profiles with the same bytes, so their write time changes each run: a
+  file is not copied when a copy in its folder has its content, whatever the copy's name (before, only a copy of the same
+  name counted, and this task's first runs left 34 copies of one `Classic.w3p`, the 33 extra ones since deleted).
+- **D124. A line can vary in a word too, and keep its place:** in D71's format, `{w}` stands for a word (ASCII
+  letters, digits and underscores) as `{t}` stands for a number, and either can stand in any line: a line without
+  `~ ` keeps its place and matches by its pattern, and `~ ` is only for a line that moves. A `~ ` line needs a token
+  and some fixed text, so it can't match any line at all. The players probe run again gave other races for slots 0
+  to 23, as the lobby draws them at random (D92), so those 24 lines have `RACE_{w}` for the race, in order; the two
+  runs' races are in the file's notes. `game-time`'s real seconds and `hashtables`' `SaveFogStateHandle` answer
+  (D125) are in-order lines with `{t}` and `{w}` too.
+- **D125. `SaveFogStateHandle` is Close:** its answer for `FOG_OF_WAR_MASKED`, a Convert native's value, was false in
+  W1-3's run of the hashtables probe and true in W1-8's, every other line the same; the value was saved and loaded back
+  both times. So the game's answer there isn't fixed (perhaps whatever its return register held; not known), and the
+  native still gives false (D85), with the line given `{w}` there.
+- **D126. The Lua build as the game's, probe lua-config** (two runs, the same lines): D33's Windows configuration holds
+  (`math.log(8, 2)` 3.00000024 and `math.log(1024, 2)` 10.000001 as here, `0x1.0000011p0` 1, `%a` of 0.1
+  `0xc.ccccdp-7`, `os.date` refusing `%F`, `%e` and `%Ey` and taking `%#x`), and so does D35's build without
+  `LUA_COMPAT_5_2` (no `math.pow`, `math.ldexp`, `math.log10`, `bit32`, `unpack`, `loadstring`, `table.maxn` or the
+  rest; `utf8`, `table.move`, `math.ult` and `rawlen` as here). D34's integer made a float by the C cast is now
+  measured: `i + 0.0` and `i / 1` round to nearest, ties to even (16777217 to 16777216, 16777219 and 16777221 to
+  16777220, 2147483647 to 2^31), and match here, where `I2R` cuts toward zero. Two differences are fixed or kept:
+  the game has no `string.dump`, so the sandbox drops it now (`sandbox.c`; the arena's addresses moved, so
+  `LuaDeterminismTests`' pins were taken again); and the game's `load` seems to read a binary chunk (inferred: the
+  start of one gave "truncated precompiled chunk", with mode `bt` and `b`, so it reached the bytecode reader), which
+  stays refused here, D36's reason holding: without `string.dump` a map can still write bytecode by hand. That keeps
+  `lua-config` different from the game for good, an exception to A6 that `docs/tasks/later.md` lists for Sven's
+  review. Left as differences, recorded: `math.log(3, 2)` and the base-10 logs (D32's log), and `pairs` over 20 string
+  keys, which visits them in the same order in both of the game's runs but not in this one's; inferred from that, the
+  game's string hash seed is fixed and isn't 0 (D35), though another hash function or table growth would change the
+  order too. Finding it is W1-10's.
+- **D127. Timers due at the same moment, probe timers** (two runs, the same lines): six timers due at 1.0 ran in the
+  game as resumed, first, periodic, second, late, restarted, which is neither the order they were made (late,
+  restarted, periodic, resumed, second, first), nor started, nor D45's order of queueing (first, second, resumed, late,
+  restarted, periodic, as here). A 3600 s timer read every 0.01 s by a periodic timer gave elapsed times as if read at
+  the hundredths themselves and cut toward zero as D45 cuts (0.01001, 0.02002, ...), but 0.25024 and 0.50024 where
+  0.25 and 0.5 would read whole, and whole at 0.75 and 1.0 (so the periodic timer's expiries are a hair past 0.25 and
+  0.5, perhaps summed timeouts); here the expiries run in the nearest 1/1024 s step, which the clock reads, so 0.00977,
+  0.01953, ... Both are recorded as differences for the timers' follow-up: D45's step and order are Close until a
+  model matches.
+- **D128. After W1-8,** with W1-6 and W1-9 merged first: 130 Exact, 267 Close, 11 Recorded, 1,427 Missing
+  (`SaveFogStateHandle` went to Close, D125).
+
+### Map files and the game's standard data (W2-1)
+
+The probes `data`, `data-objects`, `data-tags`, `data-names`, `data-sets-melee`, `data-sets-tft` and `data-sets-fk`
+(`docs/facts.md`, "The game's data") measured what the facts left open; the choices below follow them, the facts'
+"Object data", and Moonwell.GameData's reading of the tables, ported. What W2-1 leaves is in its tasks: W2-2, W2-3,
+W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
+
+- **D200. One data model, `GameData`:** the standard data (`StandardData`) with the map's changes, and the map's files
+  (`MapArchive`). An object is found by its kind and id (`Object(ObjectKind.Unit, id)`; ids are the game's, `FourCC`'s
+  order), since two kinds may share one; a field by its id (`uhpm`, `Hhb1`) and level, as text (`Text`), or read as
+  C's `atoi` and `atof` read it (`Integer`, `Real`: the longest number at the start, else 0), and null or 0 for none.
+  A field without levels is read at level 0 whatever level is given; one with levels from 1 to the object's count
+  (`alev`, `glvl`, `bvar`, `dvar`; 0 for the other kinds), and past the count it has none, as the standard Storm Bolt
+  reads 0 past its third level (game-facts). A table column's level past the 4th with no value of its own, in the map
+  or the tables, takes the level before's (game-facts: a 6-level Storm Bolt reads its 4th column at 4 to 6; the patch
+  note). A level of a field in the text files is its list's entry, and past the list's end there is none. The natives
+  decide what none reads as: tooltips past the last level read the last one (game-facts), which is W2-7's.
+- **D201. The standard data is read from the install's storage** through one seam, a function giving a file's bytes by
+  its path in `War3.w3mod` (`units/unitdata.slk`, `_balance/custom_v1.w3mod/units/unitdata.slk`,
+  `_locales/enus.w3mod/units/humanunitstrings.txt`), null when there is none, which is passed over. Each kind's
+  metadata, tables, func and skin files and locale strings are Moonwell.GameData's, merged in its order (a later
+  value replaces an earlier one), with the files named one by one (the race files in alphabetical order) instead of
+  listed, as the storage has no folders: the first table names the objects and another table's row of any other id
+  is dropped; a text section is the object's in any case, its exact id first (`[Boac]` is `BOac`'s), and its name is
+  what is between `[` and the first `]`, as the install has sections with words after the bracket (`[Hleo] leonid`,
+  `[AHw2] - T2 - Spell Blade`), whose keys would otherwise land in the section before (fapo took Leonid's icon); a
+  key is found in any case, and a later file's `UberTip` replaces `Ubertip`. The `*Addons.txt` files of 3.0 aren't
+  read, as Moonwell doesn't. The text is the installed locale's (the build's tags, `enUS` text). The SLK and profile
+  readers are written here (`Tables`), keeping each cell's text, as Moonwell's keep-text fork of War3Net.IO.Slk does
+  (Moonwell's package); unlike the SYLK format, a value's `;;` and `""` aren't read as a semicolon and a quote, as no
+  game file has them. Reading takes about 1.2 s (0.5 s opening the storage, 0.25 s `AbilityData.slk`); it is done
+  once a process for each install folder, build (its locale too) and pair of balance sets (`StandardData.Installed`);
+  a cache between processes is `later.md`'s (wave 10).
+- **D202. Which balance set a map reads** (`StandardData.Sets`): the facts' table (Forsaken Kingdom the base tables;
+  Custom `custom_v0` or `custom_v1`; Melee with Reign of Chaos `melee_v0`, with The Frozen Throne the base values and
+  `custom_v1`'s objects), and, from the probes, the Default data set read as Melee on a map with the melee flag and as
+  Custom on another, and an info file of format 28, which has no data version, read as The Frozen Throne. For Melee
+  with The Frozen Throne, measured: units (fapo's life 0), items (`CreateItem` of ckdk nil) and abilities
+  (`UnitAddAbility` of AA12 false) that `custom_v1` leaves out don't exist, while Forsaken Kingdom has all three; and
+  the constants are the base file's (`DamageBonusPierce`: a footman took 80.36 of 100 pierce, as on Forsaken
+  Kingdom, where a `custom_v1` map's took 89.29). Inferred: the same for buffs, upgrades, destructables and doodads,
+  for the func and skin files, and for the 14 other constants `custom_v1`'s `MiscGame.txt` changes; formats 25 to 30
+  read as The Frozen Throne and older ones as Reign of Chaos (25 is World Editor's first for The Frozen Throne). A map
+  without an info file reads `custom_v1`. 257 of the install's 273 maps read the base values with `custom_v1`'s
+  objects. Which AI scripts a set holds is `later.md`'s (wave 7).
+- **D203. A value kept per graphics mode is read as Definitive Edition graphics read it** (`:de`, else `:hd`, else
+  the plain key, never `:sd`; game-facts, graphics mode 2), as Moonwell does: a run shows nothing, the facts measured
+  that mode, and it is the one Sven plays. Another mode isn't offered.
+- **D204. The map's changes:** each object file and then its skin file (the data probe: hkni read the skin file's
+  name), a change to a standard object changing it, a new object starting from the standard object it is based on and
+  not the map's change to it (game-facts; the data probe for an upgrade's levels), and a change to an object the
+  balance set doesn't have dropped (not measured). War3Net keeps an id's first letter in its lowest byte, so its ids
+  are reversed to the game's (`docs/upstream.md`). A string value's `TRIGSTR_n` is resolved as the map is read; a
+  number is kept as its invariant text (D214). A doodad's variation is taken as the file's number, as a level is;
+  whether the file counts variations from 0 is W2-4's.
+- **D205. A field's place comes from its metadata row,** as Moonwell.GameData's `Fields.ColumnOf` finds it: the
+  column is `field` with the data pointer's letter (`DataA`); a field of each level in a table has a column a level
+  (`DataA1`), in the text files a comma list, or with `appendIndex` a key a level (`Requires`, `Requires1`); a field
+  sharing its `field` with others, or of the text files with an index, is that entry of a comma list (`Buttonpos`'s 0
+  and 1, a unit's `Name`), an entry in quotes keeping its commas; a blank cell, `-` and `_` are none. Which fields
+  apply to which object isn't checked: any field reads its column, so an ability's field read on another ability
+  reads the other's column of that place. Not measured: units' (`useUnit`, `useHero`, `useBuilding`) are W2-2's,
+  abilities' (`useSpecific`) and changes stored by column W2-8's.
+- **D206. A `TRIGSTR_n` given to a native that reads it is the map's string n,** resolved where its string argument is
+  read (D80), n read as `atoi` reads it after the prefix in capitals (`TRIGSTR_` and `TRIGSTR_abc` are string 0,
+  `TRIGSTR_-1` none); a string the file doesn't have stays as it is. The data probe measured which natives read it:
+  `GetLocalizedString`, `SetPlayerName`, `StringCase` and `StringLength` do; `StringHash`, `S2I`, `S2R`, `SubString`
+  and `SaveStr` don't, and `ParseTags` doesn't (data-tags), which its task (W2-8) keeps so. `DisplayTextToPlayer` and
+  `DisplayTimedTextToPlayer` resolve it too, inferred: World Editor writes the texts a map shows as `TRIGSTR_n`, and
+  the game shows the strings. The list is `ReadsTrigstr` in `Simulation.Lua.cs`; a task bringing a native that shows
+  or keeps text adds it when it measures it.
+- **D207. Runtime tests give their own data** (rule 5): `StandardData` is empty when made with `new`, and a test adds
+  objects to it with their values by field and level (`Add(ObjectKind.Upgrade, "Rhme", {["glvl"] = "3"})`, `"Hhb1:2"`
+  for a level) and strings, hotkeys and constants to its dictionaries; `Simulation.Load(path, blizzard, options,
+  data)` runs with it, and without data with an empty one, where every object is missing and the day is the standard
+  24 hours of 480 s. A test object has no metadata, so its fields read exactly the level given, with no carry past
+  level 4. The map's own files are always read, in tests too.
+- **D208. The day's hours and length are the constants `DayHours` and `DayLength`,** the map's own over the game's: the
+  time moves `DayHours / DayLength` hours a second, comes round at `DayHours`, and reads no more than 24 (game-facts:
+  `DayHours=30` gives an hour per 16 s; set to 26 or 29 it reads 24). A set above `DayHours` less 0.01 is 0, which for
+  24 hours is the measured 23.99 kept and 23.995 not; Close: with 30 hours the facts' 29.999 read 24, here 0, and the
+  game's 29.9 still read 24 3 s later, where this comes round.
+- **D209. A terrain, doodad or placed-unit file War3Net can't read is left out** (null), named in `MapArchive.Unread`
+  and `Simulation.Unread`, and written as the run's first log entries (`0.000 map: left out, as it can't be read:
+  war3map.w3e: ...`), rather than stopping the run: the game loads the install's three such maps (`docs/upstream.md`),
+  and no wave reads those files yet. Any other file that can't be read stops the read, naming it. Fixing the readers
+  is W2-6's (DustwallowKeys' `war3map.w3e`) and W2-4's (SilverpineSprint's `war3map.doo`); Roundabout's
+  `war3mapUnits.doo`, World Editor's file, which the game makes no units from, stays left out.
+- **D210. Player names, with D141:** the one person of a single-player game is "Local Player", whatever its name in
+  `war3map.w3i` (the players, lobby and data probes); a seated computer is its `war3map.w3i` name, its `TRIGSTR_n` read
+  from the strings file, when the map has custom forces with fixed player settings (the lobby probe, "Probe Computer";
+  data-names, `TRIGSTR_001` read "The Horde"), and "Computer (Normal)" otherwise (the data probe, a map without custom
+  forces whose computer was named `TRIGSTR_002`), a computer seated in a slot the map gives a user too (with fixed
+  settings D141's "Player N" stays there; neither measured); every other slot is "Player N". Not separated: custom
+  forces without fixed settings; that the names follow the fixed settings is inferred, as the lobby shows a map's own
+  names only with them. Several people's names, their accounts', stay unknown, so `GetPlayerName` stays Close. The
+  names are written in English, as before, not looked up in the strings (`LOCAL_PLAYER`, `COMPUTER_NORMAL`).
+- **D211. `GetLocalizedString` and `GetLocalizedHotkey` are Exact:** the strings are the `StringList`s of the locale's
+  `GlobalStrings.fdf`, `InfoPanelStrings.fdf`, `NetworkStrings.fdf` and `DateStrings.fdf`, FrameDef.toc's string files,
+  each key in its case, the first of a key kept; a missing key gives the text back. The hotkeys are `UI\MiscUI.txt`'s
+  `[Hotkeys]`, any case, a line for the installed language (`KEY:deDE='W'`, `KEY:esES,itIT='A'`) before the plain one;
+  the letter's code, 0 for none. A map's own string lists (`BlzLoadTOCFile`) are `later.md`'s (wave 5).
+  `GetPlayerTechMaxAllowed` is Exact with the upgrades' level counts, and `AddPlayerTechResearched` stops at them
+  (Close: a count already past one, or a limit set below it, isn't measured).
+- **D212. Read but not used yet:** placed units, doodads, regions, cameras, sounds and the import list are read as
+  War3Net gives them, for the waves that make them, and the map's other files by name (`MapArchive.File`, the FDF and
+  TOC files of wave 5). The terrain's heights (`Terrain`, the game-facts' rules for `GetLocationZ`, each corner rule
+  tested) wait for W2-6's `GetLocationZ`, which also measures the off-map edge (inferred: a point off the map reads
+  its nearest edge); bridges and walkable destructables are W2-4's. `GetObjectName` is W2-2's (it reads a name even
+  for an object the set leaves out: fapo's under Melee with The Frozen Throne), a kind's ordered objects for the random
+  item and creep natives W2-3's, `ParseTags` W2-8's, and the sound files' lengths `later.md`'s (wave 5).
+- **D213. The data probes are compared as every probe is (D120),** each on its own map: `ProbeComparison.Change` gives
+  a probe's change (`DataProbeMaps`), in the game and in MirrorImaged alike, with one probe file a map. In MirrorImaged
+  they run with the install's standard data for their map (`ProbeComparison.ReadsData`), so their comparison is
+  `Needs=Game`, skipped without an install, and CI compares the other probes as before. `data` reads only natives
+  MirrorImaged has and gives every one of the game's 49 lines; `data-names` gives its 3; `data-objects` and the three
+  `data-sets` stop at `GetObjectName` and `CreateUnit` (wave 2) and `data-tags` at `ParseTags` (W2-8), recorded in
+  `probes/differences`, so their data are tested by `GameDataTests` and `InstalledDataTests`.
+- **D214. A real the map changes is kept as decimal text without an exponent** (`0.00001`), as `Integer` reads text
+  as `atoi` does and would read `1E-05` as 1; shortcut: a real under 1e-28 is kept as 0. A whole number past the
+  integers' range reads as the range's end, as the C library's `strtol` holds it (`Integer`), not 0.
+- **D215. A day of no length or no hours is the standard one:** a map's `DayLength` or `DayHours` of 0 or below (or
+  not a number) is passed over for 480 s and 24 hours, rather than a day that never moves or divides by 0. Not
+  measured.
+- **D216. After W2-1,** with W1-6, W1-8 and W1-9 merged first: 133 Exact, 266 Close, 11 Recorded, 1,425 Missing.
+
 ### JASS maps (W1-7)
 
 The measurements are eleven JASS probes, `probes/jass-*.j`, run in the game's JASS machine (D130), and
-`probes/blizzard-numbers.lua`, in `docs/facts.md`, "JASS maps", with their lines in `probes/expected`.
-`JassProbeTests` runs each JASS probe's map in MirrorImaged and checks the game's lines, but those the decisions below
-name, which it lists with MirrorImaged's.
+`probes/blizzard-numbers.lua`, in `docs/facts.md`, "JASS maps", with their lines in `probes/expected`. W1-8's
+comparison (D120) runs them as it runs the Lua probes: `ProbeComparison` takes `probes/*.j` too, and builds and runs
+each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions below, `probes/differences` says so.
 
 - **D130. A JASS map runs as Lua.** `Simulation.Load` reads `war3map.lua`, else `war3map.j` (or `scripts\war3map.j`,
   where older maps keep it). A JASS script is made into Lua by War3Net's transpiler against common.j's natives and
@@ -948,8 +1168,9 @@ name, which it lists with MirrorImaged's.
   inferred; Lua would call nil. A probe can be JASS: `ProbeMap.BuildJass` puts it in a `war3map.j` beside `out` and
   `done` written in JASS, and calls no blizzard.j function, so the tests' seam (`Load(path, "")`, which transpiles
   against common.j only) runs the JASS probes' maps on every platform; JASS has no `pcall`, so a probe runs what may
-  stop a thread in one of its own (`ExecuteFunc`), and a timer ends the probe 30 s in. The rewriting is `Jass.cs`'s,
-  the JASS map's run `Simulation.Jass.cs`'s.
+  stop a thread in one of its own (`ExecuteFunc`), and a timer ends the probe 30 s in. The map with `'ac'`, which
+  gives no lines, is a game test's inline probe instead. The rewriting is `Jass.cs`'s, the JASS map's run
+  `Simulation.Jass.cs`'s.
 - **D131. blizzard.j two ways.** A Lua map's blizzard.j is the game's own Lua: there `ModuloInteger(7, -3)` is -5,
   flooring as Lua's `//` does (probe blizzard-numbers), so the integer `/` stays War3Net's `//`; and a real global given
   a whole number is a float (`bj_MELEE_MINE_SEARCH_RADIUS` 2000.0), so a whole number written where a real goes is

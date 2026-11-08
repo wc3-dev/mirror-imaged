@@ -175,6 +175,11 @@ Needs W1-8 (part 1, the comparison). Decisions D150-D159. W1-8 split off this pa
   expected files, which stay the game's raw lines.
 - From W1-6's review: probe a condition place taken twice (c1 destroyed, c2 takes its place, c2 destroyed, c3 takes
   it): in the model c1, c2 and c3 all run c3's function, and destroying the stale c1 frees c3's place (D115).
+- From W1-8's re-review: `GetPlayersAll` being nil (the stand-ins) ends the lobby and players probes early, so their
+  later lines, on Exact natives (`ForceEnum*`, `GetGameTypeSelected`, `IsMapFlagSet`, `SuspendTimeOfDay`,
+  `GetGameSpeed`, `GetGameDifficulty`, `GetIntegerGameState`, `GetTimeOfDayScale`, the cheat reads,
+  `IsPlayerRacePrefSet`, `VersionGet`), are never compared; settle the stand-ins so they are. And fix
+  `docs/facts.md`'s wording that no whole binary chunk "can be made" without `string.dump` (none was made; D126).
 - Differences with no task yet, to accept against A6 or plan, in `docs/tasks/later.md` (wave 10): R2S/R2SW from 2^31
   (D84), S2R past the float range (D83), StringHash/SubString on non-UTF-8 bytes (D82, D38), the random generator
   (D46, D86) incl. `GetRandomReal(3e38, -3e38)`'s tiny negatives.

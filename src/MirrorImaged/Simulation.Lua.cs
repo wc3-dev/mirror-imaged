@@ -29,6 +29,11 @@ public sealed partial class Simulation
     // A handle as Lua holds it, seen as the type declared, whose == compares the game's ids (decisions D63, D112)
     static LuaHandle ToLua(handle h, Type declared) => new(declared.Name, h.Key, h.Id, typeof(agent).IsAssignableFrom(declared));
 
+    // The natives a TRIGSTR_n given to reads as the map's string n (probe data: StringHash, S2I, S2R, SubString, SaveStr
+    // and ParseTags don't); the two that show text are inferred, as World Editor writes their text so (decisions D206).
+    static readonly HashSet<string> ReadsTrigstr =
+        ["GetLocalizedString", "StringCase", "StringLength", "SetPlayerName", "DisplayTextToPlayer", "DisplayTimedTextToPlayer"];
+
     internal object? ToCSharp(object? value, Type type, int position, string function)
     {
         if (type == typeof(int)) return Integer(value, position, function);
@@ -41,13 +46,14 @@ public sealed partial class Simulation
             };
         if (type == typeof(bool)) return value is not (null or false) && value != None;
         // As luaL_checklstring: a number is written as tostring writes it, nil is refused, and the native reads up to
-        // the first NUL (docs/facts.md, "Strings, numbers and hashtables"); a JASS map gives natives null, as its
-        // JASS does (probe jass-threads, decisions D136).
+        // the first NUL (docs/facts.md, "Strings, numbers and hashtables"). A TRIGSTR_n given to a native that reads it
+        // is the map's string n (decisions D206). A JASS map gives natives null, as its JASS does (probe jass-threads,
+        // decisions D136).
         if (type == typeof(string))
             return value switch
             {
                 null when _jass => null,
-                string s => s.IndexOf('\0') is >= 0 and var end ? s[..end] : s,
+                string s when (s.IndexOf('\0') is >= 0 and var end ? s[..end] : s) is var text => ReadsTrigstr.Contains(function) ? _natives.Data.Map?.Resolve(text) ?? text : text,
                 int n => n.ToString(CultureInfo.InvariantCulture),
                 float f => Native.Text(f),
                 _ => throw BadArgument(position, function, $"string expected, got {TypeName(value)}"),

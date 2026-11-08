@@ -1,0 +1,3 @@
+# probes/hello.lua on 3.0.1.24371, single player, 11-08 (W1-8): the game's lines. One run, as W0-4's runs gave them.
+hello from the game
+3

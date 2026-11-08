@@ -1,0 +1,3 @@
+# probes/r2sw-negative-254.lua on 3.0.1.24371, single player, 11-08 (W1-8): the game's lines. One run, as W1-3's two: the game exited by itself (0xC0000409) before any line.
+# "! the game closes" is the one line of a probe whose game closed first (decisions D122).
+! the game closes

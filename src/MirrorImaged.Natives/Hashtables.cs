@@ -150,7 +150,8 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public bool SaveDialogHandle(hashtable? table, int parentKey, int childKey, dialog? whichDialog) => SaveHandle(table, parentKey, childKey, whichDialog);
     [Native(Level.Close)] public bool SaveEffectHandle(hashtable? table, int parentKey, int childKey, effect? whichEffect) => SaveHandle(table, parentKey, childKey, whichEffect);
     [Native(Level.Close)] public bool SaveFogModifierHandle(hashtable? table, int parentKey, int childKey, fogmodifier? whichFogModifier) => SaveHandle(table, parentKey, childKey, whichFogModifier);
-    [Native(Level.Exact, Fact = TablesFact)] public bool SaveFogStateHandle(hashtable? table, int parentKey, int childKey, fogstate? whichFogState) => SaveHandle(table, parentKey, childKey, whichFogState);
+    // The game's answer for a Convert native's value varied: false in one run of the hashtables probe, true in the next (D125).
+    [Native(Level.Close)] public bool SaveFogStateHandle(hashtable? table, int parentKey, int childKey, fogstate? whichFogState) => SaveHandle(table, parentKey, childKey, whichFogState);
     [Native(Level.Close)] public bool SaveForceHandle(hashtable? table, int parentKey, int childKey, force? whichForce) => SaveHandle(table, parentKey, childKey, whichForce);
     [Native(Level.Close)] public bool SaveFrameHandle(hashtable? table, int parentKey, int childKey, framehandle? whichFrameHandle) => SaveHandle(table, parentKey, childKey, whichFrameHandle);
     [Native(Level.Exact, Fact = TablesFact)] public bool SaveGroupHandle(hashtable? table, int parentKey, int childKey, group? whichGroup) => SaveHandle(table, parentKey, childKey, whichGroup);

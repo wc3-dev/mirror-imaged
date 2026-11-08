@@ -1,0 +1,20 @@
+# Where MirrorImaged differs from the game's lines in expected/handles-3.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# The players' ids (D110).
+- players 1048584 0 2 3 4 5 6 7 8 9 10 11 12 13 14
++ players 1048576 0 1 2 3 4 5 6 7 8 9 10 11 12 13
+- players 15 16 17 18 19 20 21 22 23 24 25 1 60 62
++ players 14 15 16 17 18 19 20 21 22 23 24 25 26 27
+
+# Ids given again in the game, never here (D111; docs/tasks/later.md, wave 10).
+- new a b, 2 other
++ new , 4 other
+- made c
++ made new
+
+# Condition(nil) inside And, Or and Not, as D114 has it (Close; docs/tasks/later.md, wave 10).
+- predicted false false true false true false false
++ predicted false false true false false true true
+- ran t1,f1,t2,f3,f5,t6,u6,t8,u8
++ ran t1,f1,t2,f3,f5,t6,u6,t7,t8,u8

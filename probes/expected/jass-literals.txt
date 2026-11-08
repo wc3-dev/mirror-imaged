@@ -1,3 +1,5 @@
+# probes/jass-literals.j on 3.0.1.24371, single player, 11-08 (W1-7), in the game's JASS machine: the game's lines.
+# Two runs, the same (the second by the game probe tests).
 0.1 3dccccce 3dccccce
 0.2 3e4cccce 3e4cccce
 0.7 3f333334 3f333334

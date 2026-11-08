@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="MirrorImaged.Tests" />
+    <InternalsVisibleTo Include="MirrorImaged.GameTests" />
   </ItemGroup>
 
   <ItemGroup>

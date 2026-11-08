@@ -1,0 +1,15 @@
+# Where MirrorImaged differs from the game's lines in expected/handles.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# Ids: the players' ids start where the game's don't, and InitBlizzard's handles, which the comparison runs
+# without, aren't made (D110, D120; W1-10).
+- first 1048690 players 1048584 1048586 1048646 1048584
++ first 1048606 players 1048576 1048577 1048603 1048576
+
+# blizzard.j's own timers and groups don't exist without it (D120; W1-10).
+- blizzard 1048577 1048578 1048579 1048580 1048581 1048582 1048583
++ blizzard nil nil nil nil nil nil nil
+
+# Condition(nil) inside And and Not, as D114 has it (Close; docs/tasks/later.md, wave 10).
+- after a pass false false false false false
++ after a pass true true false false false

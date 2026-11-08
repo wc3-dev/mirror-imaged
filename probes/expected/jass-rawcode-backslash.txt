@@ -1,1 +1,0 @@
-# No lines: the game didn't load the map, whose rawcode 'a\bc' holds a backslash (the loaded mark never came).

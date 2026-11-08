@@ -1,0 +1,4 @@
+# 3.0.1.24371, 11-08 (W2-1): the probe's lines as the game gave them, on its map (ProbeComparison.Change)
+slot 0 Local Player
+slot 1 The Horde
+slot 2 Player 3
