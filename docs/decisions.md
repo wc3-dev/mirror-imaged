@@ -188,10 +188,11 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   `__name` is the type, so `tostring` writes `timer: <address>`: the facts measure that it names the type the
   returning native declares. While Lua holds it, the same handle as the same type is the same userdata (a weak table
   per type), so `==` and table keys work (`GetLocalPlayer() == Player(0)`); as another type it is another userdata, as
-  the facts measure for `unit` and `widget`. One Lua let go of is made again at a new address next time; whether the
-  game keeps it is not measured. Its place, so `pairs` and `tostring`, is the same every run (D39). An argument's
+  the facts measure for `unit` and `widget`. One Lua let go of is made again at a new address next time, as the game
+  does (measured since: D112). Its place, so `pairs` and `tostring`, is the same every run (D39). An argument's
   declared type must be the parameter's or below it, else Lua's `bad argument #1 to 'X' (timer expected, got
-  player)`, as the facts measure for `GetUnitTypeId`; a destroyed handle reads as null to the natives.
+  player)`, as the facts measure for `GetUnitTypeId` (the message replaced by D113: no `got`); a destroyed handle
+  reads as null to the natives (but a destroyed `Condition` or `Filter`, D115). `==` is D72's, then D112's.
 - **D42. A Lua function given to C#** becomes a reference in the registry, made by `sandbox.c`'s trampoline before C#
   runs, since C# must not allocate in Lua there. It is let go of when the C# function returns, unless C# keeps it
   (`LuaFunction.Keep`, then `Dispose`). A native's `code` (D20) is a delegate whose target is the kept function's
@@ -248,7 +249,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   D86: from the first bound up by the bounds' distance).
 - **D47. Handle ids** count up from 0x100000, the first agent id the game is said to give (claim), and are never
   reused: the game's reuse isn't measured (facts, "Handles and identity"). The 28 players, slots 0 to 27 (fact), are
-  made first. `GetHandleId` waits for wave 1, with the rest of the core.
+  made first. `GetHandleId` waits for wave 1, with the rest of the core. (Measured since, and kept: D110, D111.)
 - **D48. The run's log** has an entry for each `print`, each text shown to a player, whichever player, and each Lua
   error, as `<seconds to 3 places> <source>: <text>`, the source `print`, `player <n>` or `error`; text of several
   lines stays one entry with that before each line, so every line printed reads on its own. An error's traceback is
@@ -261,7 +262,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   they are. An integer parameter takes a whole float (fact) and refuses another with Lua's "number has no integer
   representation"; a real takes an integer; a boolean is Lua's truth; a string, handle or code takes nil as null (for
   a string, replaced by D80: nil is refused);
-  anything else, a table or a coroutine too, is Lua's `bad argument #n to 'Name' (<type> expected, got <type>)`. A
+  anything else, a table or a coroutine too, is Lua's `bad argument #n to 'Name' (<type> expected, got <type>)`
+  (replaced by D113 for handles, functions, numeral strings and missing arguments). A
   handle is returned as the native's declared type. The game's own Lua functions, Close: `print`, joining `tostring`
   of each argument with tabs, as Lua's does; `FourCC` (facts), a string's bytes big-endian (an object id for 4; other
   lengths not measured); and `__jarray(default)`, which World Editor's scripts make each array variable with
@@ -343,22 +345,25 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   after the natives and before the game's Lua functions and blizzard.j. Not measured: whether the game's are plain
   globals a script can change, as they are here.
 - **D63. Every handle has a key, and Lua's handles hold it.** A handle's key is its own in its game, given when it is
-  made, whatever its type, and never given twice; it is not its id, the number the game shows (`GetHandleId`, W1-6).
-  The userdata Lua holds is made from the key and the type the handle is seen as (`LuaHandle(Type, Key)`; D41's "its
-  id" is now its key): the same key as the same type is the same userdata, as another type another, and `tostring`
-  and the metatable follow the type. A handle passed back is found by its key, so one seen as a parent type, as
-  `GetTriggerEventId`'s `eventid` will give `gameevent`, `limitop` and the other event types, is still found, and
-  `gameevent` 0 and `limitop` 0, both eventids standing for 0, are two handles; a handle that isn't of the parameter's
-  type is refused with D49's bad argument, as the type Lua sees is. Keying by id and type, as the first version did,
-  missed a handle seen as its parent, and an id alone is ambiguous between a converted value and an agent.
+  made, whatever its type, and never given twice; it is not its id, the number the game shows (`GetHandleId`, W1-6). The
+  userdata Lua holds is made from the key and the type the handle is seen as (`LuaHandle(Type, Key)`; D41's "its id" is
+  now its key; D112 adds the id for `==`): the same key as the same type is the same userdata, as another type another,
+  and `tostring` and the metatable follow the type. A handle passed back is found by its key, so one seen as a parent
+  type, as `GetTriggerEventId`'s `eventid` will give `gameevent`, `limitop` and the other event types, is still found,
+  and `gameevent` 0 and `limitop` 0, both eventids standing for 0, are two handles; a handle that isn't of the
+  parameter's type is refused with D49's bad argument, as the type Lua sees is. Keying by id and type, as the first
+  version did, missed a handle seen as its parent, and an id alone is ambiguous between a converted value and an agent.
 - **D64. A Convert native gives the handle standing for its value:** one object per type and value, made the first
   time and kept, whose id is the value, with a key of its own and no game id, so the agents' ids are as before (D47).
   So the same value gives the same userdata and `==` holds, and the same value as another type is another handle
-  (`ConvertRace(0) ~= ConvertPlayerColor(0)`). All 88 are Close. `ConvertPlayerColor` and `ConvertRace` (facts:
+  (`ConvertRace(0) ~= ConvertPlayerColor(0)`; since D112 `==` compares ids, so they are equal, as in the game, and
+  `rawequal` tells them apart). All 88 are Close. `ConvertPlayerColor` and `ConvertRace` (facts:
   `GetPlayerColor` equals `ConvertPlayerColor(n)` and `GetPlayerRace` `RACE_*` with `==`), and `ConvertAttackType`,
   `ConvertDamageType` and `ConvertWeaponType` (the Moonwell.Damage gate's types, made once and compared with `==`)
   become Exact in the tasks that add those getters, which the facts compare them with. Not measured: `GetHandleId` of
-  one (said to be the value; W1-6), and a value common.j doesn't name, which gives a handle like any other.
+  one (said to be the value; W1-6), and a value common.j doesn't name, which gives a handle like any other. (Since
+  measured, probe `handles`: the id is the value, a value common.j doesn't name too, and none is taken, D110; and
+  `ConvertGameEvent` and `ConvertLimitOp` are Exact, D115.)
 - **D65. blizzard.j is transpiled at run time** from the install's `War3.w3mod:scripts/blizzard.j` (the root spells it
   `Scripts/Blizzard.j`; its lookup ignores case, D24), with `common.j` registered first for the natives' return types,
   by the upstream `War3Net.CodeAnalysis.Transpilers` 6.1.1 from nuget.org, rendered by its CSharp.lua with the default
@@ -443,7 +448,7 @@ in `probes/expected`.
   measures; `rawequal` stays false (D41). Called straight from the metatable with anything but two handles, it answers
   false. The game's `==` also holds between different handles with the same id (`GetTriggerEventId()` with id 4 `==`
   `ConvertPlayerColor(4)`; `Condition(nil) == Filter(nil)`), which needs the id in the userdata: left to W1-6
-  (`docs/tasks/wave-1.md`), so `GetTriggerEventId`, `Condition` and `Filter` are Close until then.
+  (`docs/tasks/wave-1.md`), so `GetTriggerEventId`, `Condition` and `Filter` are Close until then. (Replaced by D112.)
 - **D73. Boolexprs:** `And` and `Or` run their second operand only when needed; a nil operand, `Not(nil)` and a nil
   condition are false; a destroyed `Condition` or `Filter` fails without running, while a destroyed `And`, `Or` or `Not`
   still runs. `Condition(nil)` and `Filter(nil)` each give one handle every call, which passes as a trigger's own
@@ -452,6 +457,7 @@ in `probes/expected`.
   condition destroyed while a trigger had it, then a new one added and removed, still ran the new one through the old
   one's place (`ran removed`; handle id reuse inferred), which isn't modelled: `TriggerAddCondition`,
   `TriggerRemoveCondition`, `DestroyCondition` and `TriggerEvaluate` are Close for it, left to W1-6 with the ids.
+  (Measured since: not id reuse but the condition's place, D115; the nil handle is D114.)
 - **D74. A run takes the trigger's actions as it starts** (facts), so an action removed while a run goes on, by
   `TriggerRemoveAction`, `TriggerClearActions` or `DestroyTrigger`, is let go of only once the trigger's last running
   thread has ended. `DestroyTrigger` lets go of its events too and lets a waiting run go on: the claim that it breaks
@@ -525,7 +531,8 @@ functions before it was written.
   for a number below 0 whose text passes 255 bytes: the game closes (0xC0000409, twice), which a run can't copy, so
   the text is cut as above 0.
 - **D85. The hashtable natives** keep each key's integer, real, boolean, string and handle apart, as measured; a
-  `Save*Handle` saves nothing and gives false for a null or destroyed handle, and saves a Convert native's value but
+  `Save*Handle` saves nothing and gives false for a null or destroyed handle (but a destroyed `Condition` or `Filter`,
+  which stays in the game, so it is saved and loads, D115), and saves a Convert native's value but
   gives false, as for `FOG_OF_WAR_MASKED` (a handle made by a native that makes objects gave true); a handle destroyed
   after its save loads as null; a save to a destroyed table saves nothing and gives false (not measured: from Lua a
   destroyed table reads as null, D41, which was). `FlushParentHashtable` destroys the table and gives its place back
@@ -574,37 +581,41 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
   before `config` is W1-9's. Two options, not three: the first user is the local player, so a test choosing whose game
   the run is orders `Users`. Choosing a selectable slot's race or a computer's difficulty is in `later.md`.
 - **D92. Races come from the lobby:** a playing slot whose race is fixed (its preference names a race, and it isn't
-  selectable) has that race; a selectable one gets `RACE_PREF_RANDOM` and, like a random preference, a random race, as
-  do the unused slots of 0 to 23 (probe); the neutral slots have race 0. The random races come from a generator of
-  their own, seeded from the run's seed (`Game.RunSeed`), with a draw for every slot from 0 to 23 in order, used or not,
-  so a slot's race doesn't depend on who else plays and the map's own `GetRandomInt` and `math.random` don't depend on
-  the seating at all. Whether the game's lobby draws from the generator the script shares is not known (D46).
-- **D93. The starting state is the probe's:** names "Player N", slots 1 to 23 Empty with `MAP_CONTROL_NONE`, team -1
-  and start location -1, the neutral slots Playing as `MAP_CONTROL_CREEP` on team 0, colour the slot, races
-  selectable; each player giving itself alliance types 0 to 7, neutral passive and every player passive to each other
-  (26 to 27 inferred), nothing else; game result 3, food cap ceiling 100, bounty from the neutral slots (26 inferred),
-  `PLACED` 1 for a seated slot; handicaps 1; speed normal, difficulty easy, placement the map's settings, game type
-  melee. A seated computer's and a named slot's defaults are inferred from these, to be settled by W1-9's probe. Gold
-  below 0 reads 0 (measured) and so does lumber (inferred); other states keep any value. A tech maximum below 0 reads
-  2147483647; `SetPlayerTechResearched` sets the level, also lower, but not below 0 (inferred), and an addition stops at
-  2147483647. An upgrade's level count, which the game's `AddPlayerTechResearched` stops at and its maximum reads, needs
-  the game's data (W2-1), so those natives are Close; so is `SetPlayerTechResearched` (setting above that count isn't
-  measured) and `GetPlayerTechCount` (a unit type counts the player's units, W2-2, and `specificonly` is ignored until
-  then). `SetGameSpeed` refuses `MAP_SPEED_FASTEST` (measured); the speed changes nothing else, as game time is
-  simulated. `GetGameTypeSelected` is the map's settings for a map with custom forces (inferred from the lobby, which
-  offers no other there), and custom forces with fixed player settings set `MAP_LOCK_ALLIANCE_CHANGES` (facts);
-  `SetMapFlag` is Close, as only that flag set false was measured. `war3map.w3i` is read with War3Net's `ReadMapInfo`
-  from `War3Net.Build.Core`, now a package of `MirrorImaged.Data` too. Player names from `war3map.w3i` aren't used yet:
-  they are `TRIGSTR_n` until the strings file is read (W2-1), so `GetPlayerName` is Close (D210: no native reads them).
+  selectable) has that race; a selectable one gets `RACE_PREF_RANDOM` (replaced by D141: not with custom forces and
+  fixed player settings, which keep every preference) and, like a random preference, a random race, as do the unused
+  slots of 0 to 23 (probe; replaced by D141: an unused slot whose preference names a race has it); the neutral slots
+  have race 0. The random races come from a generator of their own, seeded from the run's seed (`Game.RunSeed`), with a
+  draw for every slot from 0 to 23 in order, used or not, so a slot's race doesn't depend on who else plays and the
+  map's own `GetRandomInt` and `math.random` don't depend on the seating at all. Whether the game's lobby draws from the
+  generator the script shares is not known (D46).
+- **D93. The starting state is the probe's:** names "Player N" (replaced by D141: "" until the lobby seats the players),
+  slots 1 to 23 Empty with `MAP_CONTROL_NONE`, team -1 and start location -1, the neutral slots Playing as
+  `MAP_CONTROL_CREEP` on team 0, colour the slot, races selectable; each player giving itself alliance types 0 to 7,
+  neutral passive and every player passive to each other (26 to 27 inferred), nothing else; game result 3, food cap
+  ceiling 100, bounty from the neutral slots (26 inferred), `PLACED` 1 for a seated slot; handicaps 1; speed normal,
+  difficulty easy, placement the map's settings, game type melee. A seated computer's and a named slot's defaults are
+  inferred from these, to be settled by W1-9's probe (settled by D141: a computer's are a user's, and it has its
+  `war3map.w3i` name). Gold below 0 reads 0 (measured) and so does lumber (inferred); other states keep any value. A
+  tech maximum below 0 reads 2147483647; `SetPlayerTechResearched` sets the level, also lower, but not below 0
+  (inferred), and an addition stops at 2147483647. An upgrade's level count, which the game's `AddPlayerTechResearched`
+  stops at and its maximum reads, needs the game's data (W2-1), so those natives are Close; so is
+  `SetPlayerTechResearched` (setting above that count isn't measured) and `GetPlayerTechCount` (a unit type counts the
+  player's units, W2-2, and `specificonly` is ignored until then). `SetGameSpeed` refuses `MAP_SPEED_FASTEST`
+  (measured); the speed changes nothing else, as game time is simulated. `GetGameTypeSelected` is the map's settings for
+  a map with custom forces (inferred from the lobby, which offers no other there; replaced by D141: melee), and custom
+  forces with fixed player settings set `MAP_LOCK_ALLIANCE_CHANGES` (facts); `SetMapFlag` is Close, as only that flag
+  set false was measured. `war3map.w3i` is read with War3Net's `ReadMapInfo` from `War3Net.Build.Core`, now a package of
+  `MirrorImaged.Data` too. Player names from `war3map.w3i` aren't used yet (replaced by D141: a computer's is; and by
+  D210: only with fixed player settings, its `TRIGSTR_n` read from the strings file), so `GetPlayerName` is Close.
 - **D94. Forces are a mask of slots,** so `ForForce` goes in slot order (measured). It runs over the players the force
   holds as it starts: one the callback adds isn't visited and one it removes still is (not measured; the simplest
-  reading of a mask copied at the start). The enumerations clear the force first and take the playing players of slots
-  0 to 23, not the neutral ones (measured with one user; computers inferred). `ForceEnumAllies` takes the players the
+  reading of a mask copied at the start). The enumerations clear the force first and take the playing players of slots 0
+  to 23, not the neutral ones (measured with one user; computers inferred). `ForceEnumAllies` takes the players the
   given player is passive to, itself among them, and `ForceEnumEnemies` the others (the direction isn't measured). A
   filter stops the run as the native being Missing until the boolexprs can be evaluated (W1-9), so a map never gets a
-  wrong answer; `GetFilterPlayer` waits with them. `ForForce` lets go of its callback (D42) and gives the outer enum
-  player back after a nested one. It is Close: besides the copy, the facts' wait that never ends after a force was
-  looped with `ForForce` and destroyed isn't modelled (W1-9).
+  wrong answer; `GetFilterPlayer` waits with them (replaced by D146: filters run). `ForForce` lets go of its callback
+  (D42) and gives the outer enum player back after a nested one. It is Close: besides the copy, the facts' wait that
+  never ends after a force was looped with `ForForce` and destroyed isn't modelled (W1-9; replaced by D148: modelled).
 - **D95. Pausing stops the clock** (`Game.Paused`): what is due in the step the game paused in still runs, so a pause
   from one callback doesn't hold back the others of its frame, and then the clock stays; `Simulation.Advance` counts no
   paused time, so once the game goes on the clock moves from where it stopped. `Simulation.Paused` shows it; only the
@@ -616,20 +627,21 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
   read cut toward zero to a float, so it reads under 24 (from 23.9, 2 s later 23.999998, where the game read
   23.9999962). An infinite or NaN scale is refused and the scale stays (not measured). Setting reads back as set; below
   0 and above 23.99 read 0 (measured: 23.99 kept, 23.995 not). Close: the game adds each frame's share and loses a
-  little (0.0999975 for 0.1 after 2 s), reads a set 0.1 a float step lower, and its event at 12 reads a float step
-  under 12; the scale and suspending are Exact. The workspace's facts saw a 7 read 6.999999 (11-05, a Moonwell check
-  map) where the probe read 7 back exactly; the facts' read may have come later than the set, and W1-9's probe is to
-  separate them. A day is the standard 24 hours of 480 s until the game's data (W2-1) gives a map's own (the facts'
-  `DayHours=30` cases; done in D208).
+  little (0.0999975 for 0.1 after 2 s), reads a set 0.1 a float step lower, and its event at 12 reads a float step under
+  12; the scale and suspending are Exact. The workspace's facts saw a 7 read 6.999999 (11-05, a Moonwell check map)
+  where the probe read 7 back exactly; the facts' read may have come later than the set, and W1-9's probe is to separate
+  them (answered by D149: neither read gives 6.999999). A day is the standard 24 hours of 480 s until the game's data
+  (W2-1) gives a map's own (the facts' `DayHours=30` cases; done in D208).
 - **D97. Events wait for the triggers (W1-9):** `TriggerRegisterPlayerEvent` (victory, defeat, leave),
   `TriggerRegisterPlayerStateEvent`, `TriggerRegisterPlayerAllianceChange` and `TriggerRegisterGameStateEvent` stay
   Missing, and with them the events the facts measure inside `RemovePlayer`, `SetPlayerAlliance` and `SetPlayerState`
-  and as the time of day passes an hour, so those three natives are Close. `RemovePlayer` sets the slot, Left for
-  defeat and Playing for any other result (victory measured), and the player's `PLAYER_STATE_GAME_RESULT` to the
-  result given (inferred: the state starts at the neutral result, 3, and is named for it). `EndGame`, which ends the
-  game for `CustomVictorySkipBJ`, stays Missing (W1-9); `CustomVictoryBJ` and `CustomDefeatBJ` also need dialogs (wave
-  5). `DefineStartLocationLoc` and `GetStartLocationLoc` wait for locations (W2-6), `SetPlayerAbilityAvailable` for
-  abilities (W2-7).
+  and as the time of day passes an hour, so those three natives are Close (replaced by D142 to D144: the events fire,
+  and the three natives are Exact). `RemovePlayer` sets the slot, Left for defeat and Playing for any other result
+  (victory measured; replaced by D142: Left for all but victory, once), and the player's `PLAYER_STATE_GAME_RESULT` to
+  the result given (inferred: the state starts at the neutral result, 3, and is named for it). `EndGame`, which ends the
+  game for `CustomVictorySkipBJ`, stays Missing (W1-9; replaced by D147: it ends the run); `CustomVictoryBJ` and
+  `CustomDefeatBJ` also need dialogs (wave 5). `DefineStartLocationLoc` and `GetStartLocationLoc` wait for locations
+  (W2-6), `SetPlayerAbilityAvailable` for abilities (W2-7).
 - **D98. What only the lobby reads is Recorded:** `SetMapName`, `SetMapDescription`, `SetEnemyStartLocPrio`,
   `SetEnemyStartLocPrioCount` and `SetPlayerRaceSkin` change nothing a native reads back, so they are Recorded, each
   with its reason. Their calls aren't written to the run's log: D48's log is what the map shows, and none of these
@@ -730,6 +742,195 @@ measured and say so where not.
   the 255-cache limit (a claim) isn't modelled. `Documents` isn't thread-safe: one run at a time uses it.
 - **D105. After W1-5,** with W1-2, W1-3 and W1-4 merged first: 112 Exact, 276 Close, 11 Recorded, 1,436 Missing.
 
+### Handles and errors (W1-6)
+
+The measurements are four probes, `probes/handles.lua`, `handles-2.lua`, `handles-3.lua` and `arguments.lua`, in
+`docs/facts.md`, "Handles and errors", with their lines in `probes/expected`.
+
+- **D110. Ids as the game gives them, but for where they start and their reuse.** Every handle a native makes takes the
+  next id, whatever its type, a trigger's actions, conditions and events too; a Convert handle's id is its value and it
+  takes none; `GetHandleId` of nil or of nothing is 0, and of a destroyed handle its id, which the Lua handle holds (the
+  binding gives `GetHandleId`, the one native taking any `handle`, a stand-in with the id, as a destroyed handle reads
+  as null to the natives, D41). All measured. Not matched, so `GetHandleId` is Close: where the ids start. The game
+  makes one handle before blizzard.j's globals (0x100001 on) and each player when first asked for, it seems
+  (`Player(0)` in `config` at 0x100008, `Player(25)` next, then 1 to 24, 26 and 27 later); here the 28 players are made
+  first (D47), as other natives read them before the script asks, and the game's own handles aren't known; left to
+  wave 6 (`docs/tasks/later.md`). Ids are `int`, from 0x100000 up, which a map making a thousand handles a second would
+  pass in 24 days. The probe lines with raw ids differ from MirrorImaged by this decision (W1-8's list,
+  `docs/tasks/wave-1.md`).
+- **D111. A destroyed handle's id is never given again.** The game gives it again once the handle is destroyed and Lua
+  has collected every userdata of it, 0.1 to 0.2 s later, the last freed first, with another id, not found, freed with
+  some batches (facts). Not modelled: when Lua collects can't match the game's collector (the allocator and the
+  sizes differ, D39), so a model would only move the ids by a guess, and it needs the userdata counted from `__gc` into
+  C#. What a map can see of it doesn't change: as long as Lua holds a destroyed handle, its id isn't given again, here
+  or in the game, so a stale handle never equals a new one, and `==` by id (D112) is safe. A map that keeps data under
+  `GetHandleId` and forgets to remove it doesn't get it back for a new handle here, as it may in the game. Left to
+  wave 10 (`docs/tasks/later.md`); the probe lines it changes are in W1-8's list (`docs/tasks/wave-1.md`).
+- **D112. `==` compares the game's ids.** A Lua handle holds its key (D63), its game id and whether its declared type is
+  an agent (`LuaHandle(Type, Key, Id, Agent)`, sandbox.c's `Handle`); every type's `__eq` compares the ids, whatever
+  the types (`GetTriggerEventId()` of id 4 `==` `ConvertPlayerColor(4)`, `ConvertRace(1) == ConvertPlayerColor(1)`,
+  `ConvertPlayerColor(n) == t`), and an agent's refuses a second operand that isn't an agent with Lua's `bad argument #2
+  to '__eq' (agent expected)` at the comparing line (`t == ConvertPlayerColor(n)`, `Player(0) == RACE_HUMAN`), as
+  measured; Lua calls the first operand's. The metatables read as `false` through `getmetatable` (`__metatable`), as
+  the game's, so `__eq` can't be called with anything else; it still checks its operands. Keys stay the identity: the
+  same key as the same type is the same userdata, so a table key, and an equal handle of another type is another key,
+  as measured; a handle Lua collected comes back as a new userdata, as measured. This replaces D72; the userdata grew,
+  which moved no address `LuaDeterminismTests` pins.
+- **D113. Arguments are checked as the game reports them** (probe `arguments`): a handle or function parameter takes nil
+  and a missing argument as null and refuses anything else with `bad argument #n to 'X' (<type> expected)`, with no
+  `got`, the type named as `common.j` spells it (`equipmentType`) and `function` for code; a number parameter reads a
+  string as Lua's `luaL_checkinteger` and `luaL_checknumber` do, with Lua's own reader (`LuaState.ToNumber`, sandbox.c's
+  `mirror_tonumber` over `luaO_str2num`), so `"0x10"` is 16 and `"1.5"` has no integer representation; a missing
+  argument to a number or string parameter is `got no value`; a boolean is Lua's truth, a missing one false. Lua's own
+  `got <type>` names a handle's declared type (`got timer`). Measured on `TimerGetTimeout`, `GetHandleId`,
+  `TriggerRegisterVariableEvent`, `I2S`, `R2S`, `StringLength`, `TriggerWaitOnSleeps`, `TriggerAddAction`, `Condition`
+  and `TimerStart`; that every native binds alike is inferred, as in D80. `math.random` takes numeral strings too, as
+  Lua's does; `math.randomseed` still refuses them (Lua's takes them). Not matched, not measured: Lua's own `got` names
+  any value whose metatable has a string `__name`, so the game's `I2S(setmetatable({}, {__name = "x"}))` would say
+  `got x`; here a table is `got table`.
+- **D114. `Condition(nil)` and `Filter(nil)` are one handle in the game:** here two, `conditionfunc` and `filterfunc`,
+  made by the first call of either with one id, so `==` holds, `rawequal` doesn't and the second takes no id, as
+  measured; C#'s types can't make one object both. Their value in an `And`, `Or` or `Not` stays D73's (false; alone as a
+  trigger's condition, true), which matches 15 of the 21 cases measured: the game's depends on what ran before (`And(t,
+  cn)` passes, `And(t, And(u, cn))` passes, `And(t, Not(cn))` fails, `And(Not(cn), t)` fails), and no rule tried fits
+  all 21: the last condition's result, globally or per evaluation, and a value per depth that a condition writes for its
+  depth and below and an `And` or `Or` clears for its operands (19 of 21, missing `And(t, Not(Not(cn)))` and
+  `And(Not(cn), t)`), which mispredicted two of the seven cases the last probe was written to check. It likely reads
+  memory the game left. `TriggerTests` lists the 21, the game's result beside the model's. So `Condition`, `Filter`,
+  `And`, `Or` and `Not` are Close, and `TriggerEvaluate`, which gives those results, too, until the nil condition fits
+  every measured case (wave 10, `docs/tasks/later.md`; the probe lines in W1-8's list). As they are one handle in the
+  game, destroying either destroys both here, also the other when its first call comes after (not measured).
+- **D115. A destroyed condition's place:** a `Condition` or `Filter` keeps its function in a place of its own;
+  destroyed, the place is freed, and the next `Condition` or `Filter` made takes the first freed, so what still holds
+  the destroyed one (a trigger's condition, an `And`, `Or` or `Not`) runs the new one, as the seven cases measured. A
+  timer and a trigger made between don't take it (measured); `Condition(nil)` and a new `And`, `Or` or `Not` don't
+  either (not measured, the model's). `And`, `Or` and `Not` have no place, so a destroyed one still runs its operands
+  (measured: an `Or` made after it didn't take it). The new one is a new handle with its own id. A destroyed condition
+  stays its place's, so given to a native it runs what the place holds: nothing while it is free, the new function once
+  taken (W1-9's probe `events`: a destroyed `Filter` given to `ForceEnumPlayers` after a `Condition` had taken its place
+  ran the new condition for each player). This is the one kind of destroyed handle that doesn't read as null to the
+  natives (D41). Not measured, the model's: destroying it again after its place was taken frees the new function too
+  (a place taken twice, c1 destroyed and taken by c2, c2 destroyed and taken by c3: c1, c2 and c3 all run c3's
+  function, and destroying the stale c1 or c2 frees c3's place; W1-10 is to probe it), and a hashtable saves and
+  loads it (D85's check is that the handle is still in the game). Known limit: a destroyed `Condition` or `Filter`
+  stays in the game for good, about 80 bytes each, which blizzard.j's matching functions, destroying a filter a call,
+  pile up; it can be let go of once Lua has collected its userdata, which needs wave 10's collector-driven id reuse
+  (`docs/tasks/later.md`; the `shortcut:` in `Triggers.cs`'s `Destroy`). No cheaper release is safe: a userdata Lua
+  still holds finds it by its key, and nothing tells C# when the last one is collected. With it, `TriggerAddCondition`,
+  `TriggerRemoveCondition` and `DestroyCondition` are Exact, and so are `GetTriggerEventId` (D112), `ConvertGameEvent`
+  and `ConvertLimitOp` (probe `triggers-2`: equal to the event of id 4; probe `handles`: `ConvertGameEvent(4)` has id
+  4). After W1-6, with W1-5 merged first: 116 Exact, 273 Close, 11 Recorded, 1,435 Missing.
+
+### Player and game events (W1-9)
+
+The measurements are three probes, `probes/lobby.lua`, `events.lua` and `forforce-wait.lua`, in `docs/facts.md`,
+"Players and the game" and "Player and game events", with their lines in `probes/expected`. What they left is in
+`docs/tasks/later.md` (wave 6), W2-1 and W1-8 (`docs/tasks/wave-1.md`, `wave-2.md`).
+
+- **D140. A probe map with a computer** (`ProbeMap.Build(..., withComputer: true)`, and the runner's `Run` likewise),
+  for the lobby and events probes: a user in slot 0, a computer in 1 and a user slot 2 no one plays, named "Probe User",
+  "Probe Computer" and "Probe Empty" in `war3map.w3i`, human with a selectable race, in custom forces with fixed player
+  settings (0 and 2 in one force, 1 in the other, not allied). Its `config` first adds what it reads (the game type,
+  the lock flag, the local player, the counts, and slots 0 to 2's name, slot state, controller, race and random
+  preference) to the global list `ProbeConfig`, one entry a call: so a probe sees what the lobby set before `config`,
+  and how often it ran (once, in the map's Lua state). One fixed layout, not options: both probes need the same, and
+  the other probes' map stays as it was.
+- **D141. The lobby before and after config** (the lobby probe). At the start of `config`, before it sets anything,
+  slots 0 to 2 are empty with no controller, named "" and with the random race preference (slots 3 to 23 inferred the
+  same, as only 0 to 2 were read), the local player is slot 0, the game type melee, `MAP_LOCK_ALLIANCE_CHANGES` not set
+  (read only there, not after `config`'s own calls), 0 players and 24 teams. The lobby seats the players after
+  `config` (D91), and then names a computer in a slot the map gives a computer as `war3map.w3i` does and every other
+  slot of 0 to 23 "Player N"; puts a slot no one plays on team -1, with the controller `config` gave it; keeps every
+  race preference when the map has custom forces with fixed player settings, selectable or not (the same with and
+  without `war3map.w3i`'s selectable-race flag), and otherwise makes a playing selectable slot random, as before; gives
+  a slot whose preference names a race that race, played or not; and, for custom forces with fixed settings, sets
+  `MAP_LOCK_ALLIANCE_CHANGES` and the flag 2^20, which `common.j` doesn't name. So the lock isn't set before `config`,
+  against the task's premise, and the seating stays after it. The game type is melee with custom forces too; custom
+  forces without fixed settings aren't measured. A computer's alliances, states, handicaps and placed state are a
+  user's, as D93 inferred. Not measured, and chosen: a name `config` set is kept (the game crashes the lobby when
+  `config` calls `SetPlayerName`, facts), and a computer seated in a slot the map gives a user is "Player N", not that
+  slot's `war3map.w3i` name. With `MAP_PLACEMENT_TEAMS_TOGETHER` the lobby put the players on start locations at
+  random, different in each run; that isn't simulated (D98, `later.md`), so `GetPlayerStartLocation` stays Close.
+  World Editor writes the names as `TRIGSTR_n`, read through the strings file in W2-1; until then a computer's name is
+  `war3map.w3i`'s as it is.
+- **D142. RemovePlayer takes a player out once** (the events probe and the facts): the result is stored, victory keeps
+  the slot Playing and any other result leaves it Left (neutral measured, tie inferred), and a player that isn't a user
+  fires its victory or defeat event inside the call, after the change, with itself the trigger player. A user fires
+  neither, inside the call or a second later (victory measured here, defeat by the facts' `CustomDefeatBJ`); neutral
+  and tie fire nothing (neutral measured); `EVENT_PLAYER_LEAVE` never fires for it. A second call on the same player
+  does nothing, whatever the result. Who counts as a user is the controller: another person in a multiplayer game
+  isn't measured. Exact.
+- **D143. Alliance and player state events** (the events probe). `SetPlayerAlliance` fires only on a change, on the
+  giving player's registrations: its `EVENT_PLAYER_ALLIANCE_CHANGED` first, for `ALLIANCE_PASSIVE` only (alliance types
+  1 to 9 fire none), then the alliance type's own (`TriggerRegisterPlayerAllianceChange`), each with the event id
+  `EVENT_PLAYER_ALLIANCE_CHANGED` and no trigger player, reading the new alliance. The workspace's facts say it fires
+  "each time it is set"; setting the same value again fired nothing here, so that means each change. A player's
+  alliance with itself doesn't change (passive measured). `SetPlayerState` fires the player's events for that state on
+  a change to a value that meets the comparison, the value stored (gold set to -1 fires as 0), with `NOT_EQUAL` a real
+  comparison, unlike the integer game states' (any change, D76); the event id is `EVENT_PLAYER_STATE_LIMIT` whatever
+  the comparison, `GetTriggerPlayer` the player and `GetEventPlayerState` the state. Outside an event
+  `GetEventPlayerState` is the state with id 0 (`PLAYER_STATE_GAME_RESULT`), not nil. `TriggerRegisterPlayerEvent`
+  with `EVENT_PLAYER_STATE_LIMIT` never fires; its input events (leave, chat, cinematic, arrows, mouse, keys) register
+  and never fire until wave 6 (`later.md`). The three registrations, `GetTriggerPlayer`, `GetEventPlayerState`,
+  `SetPlayerAlliance` and `SetPlayerState` are Exact.
+- **D144. The time of day's events** (the events probe; triggers-3's reads fit too, so D76's inference holds). A set
+  fires inside `SetFloatGameState`, reading the value set, by where the time goes: `GREATER_THAN` and
+  `GREATER_THAN_OR_EQUAL` when it goes up from the limit or below to the limit or above, `LESS_THAN` and
+  `LESS_THAN_OR_EQUAL` when it goes down from above the limit to it or below (from the limit itself, nothing), `EQUAL`
+  when it lands on the limit, `NOT_EQUAL` never. The workspace's facts say a set on from exactly the hour (6 to 18, 18
+  to 17) fires the old hour's event too; here 12 to 13 and 12 to 11 fired no `EQUAL` inside the set, so that was the
+  frames after (below). As the day runs, it fires a limit's `EQUAL`, `GREATER_THAN_OR_EQUAL` and `GREATER_THAN` events
+  as it passes it forward, and its `EQUAL`, `LESS_THAN_OR_EQUAL` and `LESS_THAN` ones backward, the time reading the
+  limit exactly; here at the first step at or past it, with the time set to the limit there (2.001 s from 11.9 at
+  scale 1; the game's frame came at 1.9999), so the day loses up to a step's share at each pass, and again a day later.
+  A set that lands on a limit while the day runs passes it at the next step, also when something else reschedules the
+  day in the set's step. Only the nearest pass is queued, so a map setting the time every frame doesn't fill the
+  queue. Not modelled, so `TriggerRegisterGameStateEvent` stays Close (W1-8 is to settle or model them): with the day
+  stopped, the frame after a set to exactly the limit fired all five again (the facts' "again within the next
+  second"); 12 to 13 with the day stopped, after frames at 12, fired nothing, where the same set within one instant
+  fired the two upward comparisons; and with the day running, a set that lands on the limit fired `EQUAL` only at the
+  next frame, which the model follows by firing `EQUAL` in a set only with the day stopped. The game's order among one
+  moment's events (GT, GE, EQ forward; EQ, LE, LT backward; EQ, GT, GE in a set) isn't registration order and isn't
+  followed.
+- **D145. TriggerRegisterGameEvent never fires in a run:** none of its 16 events fired through the events probe, not
+  the timer event for its timers, the state event for its state sets nor the victory event for its victories; that the
+  end-level event doesn't fire for `EndGame` is inferred from a file its action would have written and didn't. Close:
+  the game fires `EVENT_GAME_LOADED` after a saved game loads (facts, "Initialisation"), which a run doesn't do.
+  `GetWinningPlayer` stays Missing, with no event to read it in (`later.md`).
+- **D146. Filters** (the events probe). An enumeration's filter runs for each playing player of slots 0 to 23 in slot
+  order, with `GetFilterPlayer` that player (nil after), and passes as a trigger's condition does: 1 passes; 0, `"x"`,
+  nil, a table and a raising filter fail; `Filter(nil)` passes without running; a `Condition` serves too; `And` runs
+  both operands for each player. `ForceEnumAllies` and `ForceEnumEnemies` run it for every playing player, then test
+  the alliance; `ForceEnumPlayersCounted` stops once the force holds the count, without running the filter for the
+  rest. Inside the filter `GetEnumPlayer` and `GetTriggerPlayer` were nil when the enumeration ran in a timer's
+  callback, outside any event or `ForForce`; a filter run inside an event's action or a `ForForce` callback isn't
+  measured, and here it reads the outer thread's trigger player and enum player. A destroyed filter given again ran
+  the `Condition` that had taken the filter's place, for each player; with W1-6's places (D115) a destroyed filter
+  runs what its place holds, so this matches, and the four `ForceEnum*` are Exact (the direction of
+  `ForceEnumAllies`, D94, still isn't measured). A filter runs in a thread of its own, as a condition (D70); W2-6
+  probes that.
+- **D147. EndGame ends the run** (`Simulation.Ended`): the rest of its step runs, the code after the call and a 0 s
+  timer started before it among it, then the clock stops for good, a pause the map can't lift, and `Advance` moves
+  nothing. No event fires (D145; inferred from a missing file). The evidence is the probe's side files
+  (`events-after.pld` and `events-timer.pld` written, `events-end.pld` not), which the events game test now deletes
+  before the run and checks after, and W1-8's comparison is to check too. `doScoreScreen` changes nothing: a
+  `-loadfile` game skips the score screen (facts). Exact.
+- **D148. The lost wait after ForForce** (the forforce-wait probe, which reproduced the facts' three): a trigger's
+  wait started right after a force `ForForce` had run over was destroyed never ended, whether the force held a player
+  or not; `ForForce` alone, or a force made and destroyed, didn't; the next trigger's wait, 1.5 s later, and a
+  `PolledWait` after it ended. Its reach, probed after the code review: a wait started 1 s after the destroy ended, and
+  so did a wait already running across it, while a new one started beside it in the same instant was lost. Modelled
+  so: destroying a force `ForForce` has run over loses the next wait started in the same step; a later wait, or one
+  already running, ends. Not measured: a second new wait in that step. Why the game loses it isn't known (the trigger
+  and timer made after the force took new ids, so it isn't an id reused at once). `ForForce` stays Close for the
+  force's changes during it (D94).
+- **D149. The time of day read back** (the lobby probe, D96's question): with the day stopped, 7, 12, 18, 6 and 7.5
+  read back as set at once and in the same frame, and after a frame 7 read 7.00000477 (`40e0000a`), the others the
+  same; 0.1 read `3dccccc0` and 23.9 `41bf3332` already at once, where the players probe read `3dcccccc` and `41bf3333`.
+  So neither read gives the 11-05 map's 6.999999; the read drifts with the frames by a rule not found (times that are
+  binary fractions of 24 hours stay exact), left to W1-8. D96's model stays, reading back as set, Close. After W1-9,
+  with W1-5 and W1-6 merged first: 131 Exact, 266 Close, 11 Recorded, 1,427 Missing.
+
 ### Map files and the game's standard data (W2-1)
 
 The probes `data`, `data-tags` and `data-sets` (`docs/facts.md`, "The game's data") measured what the facts left
@@ -801,11 +1002,15 @@ open; the choices below follow them, the facts' "Object data", and Moonwell.Game
 - **D209. A map file War3Net can't read is left out** (null) and named in `MapArchive.Unread`, rather than stopping
   the run: the game loads the install's three such maps (`docs/upstream.md`). A map without `war3map.lua` still
   doesn't run.
-- **D210. Player names (replaces D93's "a named slot reads its map name"):** the one person of a single-player game is
-  "Local Player", a seated computer "Computer (Normal)" and every other slot "Player N", and the names in
-  `war3map.w3i` are read by no native (the data probe: neither the person nor the computer read theirs). The score
-  screen's "The Horde" (facts) is the screen's own. Several people's names, their accounts', stay unknown, so
-  `GetPlayerName` stays Close. The names are written in English, as before, and not looked up in the strings.
+- **D210. Player names, with D141:** the one person of a single-player game is "Local Player", whatever its name in
+  `war3map.w3i` (the players, lobby and data probes); a seated computer is its `war3map.w3i` name, its `TRIGSTR_n`
+  read from the strings file, when the map has custom forces with fixed player settings (the lobby probe, "Probe
+  Computer"), and "Computer (Normal)" otherwise (the data probe, a map without custom forces whose computer was named
+  `TRIGSTR_002`), a computer seated in a slot the map gives a user too (with fixed settings D141's "Player N" stays
+  there; neither measured); every other slot is "Player N". Not separated: custom forces without fixed settings, and a plain name without them;
+  that the names follow the fixed settings is inferred, as the lobby shows a map's own names only with them. Several
+  people's names, their accounts', stay unknown, so `GetPlayerName` stays Close. The names are written in English, as
+  before, not looked up in the strings (`LOCAL_PLAYER`, `COMPUTER_NORMAL`).
 - **D211. `GetLocalizedString` and `GetLocalizedHotkey` are Exact:** the strings are the `StringList`s of the locale's
   `GlobalStrings.fdf`, `InfoPanelStrings.fdf`, `NetworkStrings.fdf` and `DateStrings.fdf`, FrameDef.toc's string files,
   each key in its case, the first of a key kept; a missing key gives the text back. The hotkeys are `UI\MiscUI.txt`'s
@@ -820,4 +1025,4 @@ open; the choices below follow them, the facts' "Object data", and Moonwell.Game
   doodads, regions, cameras and sounds are read as War3Net gives them, for the waves that make them; the terrain's
   heights (`Terrain`, the game-facts' rules for `GetLocationZ`, each corner rule tested) wait for W2-6's
   `GetLocationZ`, and bridges for W2-4.
-- **D213. After W2-1:** 115 Exact, 275 Close, 11 Recorded, 1,434 Missing.
+- **D213. After W2-1,** with W1-6 and W1-9 merged first: 134 Exact, 265 Close, 11 Recorded, 1,425 Missing.

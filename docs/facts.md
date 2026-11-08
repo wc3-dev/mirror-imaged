@@ -232,7 +232,8 @@ callback; handle ids are read with `GetHandleId`, times with a 1000 s timer's el
 - The time of day (suspended, limit 12), set to 20, then 10, 11, 12, 12, 13, 12, 11, 10 and 14: the events read the
   time inside them as `LESS_THAN` and `LESS_THAN_OR_EQUAL` 10.0 and 12.0, `EQUAL` 12.0 twice, `GREATER_THAN_OR_EQUAL`
   and `GREATER_THAN` 12.0, 13.0 and 14.0, and `NOT_EQUAL` fired never; which sets fired them is inferred from those
-  reads (at 10 and the first 12, and so on), as the probe logged no set. The event's id is 3, `EVENT_GAME_STATE_LIMIT`.
+  reads (at 10 and the first 12, and so on), as the probe logged no set; W1-9's events probe logged them and bore the
+  inference out ("Player and game events"). The event's id is 3, `EVENT_GAME_STATE_LIMIT`.
 - `BlzTriggerIsRunning` is false for a new trigger, true in its action and while a run of it waits, also for two runs at
   once, and false once they have ended (read 1 s later), and in its condition under `TriggerEvaluate`.
   `BlzTriggerInterrupt` on a trigger whose run waits: that run never goes on, nor does its next action, and
@@ -387,7 +388,36 @@ are in `probes/expected/players.txt`, as the game gave them.
   arithmetic gave none of the three values, and neither did any of ten conversions tried for 0.1 (`x * 20 / 20`,
   `x / 24 * 24` and the like). Against the workspace's facts: on a Moonwell check map (11-05) a time set to 7 read
   6.999999, where here 7 read back exactly; that read may have come later, after the game had moved the time on, while
-  here it came at once. Not separated (W1-9's probe).
+  here it came at once. W1-9's lobby probe separated them (below): neither read gives 6.999999.
+
+Probe `probes/lobby.lua`, five runs on 3.0.1.24371, 11-08 (W1-9), on the probe map with a computer (decisions D140:
+a user in slot 0, a computer in 1 and a user slot 2 no one plays, named "Probe User", "Probe Computer" and "Probe
+Empty" in `war3map.w3i`, human and selectable, custom forces with fixed player settings, placement teams together),
+single player, `-loadfile`. The second run without `war3map.w3i`'s selectable-race flag gave the same lines. The lines
+are in `probes/expected/lobby.txt`.
+
+- `config` ran once, in the map's Lua state (a global it set was there in the probe). At its start, before it set
+  anything: `GetGameTypeSelected` melee, `MAP_LOCK_ALLIANCE_CHANGES` false, the local player slot 0, `GetPlayers` 0,
+  `GetTeams` 24, and slots 0 to 2 each named "" (empty), Empty, `MAP_CONTROL_NONE`, race 0, with
+  `IsPlayerRacePrefSet(p, RACE_PREF_RANDOM)` true.
+- After: slot 0 "Local Player", Playing, user, team 0; slot 1 "Probe Computer" (its `war3map.w3i` name), Playing,
+  `MAP_CONTROL_COMPUTER`, team 1, `PLACED` 1; slot 2 "Player 3", Empty, `MAP_CONTROL_USER` (as `config` set it), team -1
+  though `config` set 0, `PLACED` 0. All three human, with the human preference set and the random one not, though
+  selectable (in the players probe, without custom forces, the same `config` gave a random race). The neutral slots
+  had the random preference. In the first two runs, whose probe also printed slot 3 (the committed probe no longer
+  does), the unused slot 3 had a random race (orc, then undead) and the random preference.
+- The lobby moved the start locations: `config` gave slots 0, 1 and 2 locations 0, 1 and 2; slots 0 and 1 read 2 and 0
+  in the first run, 1 and 2 in the second (the later runs' weren't kept); slot 2 kept 2.
+- The computer's alliances are the user's: none with 0 or 2 either way (different forces, not allied), 255 to itself,
+  passive with neutral passive both ways, 25 to it passive and it to 25 not, none with 24 or 26. Its states and
+  handicaps are a user's (game result 3, food cap ceiling 100, `PLACED` 1, handicaps 1). `ForceEnumPlayers` held 0 and
+  1, the allies of 1 were 1 and its enemies 0.
+- After the lobby: game type still melee (custom forces too), placement teams together, 3 players, 2 teams, and the
+  map flags 1024 (`MAP_LOCK_ALLIANCE_CHANGES`) and 1048576 (2^20, no constant in `common.j`) set.
+- The time of day, suspended, each set read at once, in a 0 s timer, 0.1 s and 1 s later (float bits): 7 read 7, 7,
+  then 7.00000477 (`40e0000a`) twice; 12, 18, 6 and 7.5 read as set all four times; 0.1 read 0.0999999046
+  (`3dccccc0`) and 23.9 read 23.8999977 (`41bf3332`) all four times. Running at scale 1, a 7 read 7 at once and in a 0
+  s timer. So a read later, after a frame, can differ from the read at once, but not as the 11-05 map's 6.999999.
 
 ## Files and game cache
 
@@ -450,6 +480,162 @@ an outside program wrote and tried more paths (`files-paths`), and read a file t
   wrote it (still 177 bytes, written 07:24:50, after runs at 07:46, 08:11, 08:12 and 08:13). `Classic.w3p` in the same
   folder is rewritten by every game, saving or not.
 
+## Handles and errors
+
+The probes `handles`, `handles-2`, `handles-3` and `arguments` in `probes/`, their game lines in
+`probes/expected/<probe>.txt`, run by the game runner from the PowerShell tool, 3.0.1.24371, single player, 11-08
+(W1-6): `handles` four times (the first with an older identity part), `handles-2` six times, `handles-3` five times
+and `arguments` three times, with the same lines but where said below. Ids are read with `GetHandleId`, most as a
+difference from a timer made just before. The tests are `tests/MirrorImaged.Tests/HandleTests.cs` and the places and nil cases in
+`TriggerTests.cs`.
+
+- Every handle a native makes takes the next id, one each, whatever its type: a timer, trigger, group, force, hashtable,
+  `Condition`, `Filter`, `And`, `Not`, and also a trigger's action (`triggeraction`), condition (`triggercondition`) and
+  event. `TimerStart` (with or without a callback), `ForForce`, `ExecuteFunc`, `TriggerExecute` and `TriggerEvaluate`
+  take none.
+- A Convert handle's id is its value, also for a value `common.j` doesn't name (`ConvertRace(5)` 5,
+  `ConvertPlayerColor(100)` 100, `ConvertPlayerColor(-1)` -1, `ConvertGameEvent(4)` 4, `PLAYER_COLOR_RED` 0,
+  `RACE_HUMAN` 1), and it takes none. `GetHandleId(nil)`, `GetHandleId()` and the event id outside an event are 0.
+- The first ids: blizzard.j's globals are 0x100001 to 0x100007 (1048577 to 1048583), in the order blizzard.j makes them
+  (`bj_volumeGroupsTimer` first, `bj_lastStartedTimer` last), so the game made one handle before them (inferred). The
+  players come after: `Player(0)` is 1048584, `Player(25)` 1048585, `Player(1)` to `Player(24)` 1048586 to 1048609,
+  `Player(26)` 1048644 and `Player(27)` 1048646; inferred, from that order, that a player is made when first asked for
+  (`config` asks for `Player(0)` first). The probe's own first timer was 1048690.
+- A destroyed handle keeps its id (`GetHandleId` reads it), and no new handle takes the id while Lua holds the destroyed
+  one: three timers destroyed and kept took none of the next four ids; a destroyed trigger, force, hashtable, filter,
+  `And` and condition the same. Nor right after Lua has collected the destroyed handle (a weak table emptied), in the
+  same callback. A timer let go of but not destroyed keeps its id after Lua collected it.
+- The ids come back later. Three timers destroyed and collected at 0.1 s: a second later four new timers took the three
+  in their order and one other id (six runs), which came first in two runs and last in one; the three later runs give
+  only the freed ones and the count. Three destroyed at 0.1 s, let go of and collected at 1.2 s: a second later the
+  three in their order and one other id (six runs), last in the two that showed where. One destroyed and collected at
+  3.0 s was not given at 3.01 or 3.05 s, and was at 3.2 s (five runs). Two timers a (made first) and b, destroyed at 0.1
+  s, b collected then and a at 1.1 s: four timers at 2.1 s took a, another id, b and a new one (two runs; the three
+  later runs give the freed ones only, a then b, and two others). So the last freed comes first, a batch freed together
+  in its order, and another id was freed with some batches (whose, not found). Inferred: an id is freed once its handle
+  is destroyed and Lua has collected every userdata of it, at a later step of the game (0.1 to 0.2 s), and given again
+  last freed first.
+- A destroyed condition's place is taken by the next `Condition` or `Filter` made, and whatever still holds the
+  destroyed one runs the new one. A trigger whose condition was destroyed ran nothing and failed, and once a new
+  condition was made ran it, with its result; the same when the new one was a `Filter`, and for a destroyed `Filter` and
+  a new `Condition`. Two destroyed (a, then b) and two new (x, y): the trigger with a and b ran x, then y. A timer and a
+  trigger made between the destroy and the new condition changed nothing; inside a `Not` the same. The new condition has
+  an id of its own, not the destroyed one's, and doesn't equal it. A destroyed `And` isn't taken by an `Or` made after
+  it: it still runs its own operands. Inferred: a condition's function lives in a place of its own that the next
+  condition reuses, and this is the `ran removed` of `triggers`. W1-9's probe `events` gave a destroyed `Filter` to
+  `ForceEnumPlayers` after a `Condition` had taken its place: it ran the new condition for each player.
+- `==` between two handles compares their ids, whatever their types: `ConvertRace(1) == ConvertPlayerColor(1)`,
+  `ConvertPlayerColor(n) == t` for a timer of id n, `ConvertRace(GetHandleId(Player(0))) == Player(0)` and
+  `GetTriggerEventId() == ConvertPlayerColor(0)` outside an event are true; `ConvertRace(1) == ConvertRace(2)`, `t == u`
+  and `t == Player(0)` false. With an agent first and a handle that isn't an agent second it raises: `t ==
+  ConvertPlayerColor(n)` and `Player(0) == RACE_HUMAN` give `war3map.lua:N: bad argument #2 to '__eq' (agent
+  expected)`, N the comparing line; `RACE_HUMAN == Player(0)` is false. `t == {}` and `t == nil` are false.
+  `getmetatable` of a handle is `false`.
+- The same handle as the same type is the same userdata: `rawequal` holds for `Player(0)` and `GetLocalPlayer()`, two
+  `ConvertRace(1)`, `RACE_HUMAN` and `ConvertRace(1)`, two `Condition(nil)`, and `GetExpiredTimer()` and its timer. So
+  it is one table key; an equal handle of another type is another key (`keys[ConvertPlayerColor(1)]` nil where
+  `keys[ConvertRace(1)]` was set). A timer whose userdata Lua had collected came back from a hashtable as another
+  userdata (its `tostring` differs); two loads then are the same one.
+- `tostring` of a handle is its declared type, `: ` and 16 hexadecimal digits (`timer: ` and 16 is 23 characters;
+  `player`, `race`, `eventid`, `conditionfunc`, `filterfunc`, `boolexpr` and `triggeraction` alike).
+- `Condition(nil)` and `Filter(nil)` are one handle: the same id, `==` true, `rawequal` false (`conditionfunc` and
+  `filterfunc`). In an `And`, `Or` or `Not` its value depends on what ran before it. With t and u conditions that pass,
+  f one that fails, x any, and cn the nil handle: alone as a trigger's condition cn passes; `Not(cn)` passes,
+  `Not(Not(cn))` fails, `And(cn, x)` fails without running x, `Or(cn, f)` fails, `And(t, cn)` passes, `And(t, Not(cn))`
+  fails, `Not(And(t, cn))` fails, `And(t, And(cn, x))` fails without running x, `And(Or(f, t), cn)` fails, `Or(f, cn)`
+  fails, a trigger with the conditions t and `Not(cn)` passes, `And(t, Or(cn, f))` fails and runs f, `And(t,
+  Not(Not(cn)))` fails, `Or(f, Not(cn))` passes, `And(Not(f), cn)` fails, `And(t, And(u, cn))` passes, `And(Not(cn), t)`
+  fails without running t, and `And(And(t, u), Not(cn))` fails. No rule tried fits them all (the last condition's
+  result, in the evaluation or at each depth); inferred: it reads a value left in memory. A destroyed condition in an
+  `And` after a passing one fails.
+- Arguments (probe `arguments`, each call straight in `pcall`, so with no position): a handle parameter takes nil and
+  nothing (`TimerGetTimeout(nil)` and `TimerGetTimeout()` 0.0, `GetHandleId()` 0) and refuses anything else with `bad
+  argument #n to 'X' (<type> expected)`, with no `got`: a handle of another type, a converted handle, a parent type
+  (`eventid` for `limitop`), a number, a string, a boolean, a table, a table whose metatable's `__name` is the type, a
+  function and a thread. A function parameter takes nil and nothing and refuses a number, string or table with
+  `(function expected)`. An integer parameter takes a numeral string as Lua's own functions do (`I2S("5")` 5, `"0x10"`
+  16, `"2.0"` 2), refuses `"1.5"` and 1.5 with `(number has no integer representation)`, and a word, nil, nothing, a
+  boolean and a table with `(number expected, got string)` and the like, nothing as `got no value`, and a handle as its
+  declared type (`got timer`, `got race`, `got conditionfunc`). A real the same (`R2S("1.5")` 1.500, `R2S(2)` 2.000).
+  A string parameter given nothing: `got no value`. A boolean parameter takes Lua's truth: nil and nothing false; 0, 1,
+  `"false"` and a table true. An extra argument is ignored (`I2S(7, 8)` 7).
+- Errors' positions: a native's error inside a function of the script names the calling line, `war3map.lua:N: bad
+  argument ...`, also in a tail call (`return I2S("x")`); `error("raised")` gives `war3map.lua:N: raised`, level 2 the
+  caller's line, level 0 no position; `error({})` keeps the table; indexing nil, calling a missing global and
+  arithmetic on a table give Lua's own messages with the line.
+
+## Player and game events
+
+Two probes on 3.0.1.24371, 11-08 (W1-9), single player, `-loadfile`: `probes/events.lua` on the probe map with a
+computer (decisions D140), five runs, and `probes/forforce-wait.lua` on the usual probe map, six runs (its last two
+cases in the last four). Their lines are
+in `probes/expected`; the first run of `events` called RemovePlayer in another order, as below. Each part ran in the
+probe's zero-second timer unless timed; times are a 1000 s timer's elapsed time.
+
+- Filters (each enumeration run in the probe's zero-second timer, outside any event or `ForForce`):
+  `ForceEnumPlayers` with a filter called it for slots 0 and 1 (the playing players of 0 to 23), in that
+  order, with `GetFilterPlayer` the player, `GetEnumPlayer` and `GetTriggerPlayer` nil, and `GetFilterPlayer` nil
+  after. The force was cleared first (slot 5 gone). A filter returning true, false or "is player 1" gave 0 1, nothing
+  and 1. `ForceEnumPlayersCounted(f, filter, 1)`: with a filter passing all, called for 0 only and held 0; with one
+  refusing 0, called for 0 and 1 and held 1. `ForceEnumAllies` and `ForceEnumEnemies` of 0 called it for 0 and 1 and
+  held 0, and 1. A filter returning 1 passed; 0, "x", nil and a table failed; one that raised failed for both. A
+  `Condition` as the filter worked; `And(filter(true), filter(false))` ran both for 0, then both for 1, and held
+  nothing; `Filter(nil)` held 0 and 1 without running anything. A filter destroyed before a `Condition` was made, then
+  given to `ForceEnumPlayers`, ran that condition's function, twice, and held 0 and 1: the condition had taken the
+  destroyed filter's place ("Handles and errors").
+- Alliances: `SetPlayerAlliance(0, 1, ALLIANCE_PASSIVE, true)` fired, inside the call, player 0's
+  `EVENT_PLAYER_ALLIANCE_CHANGED` registration first and then its `TriggerRegisterPlayerAllianceChange` for passive
+  (registered before it), both with event id 12 (`EVENT_PLAYER_ALLIANCE_CHANGED`) and `GetTriggerPlayer` nil, the
+  alliance reading true inside; setting it true again fired nothing; false fired both again, false again nothing.
+  1 to 0 fired player 1's, not player 0's. Shared vision on and off fired only its own registration. Of alliance types
+  0 to 9 set on and off, only 0 (passive) fired `EVENT_PLAYER_ALLIANCE_CHANGED`. `SetPlayerAlliance(0, 0, PASSIVE,
+  false)` fired nothing and the alliance still read true. Against the workspace's facts (11-06), which say the
+  alliance-type event fires "each time it is set": setting the same value again fired nothing here, so that means each
+  change.
+- Player states: `TriggerRegisterPlayerStateEvent` on player 0's gold with limit 2 and each comparison, gold set from 0
+  to 5, 0, 1, 2, 2, 3, 2, 1, 0, 4, -1, 0, read inside: `LESS_THAN` 0, 1, 1, 0, 0; `LESS_THAN_OR_EQUAL` 0, 1, 2, 2, 1,
+  0, 0; `EQUAL` 2, 2; `GREATER_THAN_OR_EQUAL` 5, 2, 3, 2, 4; `GREATER_THAN` 5, 3, 4; `NOT_EQUAL` 5, 0, 1, 3, 1, 0, 4, 0
+  (no 2). So it fires on a change to a value that meets the comparison, -1 counting as the 0 stored, the second 0 not.
+  The event id was 11 (`EVENT_PLAYER_STATE_LIMIT`) for all. Lumber over 10.5 set to 10, 11, 12, 10 fired at 11 and
+  12, with `GetTriggerPlayer` 0 and `GetEventPlayerState` the lumber state (typed `playerstate`). Player 1's gold
+  registration didn't fire for player 0's gold; `TriggerRegisterPlayerEvent(t, p, EVENT_PLAYER_STATE_LIMIT)` never
+  fired; outside an event `GetEventPlayerState` was the state with id 0.
+- The time of day, suspended, set to 0, a trigger registered with limit 12, then set to 20, 10, 11, 12, 12, 13, 12, 11,
+  10, 14, 11.5, 12.5, 11.5 (sets 1 to 13), each comparison in its own pass; the sets that fired, with the time read
+  inside: `LESS_THAN` and `LESS_THAN_OR_EQUAL` 2 (10), 7 (12), 11 (11.5), 13 (11.5); `EQUAL` 4 (12), 7 (12);
+  `GREATER_THAN_OR_EQUAL` and `GREATER_THAN` 1 (20), 4 (12), 6 (13), 10 (14), 12 (12.5); `NOT_EQUAL` none. Inside, the
+  event id 3, `GetEventGameState` the time of day, `GetTriggerPlayer` nil.
+- The time of day passing 12, with a trigger for each comparison: set to 11.9 (from 6) and resumed at scale 1 at
+  0.0001, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL` and `EQUAL` fired at 1.9999 in that order, reading exactly 12. At
+  2.5001 scale -1 and set to 12.1: `EQUAL`, `LESS_THAN_OR_EQUAL` and `LESS_THAN` at 4.5048, reading 12. At 5.0001
+  suspended, scale 1 and set to 12: inside the set `EQUAL`, `GREATER_THAN` and `GREATER_THAN_OR_EQUAL`, then at
+  5.0048 all five but `NOT_EQUAL`, then nothing for 2.5 s. At 7.5001 set to 13: nothing, then nothing. At 10.0000
+  resumed and set to 12 (from 13): inside `LESS_THAN_OR_EQUAL` and `LESS_THAN`, at 10.0043 `EQUAL`, `GREATER_THAN` and
+  `GREATER_THAN_OR_EQUAL`. The first two runs gave the same times; the later runs' weren't kept. Against the
+  workspace's facts (11-05), which say setting the time on from exactly the hour (6 to 18, 18 to 17) fires the old
+  hour's event too: sets from exactly 12 (12 to 13 and 12 to 11, above) fired no `EQUAL` inside the set, and 12 to 13
+  after frames at 12 fired nothing in the frames after either; whether the 11-05 firing came from a running day's
+  frames isn't separated.
+- RemovePlayer, with `EVENT_PLAYER_VICTORY`, `DEFEAT`, `LEAVE` and `END_CINEMATIC` registered for players 0 and 1:
+  on the computer (1, Playing) victory fired its `EVENT_PLAYER_VICTORY` inside the call (event id 14, trigger player
+  1, slot Playing and game result 0 already); it stayed Playing with result 0. Then victory again, tie, defeat and
+  neutral fired nothing and changed nothing. In the first run, neutral first left it Left with result 3 and fired
+  nothing, and tie, victory, defeat, defeat and victory after it fired and changed nothing. On the user (0), victory
+  fired nothing, inside or 1 s later, and left it Playing with result 0.
+- `TriggerRegisterGameEvent` for every `gameevent` (0 to 10, 256 to 259, 310): none fired in the whole probe, through
+  its timers, state sets, the victories and `EndGame` (no `EVENT_GAME_VICTORY` either).
+- `EndGame(false)`, the last call of the probe's `done`: the code after the call ran (`events-after.pld`) and so did a
+  0 s timer started before it (`events-timer.pld`), in all five runs (the last two's files deleted before them and
+  checked after by the events game test). That no `EVENT_GAME_END_LEVEL` fired is inferred: its action would have
+  written `events-end.pld`, which never came.
+- `forforce-wait`: steps 1.5 s apart, each then executing a trigger whose action waits 0.5 s: none, a force made and
+  destroyed, `ForForce` over a new empty force, over one holding player 0, each ended; `ForForce` over an empty force
+  then destroyed, and over one holding 0 then destroyed, each never ended; the next step's wait (no force) and a
+  `PolledWait(0.5)` after it ended. The force destroyed had id 1048708, the trigger made after it 1048709, the timer
+  1048711. Then, in the last four runs: after `ForForce` over a force holding 0 and its destroy, a trigger's wait
+  started 1 s later ended, and so did the next step's; a trigger waiting 1.5 s, started 0.5 s before such a destroy,
+  ended, while a new trigger's wait started beside the destroy in the same instant never did; the next step's ended.
+
 ## The game's data
 
 Probes `probes/data.lua`, `data-tags.lua` and `data-sets.lua`, on 3.0.1.24371, 11-08 (W2-1): MirrorImaged's probe map
@@ -465,7 +651,9 @@ Frozen Throne's data version (`data-sets-tft`). The runs' lines are in `probes/e
 seen once (the data probe twice).
 
 - Names: slot 0, the one person, is "Local Player" and the seated computer "Computer (Normal)", the strings
-  `LOCAL_PLAYER` and `COMPUTER_NORMAL`; neither reads its `war3map.w3i` name, and an unseated slot is "Player N".
+  `LOCAL_PLAYER` and `COMPUTER_NORMAL`; neither reads its `war3map.w3i` name, and an unseated slot is "Player N". On
+  W1-9's lobby probe map, with custom forces and fixed player settings, the computer read its `war3map.w3i` name
+  ("Probe Computer", written plainly); which of the two differences gives the name isn't separated.
   Without the `config` lines the computer slot of `war3map.w3i` isn't seated at all: `MAP_CONTROL_NONE`, Empty,
   "Player 3" (first run).
 - Object data: `GetObjectName` reads hfoo "Probe Footman" (the `TRIGSTR_` resolved), hkni "Skin Knight" (the skin

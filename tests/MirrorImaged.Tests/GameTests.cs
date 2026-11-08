@@ -18,6 +18,20 @@ public sealed class GameTests
     }
 
     [Fact]
+    public void An_action_taken_back_never_runs_and_the_others_do()
+    {
+        Action first = () => _ran.Add("first"), second = () => _ran.Add("second");
+        _game.At(10, first);
+        _game.At(10, second);
+
+        _game.Cancel(first);
+        _game.Cancel(first);
+        _game.Advance(20);
+
+        Assert.Equal(["second"], _ran);
+    }
+
+    [Fact]
     public void A_time_past_the_clocks_range_is_its_end()
     {
         Assert.Equal(1L << 60, Game.Steps(1e30));

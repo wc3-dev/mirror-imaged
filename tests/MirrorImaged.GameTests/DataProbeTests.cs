@@ -105,7 +105,7 @@ public sealed class DataProbeTests
 
     static void Measured(string name, string probe, Action<Map> change)
     {
-        var run = GameRunner.Default.Run(name, ProbeMap.Source(probe), TimeSpan.FromMinutes(2), change);
+        var run = GameRunner.Default.Run(name, ProbeMap.Source(probe), TimeSpan.FromMinutes(2), change: change);
 
         Assert.True(run.State == ProbeState.Done, $"{run.State}: {run.Detail}");
         ExpectedLines.Assert(Path.Combine(AppContext.BaseDirectory, "probes", "expected", name + ".txt"), run.Lines);

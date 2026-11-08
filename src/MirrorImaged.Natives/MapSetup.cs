@@ -4,7 +4,7 @@ namespace MirrorImaged.Natives;
 // enemy start priorities) is Recorded: no native reads it back (decisions D98).
 public sealed partial class GameNatives
 {
-    int _playerCount, _teamCount, _placement = 2, _gameType = 1, _mapFlags; // MAP_PLACEMENT_USE_MAP_SETTINGS, GAME_TYPE_MELEE
+    int _playerCount, _teamCount = 24, _placement = 2, _mapFlags; // MAP_PLACEMENT_USE_MAP_SETTINGS
     readonly Dictionary<int, (float X, float Y)> _startLocations = [];
     readonly Dictionary<(int Location, int Slot), (int Other, int Priority)> _startPriorities = [];
 
@@ -37,11 +37,11 @@ public sealed partial class GameNatives
     public placement? GetGamePlacement() => Convert<placement>(_placement);
 
     /// <summary>
-    /// Melee, as a <c>-loadfile</c> game of a map without custom forces is (the players probe); the map's settings for
-    /// one with custom forces (<see cref="Seat"/>, not measured).
+    /// Melee, as a <c>-loadfile</c> game is, from <c>config</c> on, with custom forces or without (the players and lobby
+    /// probes; custom forces without fixed settings not measured).
     /// </summary>
-    [Native(Level.Close)]
-    public gametype? GetGameTypeSelected() => Convert<gametype>(_gameType);
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: the players and lobby probes")]
+    public gametype? GetGameTypeSelected() => Convert<gametype>(1); // GAME_TYPE_MELEE
 
     [Native(Level.Close)]
     public void DefineStartLocation(int whichStartLoc, float x, float y) => _startLocations[whichStartLoc] = (x, y);
@@ -87,7 +87,10 @@ public sealed partial class GameNatives
         if (whichMapFlag is not null) _mapFlags = value ? _mapFlags | whichMapFlag.Id : _mapFlags & ~whichMapFlag.Id;
     }
 
-    /// <summary>A flag set, or the lobby's: none, but MAP_LOCK_ALLIANCE_CHANGES for custom forces with fixed player settings.</summary>
+    /// <summary>
+    /// A flag set, or the lobby's, once it has seated the players after <c>config</c>: none, but
+    /// MAP_LOCK_ALLIANCE_CHANGES and 2^20 for custom forces with fixed player settings (the lobby probe).
+    /// </summary>
     [Native(Level.Exact, Fact = "game-facts.md, Version and launching: custom forces and fixed player settings start with MAP_LOCK_ALLIANCE_CHANGES set (11-06); docs/facts.md, Players and the game: no flag without them")]
     public bool IsMapFlagSet(mapflag? whichMapFlag) => whichMapFlag is not null && (_mapFlags & whichMapFlag.Id) != 0;
 }

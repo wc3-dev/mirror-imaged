@@ -56,14 +56,15 @@ public sealed partial class Simulation : IDisposable
             foreach (var native in NativeMethods.OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())
-                _lua[name] = value is handle h ? new LuaHandle(h.GetType().Name, h.Key) : value;
+                _lua[name] = value is handle h ? ToLua(h, h.GetType()) : value;
             AddLuaExtras();
             AddPreloader();
             _lua.Run(blizzard, "blizzard.lua");
             Protect(() => _lua.Run(data.Map.Script!, "war3map.lua"));
             Protect(() => _lua.Call("config"));
             var flags = info?.MapFlags ?? 0;
-            _natives.Seat(users, computers, others, flags.HasFlag(MapFlags.UseCustomForces), flags.HasFlag(MapFlags.FixedPlayerSettingsForCustomForces));
+            _natives.Seat(users, computers, others, flags.HasFlag(MapFlags.UseCustomForces), flags.HasFlag(MapFlags.FixedPlayerSettingsForCustomForces),
+                info?.Players.Where(p => p.Controller == PlayerController.Computer).DistinctBy(p => p.Id).ToDictionary(p => p.Id, p => data.Map.Resolve(p.Name)));
             Protect(() => _lua.Call("main"));
         }
         catch (LuaException e) when (_lua.Halted is not null)
@@ -138,6 +139,11 @@ public sealed partial class Simulation : IDisposable
     /// </summary>
     public bool Paused => _game.Paused;
 
+    /// <summary>
+    /// Whether the map has ended the game (<c>EndGame</c>): the rest of that step ran, and the clock doesn't move again.
+    /// </summary>
+    public bool Ended => _game.Ended;
+
     /// <summary>The documents the run reads and writes, <see cref="SimulationOptions.Documents"/>.</summary>
     public Documents Documents => _natives.Documents;
 
@@ -156,7 +162,7 @@ public sealed partial class Simulation : IDisposable
     /// <summary>
     /// Moves the clock on by <paramref name="time"/>. The clock moves in whole steps of 1/1024 s, to the step nearest
     /// all the time asked for so far, so many short advances add up as one long one. A paused game's clock doesn't
-    /// move, and once the game goes on it moves from where it stopped.
+    /// move, and once the game goes on it moves from where it stopped; an ended game's never moves again.
     /// </summary>
     /// <exception cref="LuaException">The run has stopped, or a Missing native stopped it now: <see cref="Stopped"/>.</exception>
     public void Advance(TimeSpan time)
@@ -171,7 +177,7 @@ public sealed partial class Simulation : IDisposable
             throw;
         }
         // Paused time isn't the game's, so the next advance goes on from where it stopped.
-        if (_game.Paused) _time = TimeSpan.FromSeconds((double)_game.Step / Game.StepsPerSecond);
+        if (_game.Paused || _game.Ended) _time = TimeSpan.FromSeconds((double)_game.Step / Game.StepsPerSecond);
     }
 
     public void Dispose() => _lua.Dispose();

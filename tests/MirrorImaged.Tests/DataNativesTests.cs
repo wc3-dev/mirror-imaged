@@ -1,4 +1,5 @@
 using MirrorImaged.Data;
+using War3Net.Build.Info;
 using War3Net.Build.Object;
 using War3Net.Build.Script;
 using War3Net.Common.Extensions;
@@ -98,6 +99,28 @@ public sealed class DataNativesTests : IDisposable
             """, new StandardData());
 
         Assert.Equal(["0.000 print: The Horde\tprobe alpha\t11"], simulation.Log);
+    }
+
+    // The lobby probe: with fixed player settings a computer reads its war3map.w3i name; the data probe: without, it is
+    // "Computer (Normal)", and the person "Local Player" either way (decisions D210)
+    [Theory]
+    [InlineData(true, "Local Player\tThe Horde")]
+    [InlineData(false, "Local Player\tComputer (Normal)")]
+    public void A_computer_reads_its_maps_name_only_with_fixed_player_settings(bool fixedSettings, string names)
+    {
+        var path = _maps.Build("""
+            function config() SetPlayerController(Player(1), MAP_CONTROL_COMPUTER) end
+            function main() print(GetPlayerName(Player(0)), GetPlayerName(Player(1))) end
+            """, change: info =>
+        {
+            info.MapFlags |= fixedSettings ? MapFlags.UseCustomForces | MapFlags.FixedPlayerSettingsForCustomForces : 0;
+            info.Players[0].Name = "TRIGSTR_001";
+            info.Players.Add(new PlayerData { Id = 1, Controller = PlayerController.Computer, Race = PlayerRace.Orc, Name = "TRIGSTR_002" });
+        }, map: map => map.TriggerStrings = new TriggerStrings { Strings = { new TriggerString { Key = 1, Value = "Probe Alpha" }, new TriggerString { Key = 2, Value = "The Horde" } } });
+
+        using var simulation = Simulation.Load(path, "");
+
+        Assert.Equal([$"0.000 print: {names}"], simulation.Log);
     }
 
     // game-facts, "Time of day": DayHours=30 moves an hour every 16 s (480 / 30) and reads no more than 24

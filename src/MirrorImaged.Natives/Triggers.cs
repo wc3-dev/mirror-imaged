@@ -58,12 +58,19 @@ public partial class triggercondition
 
 internal enum Junction { None, And, Or, Not }
 
+// Where a Condition's or a Filter's function lives: once its handle is destroyed (Code null), the next Condition or Filter
+// made takes the place, the first destroyed first, and whatever still holds the destroyed one runs the new one
+// (decisions D115).
+internal sealed class Place
+{
+    internal Func<bool>? Code;
+}
+
 public partial class boolexpr
 {
-    internal Func<bool>? Code;  // a Condition's or a Filter's
+    internal Place? Place;  // a Condition's or a Filter's; none for Condition(nil), And, Or and Not
     internal Junction Junction;
     internal boolexpr? A, B;
-    internal bool Destroyed;
 }
 
 public partial class @event
@@ -88,10 +95,11 @@ public sealed partial class GameNatives
     const int TimerExpired = 4;  // EVENT_GAME_TIMER_EXPIRED
 
     // What the event responses read in a thread: the trigger it runs for and the event that started it (decisions D75)
-    sealed record Firing(trigger? Trigger, eventid Event, gamestate? State = null);
+    sealed record Firing(trigger? Trigger, eventid Event, gamestate? State = null, player? Player = null, playerstate? PlayerState = null);
 
     readonly List<(gamestate State, limitop Op, float Limit, @event Event)> _stateEvents = [];
     Firing? _firing, _outside;
+    readonly Queue<Place> _places = new();
     conditionfunc? _noCondition;
     filterfunc? _noFilter;
     float _sleep;
@@ -123,6 +131,9 @@ public sealed partial class GameNatives
         }
         whichTrigger.Events.Clear();
         _stateEvents.RemoveAll(state => state.Event.Trigger == whichTrigger);
+        _playerEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
+        _allianceEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
+        _playerStateEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _game.Remove(whichTrigger.Key);
     }
 
@@ -220,10 +231,10 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// A nil condition makes the trigger's conditions fail. Close: in the game a destroyed condition's place ran a
-    /// condition made after it (decisions D73).
+    /// A nil condition makes the trigger's conditions fail. A destroyed condition fails, until a Condition or Filter made
+    /// after it takes its place and runs there (decisions D115).
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = Probe1 + "; " + Handles)]
     public triggercondition? TriggerAddCondition(trigger? whichTrigger, boolexpr? condition)
     {
         if (whichTrigger is null) return null;
@@ -232,8 +243,7 @@ public sealed partial class GameNatives
         return added;
     }
 
-    /// <summary>Close as TriggerAddCondition (decisions D73).</summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = Probe1 + "; " + Handles)]
     public void TriggerRemoveCondition(trigger? whichTrigger, triggercondition? whichCondition)
     {
         if (whichCondition is not null && whichTrigger?.Conditions.Remove(whichCondition) == true) _game.Remove(whichCondition.Key);
@@ -249,8 +259,8 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Runs every condition in order, also after one has failed, and answers whether all passed: true with none. A
-    /// condition that raises, or waits, fails. Counts nothing; a disabled trigger's conditions run too. Close as
-    /// TriggerAddCondition (decisions D73).
+    /// condition that raises, or waits, fails. Counts nothing; a disabled trigger's conditions run too. Close: with
+    /// Condition(nil) in an And, Or or Not it gives the model's value, not the game's (decisions D114).
     /// </summary>
     [Native(Level.Close)]
     public bool TriggerEvaluate(trigger? whichTrigger) =>
@@ -286,12 +296,14 @@ public sealed partial class GameNatives
     /// <summary>
     /// Waits in a trigger's actions or ExecuteFunc's function until the first tenth of a second of game time after the
     /// timeout (decisions D71). A wait in a timer's callback or a condition never ends; in the main thread, or past a C
-    /// function, it raises.
+    /// function, it raises. The first wait started in the step a force ForForce ran over was destroyed in never ends
+    /// either (DestroyForce).
     /// </summary>
     [Native(Level.Close)]
     public void TriggerSleepAction(float timeout)
     {
-        _sleep = timeout;
+        _sleep = _waitLost == _game.Step ? float.PositiveInfinity : timeout;
+        _waitLost = -1;
         if (Threads is null) throw new InvalidOperationException("attempt to yield from outside a coroutine");
         Threads.Yield();
     }
@@ -303,38 +315,57 @@ public sealed partial class GameNatives
     /// <summary>
     /// The event that fired the trigger, kept through TriggerExecute and ExecuteFunc: EVENT_GAME_TIMER_EXPIRED for timer
     /// events, EVENT_GAME_STATE_LIMIT for a float game state, the comparison less 255 for an integer one, and a handle
-    /// with id 0 outside an event. Lua's == compares it with a constant of another type (decisions D72), but not with
-    /// another handle of the same id, as the game's does.
+    /// with id 0 outside an event. Lua's == holds with any handle of its id, ConvertPlayerColor(4) too (decisions D112).
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = Probe1 + "; " + Probe3 + "; " + Handles)]
     public eventid? GetTriggerEventId() => Current.Event;
 
     /// <summary>
-    /// A new handle each call, even for the same function. Condition(nil) gives one handle every time, which passes as a
-    /// trigger's condition and is false in an And, Or or Not; in the game it equals Filter(nil) too (decisions D73).
+    /// A new handle each call, even for the same function, in a destroyed one's place if there is one (decisions D115).
+    /// Condition(nil) and Filter(nil) give one handle every time, the same for both (decisions D114), which passes as a
+    /// trigger's condition and is false in an And, Or or Not. Close: there the game's reads a value left from what ran
+    /// before it, which this matches in 15 of the 21 cases measured (decisions D114).
     /// </summary>
     [Native(Level.Close)]
     public conditionfunc? Condition(Func<bool>? func) =>
-        func is null ? _noCondition ??= Make(new conditionfunc()) : Make(new conditionfunc { Code = func });
+        func is null ? _noCondition ??= Nil(new conditionfunc()) : Make(new conditionfunc { Place = Take(func) });
 
     /// <summary>As Condition.</summary>
     [Native(Level.Close)]
     public filterfunc? Filter(Func<bool>? func) =>
-        func is null ? _noFilter ??= Make(new filterfunc()) : Make(new filterfunc { Code = func });
+        func is null ? _noFilter ??= Nil(new filterfunc()) : Make(new filterfunc { Place = Take(func) });
+
+    // Condition(nil) and Filter(nil) are one handle in the game: here two, seen as each declares, of one id (decisions D114)
+    T Nil<T>(T made) where T : boolexpr
+    {
+        if ((_noCondition ?? (boolexpr?)_noFilter) is not { } other) return Make(made);
+        made.Id = other.Id;
+        made.Key = _game.Add(made);
+        if (_game.Handle(other.Key) is null) _game.Remove(made.Key); // the other was destroyed, so this one is too
+        return made;
+    }
+
+    Place Take(Func<bool> code)
+    {
+        var place = _places.Count > 0 ? _places.Dequeue() : new Place();
+        place.Code = code;
+        return place;
+    }
 
     /// <summary>
-    /// The second operand runs only when the first passes; a nil operand is false. Not matched: And(x, Condition(nil))
-    /// is x in the game, false here.
+    /// The second operand runs only when the first passes; a nil operand is false. Not matched: with Condition(nil) in
+    /// it, 6 of the 21 cases measured differ, such as And(t, Condition(nil)) for a condition t that passes, which passes
+    /// in the game and fails here (decisions D114).
     /// </summary>
     [Native(Level.Close)]
     public boolexpr? And(boolexpr? operandA, boolexpr? operandB) => Make(new boolexpr { Junction = Junction.And, A = operandA, B = operandB });
 
-    /// <summary>The second operand runs only when the first fails; a nil operand is false.</summary>
-    [Native(Level.Exact, Fact = Probe3)]
+    /// <summary>The second operand runs only when the first fails; a nil operand is false. Close as And (decisions D114).</summary>
+    [Native(Level.Close)]
     public boolexpr? Or(boolexpr? operandA, boolexpr? operandB) => Make(new boolexpr { Junction = Junction.Or, A = operandA, B = operandB });
 
-    /// <summary>Not(nil) is false.</summary>
-    [Native(Level.Exact, Fact = Probe3)]
+    /// <summary>Not(nil) is false. Close as And (decisions D114).</summary>
+    [Native(Level.Close)]
     public boolexpr? Not(boolexpr? operand) => Make(new boolexpr { Junction = Junction.Not, A = operand });
 
     /// <summary>A destroyed And, Or or Not still runs where it was added.</summary>
@@ -342,14 +373,14 @@ public sealed partial class GameNatives
     public void DestroyBoolExpr(boolexpr? e) => Destroy(e);
 
     /// <summary>
-    /// A destroyed condition no longer runs, and fails where it was added. Close: in the game a condition made after it
-    /// ran in its place (decisions D73).
+    /// A destroyed condition no longer runs, and fails where it was added, until a Condition or Filter made after it takes
+    /// its place and runs there (decisions D115).
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = Probe2 + "; " + Handles)]
     public void DestroyCondition(conditionfunc? c) => Destroy(c);
 
     /// <summary>As DestroyCondition.</summary>
-    [Native(Level.Exact, Fact = Probe2)]
+    [Native(Level.Exact, Fact = Probe2 + "; " + Handles)]
     public void DestroyFilter(filterfunc? f) => Destroy(f);
 
     /// <summary>
@@ -401,7 +432,9 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// An integer game state's event fires inside SetIntegerGameState when the value changes to one that passes the
-    /// comparison, and NOT_EQUAL's on every change. The time of day's comes with its clock, in W1-9 (decisions D76).
+    /// comparison, and NOT_EQUAL's on every change. The time of day's fire inside SetFloatGameState and as the day
+    /// passes the limit (GameState.cs). Close: three things the events probe saw the game do in the frames after a set
+    /// aren't modelled (decisions D144).
     /// </summary>
     [Native(Level.Close)]
     public @event? TriggerRegisterGameStateEvent(trigger? whichTrigger, gamestate? whichState, limitop? opcode, float limitval)
@@ -409,6 +442,7 @@ public sealed partial class GameNatives
         if (whichTrigger is null || whichState is null || opcode is null) return null;
         var registered = Register(whichTrigger);
         _stateEvents.Add((whichState, opcode, limitval, registered));
+        ScheduleDay();
         return registered;
     }
 
@@ -421,16 +455,7 @@ public sealed partial class GameNatives
     void IntegerStateChanged(igamestate whichIntegerGameState, int value)
     {
         foreach (var (state, op, limit, registered) in _stateEvents.ToArray())
-            if (state == whichIntegerGameState && op.Id switch
-                {
-                    0 => value < limit,
-                    1 => value <= limit,
-                    2 => value == limit,
-                    3 => value >= limit,
-                    4 => value > limit,
-                    5 => true,
-                    _ => false,
-                })
+            if (state == whichIntegerGameState && (op.Id == 5 || Compare(op.Id, value, limit)))
                 Fire(registered, Convert<gameevent>(op.Id - 255), state);
     }
 
@@ -442,12 +467,12 @@ public sealed partial class GameNatives
     }
 
     // An event: counted; then, when the trigger is enabled and its conditions pass, its actions run (probe triggers-2)
-    void Fire(@event registered, eventid id, gamestate? state = null)
+    void Fire(@event registered, eventid id, gamestate? state = null, player? player = null, playerstate? playerState = null)
     {
         if (registered.Trigger is not { Destroyed: false } t) return;
         t.EvalCount++;
         if (!t.Enabled) return;
-        var firing = new Firing(t, id, state);
+        var firing = new Firing(t, id, state, player, playerState);
         if (!In(firing, () => Passes(t))) return;
         t.ExecCount++;
         Execute(t, firing);
@@ -460,24 +485,40 @@ public sealed partial class GameNatives
         return passes;
     }
 
-    // Probes triggers-2 and triggers-3 (decisions D73)
+    // Probes triggers-2 and triggers-3 (decisions D73, D114)
     static bool Holds(boolexpr? e, bool alone = false) => e switch
     {
         null => false,
         { Junction: Junction.Not } => e.A is not null && !Holds(e.A),
         { Junction: Junction.And } => Holds(e.A) && Holds(e.B),
         { Junction: Junction.Or } => Holds(e.A) || Holds(e.B),
-        { Destroyed: true } => false,
-        { Code: null } => alone,
-        _ => e.Code(),
+        { Place: null } => alone,
+        { Place.Code: { } code } => code(),
+        _ => false,
     };
 
+    // A destroyed Condition or Filter frees its place and stays the place's: where it is held, or given later, it runs
+    // whatever the place holds, nothing until a new one takes it (decisions D115). A destroyed And, Or or Not still runs
+    // where it was added.
     void Destroy(boolexpr? e)
     {
         if (e is null) return;
-        e.Destroyed = true;
-        Release(e.Code);
+        // shortcut: a destroyed Condition or Filter stays in the game for good, as Lua may still give it to a native (a
+        // filter destroyed per call by blizzard.j's matching functions keeps about 80 bytes each); let it go once Lua
+        // has collected its userdata, with wave 10's collector-driven id reuse (docs/tasks/later.md).
+        if (e.Place is { } place)
+        {
+            if (place.Code is null) return;
+            Release(place.Code);
+            place.Code = null;
+            _places.Enqueue(place);
+            return;
+        }
         _game.Remove(e.Key);
+        // Condition(nil) and Filter(nil) are one handle in the game (decisions D114)
+        if (e != _noCondition && e != _noFilter) return;
+        if (_noCondition is not null) _game.Remove(_noCondition.Key);
+        if (_noFilter is not null) _game.Remove(_noFilter.Key);
     }
 
     void Execute(trigger t, Firing firing) =>

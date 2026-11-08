@@ -1,0 +1,29 @@
+# probes/lobby.lua on 3.0.1.24371, single player, 11-08, on the probe map with a computer: the game's lines. Five runs
+# (one without war3map.w3i's selectable-race flag), the same but for the start locations of slots 0 and 1, which the
+# lobby's placement (teams together) gave at random, and the race of slot 3, which no longer prints.
+# A line starting "~ " varies from run to run: each {t} in it stands for a number, the rest must match exactly, and the
+# run may give it anywhere. The other lines come in order, exactly. Lines starting "# " are notes.
+config ran 1 times
+config 1:type 1 lock false local 0 players 0 teams 24
+config 1: 0  0 5 0 true
+config 1: 1  0 5 0 true
+config 1: 2  0 5 0 true
+~ slot 0 Local Player|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_USER RACE_HUMAN team 0 start {t} colour 0 selectable true random false human true
+~ slot 1 Probe Computer|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_COMPUTER RACE_HUMAN team 1 start {t} colour 1 selectable true random false human true
+slot 2 Player 3|PLAYER_SLOT_STATE_EMPTY MAP_CONTROL_USER RACE_HUMAN team -1 start 2 colour 2 selectable true random false human true
+slot 24 Player 25|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_CREEP other 0 team 0 start -1 colour 24 selectable true random true human false
+slot 27 Player 28|PLAYER_SLOT_STATE_PLAYING MAP_CONTROL_CREEP other 0 team 0 start -1 colour 27 selectable true random true human false
+alliances 0>1 0, 1>0 0, 0>2 0, 2>0 0, 1>2 0, 2>1 0, 1>1 255, 2>2 255, 1>24 0, 24>1 0, 1>25 0, 25>1 1, 1>26 0, 1>27 1, 27>1 1, 2>27 1, 27>2 1, 1>3 0
+states 0 3 0 0 0 0 0 100 0 0 1 0 0 0 0 0 0 0 0; handicaps 1.0 1.0 1.0 1.0
+states 1 3 0 0 0 0 0 100 0 0 1 0 0 0 0 0 0 0 0; handicaps 1.0 1.0 1.0 1.0
+states 2 3 0 0 0 0 0 100 0 0 0 0 0 0 0 0 0 0 0; handicaps 1.0 1.0 1.0 1.0
+enum players: 0 1; allies of 1: 1; enemies of 1: 0; all: 0 1
+type GAME_TYPE_MELEE placement MAP_PLACEMENT_TEAMS_TOGETHER players 3 teams 2 map flags 1024 1048576
+suspended 7: 7 40e00000, 7 40e00000, 7.00000477 40e0000a, 7.00000477 40e0000a
+suspended 12: 12 41400000, 12 41400000, 12 41400000, 12 41400000
+suspended 18: 18 41900000, 18 41900000, 18 41900000, 18 41900000
+suspended 6: 6 40c00000, 6 40c00000, 6 40c00000, 6 40c00000
+suspended 0.1: 0.0999999046 3dccccc0, 0.0999999046 3dccccc0, 0.0999999046 3dccccc0, 0.0999999046 3dccccc0
+suspended 23.9: 23.8999977 41bf3332, 23.8999977 41bf3332, 23.8999977 41bf3332, 23.8999977 41bf3332
+suspended 7.5: 7.5 40f00000, 7.5 40f00000, 7.5 40f00000, 7.5 40f00000
+running 7: at once 7 40e00000; 0 s later 7 40e00000

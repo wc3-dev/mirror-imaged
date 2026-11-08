@@ -24,7 +24,9 @@ W2-1 started before wave 1 finished (11-08): it touches the data loading, which 
   `GetLocalizedString` often), left by W1-3.
 - Left by W1-4 for this task: an upgrade's level count (`GetPlayerTechMaxAllowed`'s default and the cap on
   `AddPlayerTechResearched`, D93), the map's day length and hours (`DayHours`, `DayLength`; D96), and the player
-  names in `war3map.w3i` and `war3map.wts` (D93: a named slot reads its map name; the score screen showed "The Horde").
+  names in `war3map.w3i` and `war3map.wts` (D141: only a computer reads its `war3map.w3i` name; a user is "Local
+  Player" or "Player N", an unplayed slot "Player N"; `Seat` passes a `TRIGSTR_n` name through as it is, so resolve it
+  through `war3map.wts`; then `GetPlayerName` can become Exact).
 - Like the W1-1 seam for `blizzard.j`: runtime tests and CI must be able to supply their own small data instead of
   the install's (rule 5).
 - Tests with maps built in the tests; a `Needs=Game` test that the standard footman, Paladin and Holy Light read the
