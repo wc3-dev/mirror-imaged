@@ -667,10 +667,10 @@ Two new probes, each run twice with the same lines:
   `loadstring`, `table.maxn`, `table.getn`, `setfenv`, `module`, `string.gfind`, `string.dump` and `require` exists;
   `utf8`, `table.move`, `math.ult` and `rawlen` do. `load` of the start of a binary chunk (`'\27Lua\83\0'`) gives
   "truncated precompiled chunk", with mode `b` too: the chunk reached Lua's bytecode reader, so the game reads
-  bytecode (inferred; no whole chunk was loaded, as without `string.dump` none can be made). An integer made a float (`i + 0.0`,
-  `i / 1`) rounds to nearest, ties to even: 16777217 is 16777216, 16777219 and 16777221 are 16777220, 16777223 is
-  16777224, 33554435 and 33554437 are 33554436, 2147483647 and -2^31 are ±2^31; `16777219 == 16777220.0` is false and
-  `16777219 < 16777220.0` true. `pairs` over the 20 string keys `a` to `h`, `one` to `five`, `alpha`, `beta`, `gamma`,
+  bytecode (inferred; no whole chunk was loaded: none was made, though a map can write one by hand without
+  `string.dump`). An integer made a float (`i + 0.0`, `i / 1`) rounds to nearest, ties to even: 16777217 is 16777216,
+  16777219 and 16777221 are 16777220, 16777223 is 16777224, 33554435 and 33554437 are 33554436, 2147483647 and -2^31 are
+  ±2^31; `16777219 == 16777220.0` is false and `16777219 < 16777220.0` true. `pairs` over the 20 string keys `a` to `h`, `one` to `five`, `alpha`, `beta`, `gamma`,
   `x1`, `x2`, `x10` and `Footman`, set in that order, visits them as `three four one f e d c b a five x10 two Footman
   x2 x1 beta gamma h g alpha` in both runs; Lua 5.3 with string hash seed 0 visits them otherwise. Inferred: the
   game's seed is fixed and isn't 0 (another hash function or table growth would change the order too).
