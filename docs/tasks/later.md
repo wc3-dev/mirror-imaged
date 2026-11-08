@@ -55,3 +55,6 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 5 (presentation): the unit animation natives and `SetUnitTimeScale` (W2-2).
 - Wave 10 (speed): a cross-process cache of the standard data (about 1.2-1.7 s a process) if the benchmark or the
   corpus runs need it; it must live outside the repo and packages (A15) (W2-1).
+- Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
+  is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
+- Wave 10 (JASS): a rawcode with a backslash (`'ac'`) loads here but the game refuses the map (D137) (W1-7).
