@@ -14,6 +14,7 @@ public sealed partial class Simulation
     static JassCompilationUnitSyntax? _commonJ;
 
     LuaFunction? _preloadFile;
+    (string Lua, string Path) _preloadNext;
 
     static IEnumerable<MethodInfo> NativeMethods => typeof(GameNatives).GetMethods().Where(method => method.GetCustomAttribute<NativeAttribute>() is not null);
 
@@ -52,18 +53,20 @@ public sealed partial class Simulation
             _preloadFile = ((LuaFunction)args[0]!).Keep();
             return [];
         });
+        _lua.Register("preloaderNext", _ => [_preloadNext.Lua, _preloadNext.Path]);
         _lua.Run("""
-            local load, error, setmetatable, jass = load, error, setmetatable, {}
+            local load, error, setmetatable, nextFile, jass = load, error, setmetatable, preloaderNext, {}
             for name in preloaderNames:gmatch('%S+') do jass[name] = _G[name] end
             setmetatable(jass, {__index = function(_, name) error(name .. " is not a native or a global of common.j", 2) end})
-            preloader(function(lua, path)
+            preloader(function()
+              local lua, path = nextFile()
               local file = setmetatable({}, {__index = jass})
               local run, problem = load(lua, '@' .. path, 't', file)
               if not run then error(problem, 0) end
               run()
               file.PreloadFiles()
             end)
-            preloaderNames, preloader = nil, nil
+            preloaderNames, preloader, preloaderNext = nil, nil, nil
             """, "mirror");
     }
 
@@ -71,7 +74,9 @@ public sealed partial class Simulation
     {
         try
         {
-            _preloadFile!.Call(Blizzard.ToLua(_commonJ ??= JassSyntaxFactory.ParseCompilationUnit(Declarations(_natives)), jass), path);
+            // A thread is started with no arguments, so the function asks for the file; a wait in it isn't kept (D102).
+            _preloadNext = (Blizzard.ToLua(_commonJ ??= JassSyntaxFactory.ParseCompilationUnit(Declarations(_natives)), jass), path);
+            _preloadFile!.Start().Dispose();
         }
         catch (Exception e) when (_lua.Halted is null)
         {

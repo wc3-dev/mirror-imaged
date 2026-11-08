@@ -684,12 +684,13 @@ measured and say so where not.
   byte from 0x80 up after the first as signed: `'éab'` (UTF-8 `C3 A9 61 62`) is -1029086878, where its bytes, and the
   old `FourCC`, give -1012309662. Neither that nor the game's reading of a backslash in a rawcode is measured: W1-7's
   JASS probes are to settle rawcodes with high bytes. This reaches blizzard.j's rawcodes too, with the same values for
-  its rawcodes, which are all ASCII. The Lua is loaded as the chunk named by the file's path, so an error in it reads
-  `MyMap\save.pld:N:` (N the transpiled Lua's line, as D65's are), and runs with those natives and globals as they were
-  before blizzard.j and the map ran, and `__jarray`, which War3Net makes a JASS array with. So a native the map
-  replaced isn't what a file calls, and a file's `PreloadFiles` isn't the map's (inferred: the game runs a Preload file
-  as JASS, without blizzard.j or Lua, facts). A `Preload` call the file makes isn't kept for the map's next file, while
-  what the map kept before and after the `Preloader` call is (probe).
+  its rawcodes, which are all ASCII. The file runs in a Lua thread of its own, as W1-2 runs a callback; a wait in it
+  (`TriggerSleepAction`) lets the rest of the file go (not measured). The Lua is loaded as the chunk named by the
+  file's path, so an error in it reads `MyMap\save.pld:N:` (N the transpiled Lua's line, as D65's are), and runs with
+  those natives and globals as they were before blizzard.j and the map ran, and `__jarray`, which War3Net makes a JASS
+  array with. So a native the map replaced isn't what a file calls, and a file's `PreloadFiles` isn't the map's
+  (inferred: the game runs a Preload file as JASS, without blizzard.j or Lua, facts). A `Preload` call the file makes
+  isn't kept for the map's next file, while what the map kept before and after the `Preloader` call is (probe).
   The game closed on a file with a cut piece and on one naming a blizzard.j global (facts), on a line that isn't JASS,
   and on a file that ends `PreloadFiles` and goes on in Lua, as some maps' save files do (probe); so a file that
   doesn't parse or names anything but those natives and globals stops the run with a `GameClosedException`, as for a
@@ -727,4 +728,4 @@ measured and say so where not.
   gives false (not measured). The sync natives do nothing: a run is one machine, whose caches are every player's. The
   unit natives (`StoreUnit`, `RestoreUnit`, `HaveStoredUnit`, `FlushStoredUnit`, `SyncStoredUnit`) wait for W2-3;
   the 255-cache limit (a claim) isn't modelled. `Documents` isn't thread-safe: one run at a time uses it.
-- **D105. After W1-5,** with W1-3 and W1-4 merged first: 84 Exact, 266 Close, 11 Recorded, 1,474 Missing.
+- **D105. After W1-5,** with W1-2, W1-3 and W1-4 merged first: 112 Exact, 276 Close, 11 Recorded, 1,436 Missing.
