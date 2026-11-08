@@ -901,3 +901,87 @@ subtracting 1 in [1, 2), `R2I` of a whole number).
 - `blizzard-numbers` (a Lua map): `ModuloInteger(7, -3)` -5, `(-7, 3)` 2, `(-7, -3)` -4, `(7, 3)` 1, so the game's own
   Lua blizzard.j floors as Lua's `//`; `bj_MELEE_MINE_SEARCH_RADIUS` is the float 2000.0, `bj_cineFadeContinueRed` and
   `bj_MELEE_CLEAR_UNITS_RADIUS` floats; `ModuloInteger(1, 0)` raised.
+
+## Destructables
+
+Probe `probes/destructables.lua` on 3.0.1.24371, 11-08 (W2-4): MirrorImaged's probe map (D51, flat ground at 0, no
+`war3map.doo`) started with `-loadfile` on a hidden desktop, single player; four runs as it grew, the lines they shared
+the same each time. Its lines are in `probes/expected/destructables.txt`.
+
+- Creating: `CreateDestructable` of a unit's id (`hfoo`) and of 0 gives nil; LTlt at variation 15 (it has 10) and -1
+  makes one. `CreateDestructableZ` at (1000, 1000, z 300) stands at (960, 960) with 50 of 50 life.
+- Where it stands, asked at (1000, 1000), (0, 0), (-10, -10), (10, -40), (63, 63), (64, -64), (-96, 96), (1536, -1536),
+  (-1000, 1200), (31.9, 32.1), (-10.1, -0.3) and (100.6, -200.9), facing 270: LTlt (Summer tree, fixed rotation 270,
+  pathing texture 4x4) and LTg1 (gate, 270, 20x4) at (960, 960), (0, 0), (0, 0), (0, 0), (0, 0), (64, -64), (-64, 64),
+  (1536, -1536), (-960, 1152), (0, 0), (0, 0), (64, -192): the 64 grid toward 0. LTbr (barrel, free rotation, 2x2) at
+  (992, 992), (32, 32), (-32, -32), (32, -32), (32, 32), (96, -96), (-96, 96), (1568, -1568), (-992, 1184), (32, 32),
+  (-32, -32), (96, -224): the 64 grid toward 0, then 32 away from 0, 0 counting as above. YT16 (Long Stone Bridge, fixed
+  0, 32x18) is a barrel across and a tree up; LT06 (fixed 90, the same texture) and XTmx (free, 8x2) a tree across and
+  a barrel up. OTsp and YTc1 (no pathing texture) stay where asked but cut down to a quarter: 31.9 is 31.75, 32.1 is 32,
+  -10.1 is -10.25, -0.3 is -0.5, 100.6 is 100.5, -200.9 is -201. XTmx at (0, 0) and (1000, 1000) by facing: at 0 and
+  180 a barrel across and a tree up, at 30, 45, 60, 90, 135, 300, 360, -90, 0.5, 179.9, 270, 540 and -180 a tree across.
+  So half the texture's cells each way decides, odd giving the 32, and the texture's sides swap at exactly 0 and 180.
+  The deck probe's placements at facing 270 (Moonwell's `Decks.txt`: 162 walkable types with their textures' sizes)
+  fit the same rule.
+- A place of 0 reads `0.000` (`GetDestructableX`, `GetWidgetY` of a tree asked at -10, -10), and the place less 0 in
+  Lua `-0.0` (the game's subtraction, D151).
+- Life: a new LTlt 50 of 50 (`bhps`), `GetWidgetLife` 50; `SetDestructableLife` 20.5 reads 20.5, 999 reads 50, 0.405
+  lives at 0.405; 0.4, 0.1, 0 and -5 kill it, its death event (`TriggerRegisterDeathEvent`) inside the call reading 0,
+  `GetTriggerWidget() == GetTriggerDestructable()` true, the event id 89 (`EVENT_WIDGET_DEATH`). On the dead tree 20
+  reads 20 and `KillDestructable` fires a second death; a third fires nothing. `RemoveDestructable` fires the death
+  event again for a dead one (reading 0), and for one at 20 reading 20; afterwards its type id, life, most life and
+  place read 0.
+- Most life: from 50 of 50, `SetDestructableMaxLife` 80.7 gives 81 of 81, 80.5 81 of 81, 80.4 80 of 80, 10 10 of 10, 0
+  0 of 0 and -5 0 of -5; from 20 of 50, 100 gives 40 of 100, 25 10 of 25, 10 4 of 10: the life keeps its share, and
+  nothing died. A dead one (0 of 50) set to 70 is 0 of 70. A tree set to 0 then 50 is 0 of 50, and
+  `KillDestructable` then fires nothing: it is dead though it never died.
+- `DestructableRestoreLife` on a dead LTlt: 30 (with birth) 30, 0 50, 999 50, 0.3, 0.5 and -5 0.5; on a living one at
+  20, asked 40 with birth, still 20. Killed, restored with 50 and killed again, it fires its death again.
+- `CreateDeadDestructable` of LTlt: 0 of 50; `KillDestructable` fires nothing; restored with 0, 50 of 50.
+- On a barrel (20), `SetWidgetLife` 10.5 reads 10.5 by `GetWidgetLife` and `GetDestructableLife`, `GetWidgetX`/`Y` read
+  its place, and `SetWidgetLife` 0 kills it with its death event inside the call.
+- `IsDestructableInvulnerable` is false for a new tree and true once set; the invulnerable tree still dies to
+  `SetDestructableLife` 0 and, restored, to `KillDestructable`, each firing its death.
+- `GetDestructableOccluderHeight` reads the type's `boch`: LTlt 230, LTbr, YT16 and OTsp 0; set to 100.7 it reads
+  100.7, to -5 -5.
+- `GetDestructableName` reads "Summer Tree Wall" (LTlt), "Barrel" (LTbr), "Long Stone Bridge" (YT16, editor suffix
+  "Vertical" left off) and "Shimmering Portal" (OTsp), the strings of `UI\WorldEditGameStrings.txt` (enUS) for the
+  types' `WESTRING_` names; `UI\WorldEditStrings.txt` doesn't hold them. `GetDestructableName(nil)` gives "".
+- A tree hidden with `ShowDestructable(false)`, its animation set, queued and sped up, its colour and vertex colour set,
+  and `SetDoodadAnimation`/`SetDoodadAnimationRect` called near it, kept 50 of 50 and was still found by
+  `EnumDestructablesInRect`.
+- A gate (LTg1, 500) opened as `ModifyGateBJ` does (`KillDestructable`, then the animation "death alternate") fires
+  its death and reads 0 of 500; closed (`DestructableRestoreLife` to its most with birth, animation "stand") 500.
+- `EnumDestructablesInRect` around a tree at (-1024, -1024) and a barrel at (-1056, -1056), both on the 32 grid: a
+  centred rect of half-size 1, 16 and 31 finds nothing, 32 to 129 finds it; a rect from 300 south-west to `a` past it
+  finds it for `a` from 32 up and not for 1 down; one from `a` to 300 north-east finds it for `a` from -1 down and not
+  for 0 up; strips 1 wide across it find nothing. An OTsp at (-1000.5, -1000.5): rects (-1000.75, -960.5) and (-1001,
+  -968.5) don't find it, (-1030, -990) does. So a rect finds a destructable when the 32 cell holding its place lies in
+  the rect with its west and south edges strictly inside, not by the place itself.
+- Five trees made at (1408, -1280), (1152, -1280), (1280, -1152), (1280, -1408) and (1280, -1280), in that order, are
+  given to the filter as the 4th, 2nd, 5th, 3rd, 1st: rows of 256 cells from the south, west to east, and the 5th, 3rd
+  and 1st (one cell) the last made first. The callback came for those the filter passed, in that order, with
+  `GetFilterDestructable` the destructable it was called for, as `GetEnumDestructable`; without a filter
+  `GetFilterDestructable` is still set in the callback. Both are nil after.
+- `GetLocationZ` on flat ground at 0 around a YT16 made at (0, -1280), standing at (32, -1280): 286.5 at its place,
+  277.5, 255.0, 247.1, 198.8 and 158.2 at 128, 256, -256, 512 and -640 north, 288.9 at 128 east, 0 at 256 east and
+  west and 300 east: it runs north-south. An LT06 made at (-1280, 0), standing at (-1280, 32): 274.2 at its place and
+  128 north, 0 at 256 north and south, 269.3, 251.2, 250.3 and 243.5 at 128, 256, -256 and 300 east: east-west.
+  Killed, the YT16's deck reads the same in that instant, and 0 at all ten points 3 s later; restored without birth,
+  as before 3 s later.
+- A probe map with a `war3map.doo` written by War3Net 6.1.2 (format 8, subversion 11, the new layout), with destructables
+  in each state or with no doodads at all, closed the game as it loaded (`ACCESS_VIOLATION` writing 0x0), 6 runs: with
+  and without a `war3map.wpm`, with an empty `war3mapUnits.doo`, and with the terrain's corner count made to match its
+  tiles; with a `war3map.shd` of 32 by 32 by 16 bytes the game said "Invalid shadow map file". The file's bytes match a
+  World Editor file's layout. Not separated; the probe runs without a `war3map.doo`.
+
+Read from the install's 273 maps (11-08):
+
+- In `war3map.w3d`, the per-variation fields (`dvr1`, `dvg1`, `dvb1`) are changed at variations 1 to 10 (448 changes
+  at 1, 18 at 10) and never at 0; every other field at 0. So World Editor numbers a doodad's variations from 1.
+- `war3map.doo` is format 8 (subversion 11, the new layout) in most maps and 13 in some (Forgotten Hollow, Silverpine
+  Sprint, GnollWood S2, WarChasers); states 0, 2, 3, 4, 6 and 7 occur, and SilverpineSprint's also 10 and 14 (bit 3),
+  which War3Net refuses: 7,123 of state 2, 5,184 of 6, 6 of 10 and 785 of 14 among its 13,098 doodads.
+- A destructable's pathing texture (`bptx`) is a TGA whose width and height are cells: `4x4Default` 4 by 4, `2x2Default`
+  2 by 2, `CityBridgeLarge0` 32 by 18, `Gate1Path` 20 by 4, `8x2Default` 8 by 2; 16 types (OTsp, YTc1, Volc among them)
+  have none.

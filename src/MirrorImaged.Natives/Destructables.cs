@@ -40,10 +40,8 @@ public sealed partial class GameNatives
     {
         foreach (var placed in Data.Map?.Files.Doodads?.Doodads ?? [])
         {
-            var state = (int)placed.State;
-            if ((state & 3) == 0
-                || Create(BinaryPrimitives.ReverseEndianness(placed.TypeId), placed.Position.X, placed.Position.Y, placed.Rotation * 180 / MathF.PI, placed.Scale.X, false) is not { } d)
-                continue;
+            var (state, id, facing) = ((int)placed.State, BinaryPrimitives.ReverseEndianness(placed.TypeId), placed.Rotation * 180 / MathF.PI);
+            if ((state & 3) == 0 || Create(id, placed.Position.X, placed.Position.Y, facing, placed.Scale.X, false) is not { } d) continue;
             d.Listed = (state & 1) == 0;
             d.Life = d.MaxLife * Math.Min((int)placed.Life, 100) / 100;
         }
@@ -60,8 +58,8 @@ public sealed partial class GameNatives
         if (rotation is 0 or 180) (across, up) = (up, across);
         var d = Make(new destructable
         {
-            Type = type, X = Snap(x, across), Y = Snap(y, up), Face = face, Scale = scale, MaxLife = type.Real(DestructableLife), Occluder = type.Real(Occlusion),
-            Deck = Deck.Of(type.Id) ?? Deck.Of(type.BaseId),
+            Type = type, X = Snap(x, across), Y = Snap(y, up), Face = face, Scale = scale,
+            MaxLife = type.Real(DestructableLife), Occluder = type.Real(Occlusion), Deck = Deck.Of(type.Id) ?? Deck.Of(type.BaseId),
         });
         d.Life = dead ? 0 : d.MaxLife;
         d.Ground = Data.Terrain?.Ground(d.X, d.Y) ?? 0;

@@ -1081,7 +1081,7 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
   balance set doesn't have dropped (not measured). War3Net keeps an id's first letter in its lowest byte, so its ids
   are reversed to the game's (`docs/upstream.md`). A string value's `TRIGSTR_n` is resolved as the map is read; a
   number is kept as its invariant text (D214). A doodad's variation is taken as the file's number, as a level is;
-  whether the file counts variations from 0 is W2-4's.
+  whether the file counts variations from 0 is W2-4's (from 1: D257).
 - **D205. A field's place comes from its metadata row,** as Moonwell.GameData's `Fields.ColumnOf` finds it: the
   column is `field` with the data pointer's letter (`DataA`); a field of each level in a table has a column a level
   (`DataA1`), in the text files a comma list, or with `appendIndex` a key a level (`Requires`, `Requires1`); a field
@@ -1113,7 +1113,7 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
   and `Simulation.Unread`, and written as the run's first log entries (`0.000 map: left out, as it can't be read:
   war3map.w3e: ...`), rather than stopping the run: the game loads the install's three such maps (`docs/upstream.md`),
   and no wave reads those files yet. Any other file that can't be read stops the read, naming it. Fixing the readers
-  is W2-6's (DustwallowKeys' `war3map.w3e`) and W2-4's (SilverpineSprint's `war3map.doo`); Roundabout's
+  is W2-6's (DustwallowKeys' `war3map.w3e`) and W2-4's (SilverpineSprint's `war3map.doo`, read: D258); Roundabout's
   `war3mapUnits.doo`, World Editor's file, which the game makes no units from, stays left out.
 - **D210. Player names, with D141:** the one person of a single-player game is "Local Player", whatever its name in
   `war3map.w3i` (the players, lobby and data probes); a seated computer is its `war3map.w3i` name, its `TRIGSTR_n` read
@@ -1135,7 +1135,7 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
   War3Net gives them, for the waves that make them, and the map's other files by name (`MapArchive.File`, the FDF and
   TOC files of wave 5). The terrain's heights (`Terrain`, the game-facts' rules for `GetLocationZ`, each corner rule
   tested) wait for W2-6's `GetLocationZ`, which also measures the off-map edge (inferred: a point off the map reads
-  its nearest edge); bridges and walkable destructables are W2-4's. `GetObjectName` is W2-2's (it reads a name even
+  its nearest edge); bridges and walkable destructables are W2-4's (D255). `GetObjectName` is W2-2's (it reads a name even
   for an object the set leaves out: fapo's under Melee with The Frozen Throne), a kind's ordered objects for the random
   item and creep natives W2-3's, `ParseTags` W2-8's, and the sound files' lengths `later.md`'s (wave 5).
 - **D213. The data probes are compared as every probe is (D120),** each on its own map: `ProbeComparison.Change` gives
@@ -1356,3 +1356,88 @@ each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions belo
   transpiler took twice and refused, so a native the map declares is taken from the map alone; and one (WotLK RPG)
   has statements after a `return`, which War3Net writes where Lua can't load them (`docs/upstream.md`), so they are
   left out. After W1-7, with W1-8, W2-1 and W1-10 merged first, the natives' levels are unchanged.
+
+### Destructables, trees and doodads (W2-4)
+
+The measurements are the probe `probes/destructables.lua` (four runs as it grew, the lines they shared the same), in
+`docs/facts.md`, "Destructables", with its lines in `probes/expected`, and the facts' "Units" and "World Editor and map
+files". What it leaves is in `docs/tasks/later.md` (D255, D257) and W2-2's and W2-6's tasks.
+
+- **D250. A destructable is its type's data with its own life, most life, place, facing, scale, occluder height and
+  invulnerability** (`Destructables.cs`). It is dead while its life is 0: `KillDestructable` fires nothing on one whose
+  most life was set to 0, though it never died, and fires again on a dead one whose life was set to 20 (probe), so no
+  flag of its own is kept. Its death event fires inside `KillDestructable`, a set of its life below 0.405 and
+  `RemoveDestructable` (dead or not, with the life it had), with `GetTriggerDestructable` and `GetTriggerWidget` the
+  destructable (`==` holds) and the event id `EVENT_WIDGET_DEATH`; a firing now carries its widget (`Firing.Widget`).
+  Invulnerability is a flag that stops neither native's death (damage is W2-5's). The life rules are the probe's: a set
+  keeps its fraction and is held to the most life, and 0.405 lives; `SetDestructableMaxLife` rounds halves away from 0
+  (80.5 is 81, 80.4 80), keeps 0 and below, and the life keeps its share, at least 0 (20 of 50 is 40 of 100), killing
+  nothing; `DestructableRestoreLife` on a dead one gives the life from 0.5 up to the most, 0 the most, and on a living
+  one nothing. One made dead reads 0 of its most. The 28 `BlzCreate*Destructable*` natives make one as
+  `CreateDestructable` does and are Close: their skin, colour, pitch and roll aren't read back, and no probe made one.
+  After a removal every native reads it as nil (its handle is gone).
+- **D251. Where a destructable is put** (probe: eight types at twelve places, a free type at fifteen facings; the
+  facts' LTlt at 1000,1000 and YT16 at 2600,-1200): a place is cut down to a quarter (floor: -10.1 is -10.25); then a
+  type with a pathing texture is put on the 64 grid toward 0 (-96 is -64), or 32 off it away from 0 (0 is 32, -10 is
+  -32) when half the texture's cells that way is odd. The texture's sides swap when the type is turned exactly 0 or 180
+  degrees: by its fixed rotation (`bfxr`), else by the facing given (0 and 180 swapped; 0.5, 179.9, 360, 540, -180 and
+  -90 didn't). A type without a texture is only cut to the quarter. The deck probe's 162 placements at facing 270 fit
+  too. A texture's size is its TGA header's, read with the standard data (`StandardData.PathingSizes`), a map's own file
+  of that path first (`GameData.PathingSize`). A zero place is +0, as `GetWidgetX` read it.
+- **D252. The widget natives and the death registration take a destructable; a unit or an item stops the run as
+  Missing** (`GetWidgetLife`, `SetWidgetLife`, `GetWidgetX`, `GetWidgetY`, `TriggerRegisterDeathEvent`), so a map gets no
+  wrong answer until W2-2 (units, running beside this task, which writes these natives for units) and W2-3 (items) add
+  theirs; so they are Close, Exact for destructables. `SetWidgetLife` on a destructable is `SetDestructableLife`
+  (probe). Whichever of W2-2 and W2-4 merges second joins the two.
+- **D253. EnumDestructablesInRect** finds a destructable when the 32 cell holding its place lies in the rect, its west
+  and south edges past the rect's: a centred rect finds it from 32 around, a rect whose west edge is its place doesn't,
+  one whose east edge is 31 past it doesn't (probe: two types on the 32 grid at 24 rects each; a portal at -1000.5 at
+  five, where its place alone would answer otherwise). So a rect of 32 around a destructable never finds it, as the
+  facts saw. The order is rows of 256 cells from the south, west to east, the last made first in a cell, fitted to the
+  one case of five measured. Each is given to the filter, then the callback, with `GetFilterDestructable` and
+  `GetEnumDestructable` both it in either; nil after. A hidden destructable is listed (probe), so `ShowDestructable` is
+  Recorded; one removed by an earlier callback is passed over (not measured). Whether the filter and callback run in
+  threads of their own is W2-6's to probe with the other enumerations (D70); here they run as `ForForce`'s do.
+- **D254. A destructable's name is the World Editor string its type names** (`bnam`, `WESTRING_DEST_BARREL`), read from
+  the locale's `UI\WorldEditGameStrings.txt` (`StandardData.EditorStrings`, its quotes dropped; `WorldEditStrings.txt`,
+  which the task named, doesn't hold them), without the editor suffix: "Summer Tree Wall", "Barrel", "Long Stone
+  Bridge", "Shimmering Portal" (probe); a name that isn't a key is itself, and nil's is "". Other languages aren't
+  measured (the facts' claim: names are localised per client).
+- **D255. Bridges and walkable destructables in GetLocationZ** read the deck shapes measured in the game, Moonwell's
+  `Decks.txt` (copied into `MirrorImaged.Data`, MIT, the workspace's own measurement): each standard walkable type's
+  variation 0 at facing 270 and scale 1, its height above the ground every 32, in whole units (`Deck`). A deck stands on
+  the ground beneath any water at the destructable's place (`Terrain.Ground`; game-facts: the deck on the river's bed),
+  turns with the facing unless the rotation is fixed, scales with the scale, and between its points blends the four
+  around, or takes the nearest where one has none, as Moonwell reads it; `GetLocationZ` is the higher of the terrain
+  and the standing decks. A deck follows the life a step late: a killed bridge's still reads in that instant, a restored
+  one's not yet (probe, facts). Close: the whole units put most points up to 0.5 off (YT16's middle 287 against
+  286.5); a dying deck falls over 2 s and leaves its ends in the game, where here it is gone at the next step; a
+  restored one comes back over 0.5 s (7 s with birth); a map's own walkable type reads its base type's deck. Exact
+  would need the decks measured to a tenth (`later.md`).
+- **D256. The map's placed destructables are made as it loads, before blizzard.j** (`GameNatives.Place`), from
+  `war3map.doo`: one whose state has bit 0 or 1 set (game-facts: the game skips those of state 0 and 4, which World
+  Editor's script makes), unlisted by the enumeration when bit 0 is (game-facts: state 3 isn't listed; whether the game
+  makes it at all is open, and here it is made, so its deck stands), put on the grid as a made one is (game-facts: a
+  placed YT16 at x 0 stood at 32, its facing ignored), at its life share of the file's percentage (not measured). Their
+  handle ids come before blizzard.j's (not measured). A probe of placed destructables couldn't be run: the probe map
+  with a `war3map.doo` written by War3Net, even an empty one, closed the game as it loaded (facts).
+- **D257. A doodad's variations are numbered from 1 in `war3map.w3d`:** the install's maps change the per-variation
+  fields (`dvr1`, `dvg1`, `dvb1`) at variations 1 to 10 and never 0, so D204's reading of the file's variation as the
+  field's level holds, and a test pins it. `SetDoodadAnimation`, `SetDoodadAnimationRect` and the destructable natives
+  that change only how it is drawn (`SetDestructableAnimation`, `QueueDestructableAnimation`,
+  `SetDestructableAnimationSpeed`, `SetDestructableColor`, `SetDestructableVertexColor`, `ShowDestructable`) are Recorded.
+  The doodad natives by index (`BlzGetDoodad*`, `BlzGetNumDoodads`, `BlzSetSingleDoodad*`), `SetDoodadColor` and
+  `SetDoodadColorRect` stay Missing: reading placed doodads needs a probe map with a `war3map.doo`, which closed the
+  game (D256); `later.md`.
+- **D258. A `war3map.doo` whose doodad states War3Net refuses is read here** (`MapArchive.Doodads`), as War3Net reads
+  every format it knows but with each state kept as written: `(1)SilverpineSprint.w3x`'s, format 13 with states 10
+  and 14 (bit 3, which War3Net doesn't define), now reads its 13,098 doodads, and every map of the install reads its
+  doodads. What follows the doodads in the file (the terrain's own doodads, which nothing reads) is left out then.
+  `MapArchive.Unread` still names a doodad file that can't be read this way either. This replaces D209 for
+  `war3map.doo`; DustwallowKeys' `war3map.w3e` stays W2-6's and Roundabout's `war3mapUnits.doo` stays left out.
+- **D259. The smallest locations and rects:** `Location`, `RemoveLocation`, `MoveLocation`, `GetLocationX`,
+  `GetLocationY`, `GetLocationZ`, `Rect` and `RemoveRect`, Close, which `GetLocationZ` on decks and
+  `EnumDestructablesInRect` need, as the task asked, for W2-6 to take over with its rects, regions and the off-map edge.
+  `GetLocationZ` is W2-1's `Terrain` with the decks (D255). The strings-2 probe, which stopped at `Location`, now stops
+  at `CreateTextTag`. After W2-4, with W1-7, W1-8, W1-10 and W2-1 merged first: 156 Exact, 308 Close, 19 Recorded,
+  1,352 Missing.

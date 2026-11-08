@@ -27,7 +27,9 @@ map. In 3.0.1.24371's install: `Maps/(10)DustwallowKeys.w3m`'s `war3map.w3e` has
 defined for enum of type CliffType"), `Maps/ForsakenKingdom/Scenario/(1)SilverpineSprint.w3x`'s `war3map.doo` a doodad
 state 14 (`DoodadState`), and `Maps/FrozenThrone/(4)Roundabout.w3x`'s `war3mapUnits.doo` a random unit mode 641
 (`RandomUnitDataMode`). Expected: the value kept as read. MirrorImaged leaves such a file out and names it in
-`MapArchive.Unread` (decisions D209); the other 270 maps read whole.
+`MapArchive.Unread` (decisions D209); the other 270 maps read whole. It reads a `war3map.doo` itself when War3Net
+refuses a state, keeping it as written (decisions D258): SilverpineSprint's is format 13 with states 10 and 14, bit 3
+being the one `DoodadState` doesn't define.
 
 ## War3Net.Build.Core: an object's id is kept in the reverse byte order of the game's
 

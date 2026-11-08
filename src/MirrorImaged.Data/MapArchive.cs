@@ -51,7 +51,8 @@ public sealed class MapArchive
     /// <summary>The files left out as War3Net can't read them, each with why: <c>war3map.w3e: Value '0' is not ...</c>.</summary>
     public IReadOnlyList<string> Unread { get; }
 
-    // The install's three maps War3Net can't read whole have one of these (D209), which no wave reads yet.
+    // Two of the install's maps have a terrain or placed-unit file War3Net can't read (D209); a doodad file neither it nor
+    // Doodads reads is left out too (D258).
     static readonly string[] LeftOut = ["war3map.w3e", "war3map.doo", "war3mapUnits.doo"];
 
     /// <summary>Reads the map at <paramref name="path"/>.</summary>

@@ -59,3 +59,10 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
   is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
 - Wave 10 (JASS): a rawcode with a backslash (`'a\bc'`) loads here but the game refuses the map (D137) (W1-7).
+- Wave 10 (accuracy, W2-4): the decks are measured in whole units (D255), so `GetLocationZ` on a bridge is up to 0.5
+  off; measure them to a tenth with the workspace's deck probe, and the fall of a killed deck (over 2 s, its ends left)
+  and the rise of one restored (0.5 s, 7 s with birth), to make it Exact.
+- Wave 5 or 10 (doodads, W2-4): the doodad natives by index (`BlzGetDoodad*`, `BlzGetNumDoodads`,
+  `BlzSetSingleDoodad*`) and `SetDoodadColor`/`SetDoodadColorRect` are Missing (D257); with them, measure the placed
+  destructables' life share and whether state 3 is made (D256). All need a probe map with a `war3map.doo` the game
+  loads: War3Net's closed it (docs/facts.md, "Destructables"), so start from a World Editor map's files.

@@ -489,12 +489,15 @@ public sealed class DestructableTests : IDisposable
     [Fact]
     public void A_unit_given_to_the_widget_natives_stops_the_run_until_units_come()
     {
-        using var simulation = Simulation.Load(_maps.Build("""
-            function config() end
-            function main() GetWidgetLife(CreateUnit(Player(0), FourCC("hfoo"), 0, 0, 0)) end
-            """), "", data: Standard);
+        var natives = new GameNatives(new World.Game(0));
+        var footman = new unit();
 
-        Assert.IsType<MissingNativeException>(simulation.Stopped?.InnerException);
+        Assert.Equal("GetWidgetLife", Assert.Throws<MissingNativeException>(() => natives.GetWidgetLife(footman)).Native);
+        Assert.Equal("SetWidgetLife", Assert.Throws<MissingNativeException>(() => natives.SetWidgetLife(footman, 1)).Native);
+        Assert.Equal("GetWidgetX", Assert.Throws<MissingNativeException>(() => natives.GetWidgetX(footman)).Native);
+        Assert.Equal("TriggerRegisterDeathEvent",
+            Assert.Throws<MissingNativeException>(() => natives.TriggerRegisterDeathEvent(natives.CreateTrigger(), footman)).Native);
+        Assert.Equal(0, natives.GetWidgetLife(null));
     }
 
     // A map's own pathing texture comes before the game's: a 4x4 one made 2x2 puts the tree 32 off the 64 grid
