@@ -6,4 +6,8 @@
     <ToolCommandName>mirror</ToolCommandName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MirrorImaged.Natives\MirrorImaged.Natives.csproj" />
+  </ItemGroup>
+
 </Project>

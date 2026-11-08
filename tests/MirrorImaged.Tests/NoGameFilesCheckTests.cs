@@ -138,6 +138,27 @@ public sealed class NoGameFilesCheckTests : IDisposable
     }
 
     [Fact]
+    public void Stays_in_step_after_an_answer_that_is_not_a_blob()
+    {
+        Write("b.txt", "text");
+        Write("c.bin", "MPQ\u001a");
+        Write("d.txt", "text");
+        Git("add", "-A");
+        Git("-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "Files");
+        var head = Git("rev-parse", "HEAD").Trim();
+        // A submodule entry at this repository's own commit: git answers with the commit's content, not a blob's.
+        Git("update-index", "--add", "--cacheinfo", $"160000,{head},a-sub");
+
+        var (exit, output) = Check();
+
+        Assert.Equal(1, exit);
+        Assert.Contains("a-sub (git can't give its content)", output);
+        Assert.Contains("c.bin (game file signature)", output);
+        Assert.DoesNotContain("b.txt", output);
+        Assert.DoesNotContain("d.txt", output);
+    }
+
+    [Fact]
     public void Resolves_a_relative_path_against_the_powershell_location()
     {
         Write("src/Program.cs", "return 0;");
