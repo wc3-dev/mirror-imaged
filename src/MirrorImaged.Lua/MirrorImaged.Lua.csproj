@@ -5,6 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="MirrorImaged" />
+    <InternalsVisibleTo Include="MirrorImaged.Natives" />
     <InternalsVisibleTo Include="MirrorImaged.Tests" />
   </ItemGroup>
 

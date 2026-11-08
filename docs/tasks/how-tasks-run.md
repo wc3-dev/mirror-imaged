@@ -68,6 +68,9 @@ commit, push. Report what you changed.
   nothing copied out of the game's storage. Generated C# that names the natives and their signatures is allowed.
 - Never type a password or log in to anything. If the game asks for a login, stop that step and report it.
 - You may launch Warcraft III for probes and stop the game processes you started. Never stop one you didn't start.
+- A probe never calls a native that writes outside `CustomMapData\MirrorImaged` (`SaveGameCache`, `SaveGame`,
+  `ReloadGameCachesFromDisk` after a save, anything touching the account's `Campaigns` or `Replays` folders beyond the
+  runner's own copy rule): W1-5's probe rewrote Sven's `Campaigns.w3v` this way.
 - Run anything that launches the game (the `Needs=Game` tests of `tests/MirrorImaged.GameTests`, probes) from the
   PowerShell tool, never from the Bash tool: a game started under the Bash tool's sandbox never logs in to Battle.net
   and the run ends `AtLogin` (0 of 15 from Bash, every run from PowerShell; D50 onwards).
