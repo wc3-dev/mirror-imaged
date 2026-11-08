@@ -3,7 +3,7 @@ using System.Globalization;
 namespace MirrorImaged.World;
 
 /// <summary>
-/// The simulated game: a clock moving in fixed steps, a seeded random generator, the handles by id, and the run's
+/// The simulated game: a clock moving in fixed steps, a seeded random generator, the handles by key, and the run's
 /// log. The same seed and the same calls give the same game.
 /// </summary>
 public sealed class Game
@@ -15,7 +15,7 @@ public sealed class Game
     readonly Dictionary<int, object> _handles = [];
     readonly List<string> _log = [];
     long _scheduled;
-    int _nextId = 0x100000;
+    int _nextId = 0x100000, _nextKey;
     ulong _random;
 
     public Game(int seed) => Seed(seed);
@@ -64,17 +64,23 @@ public sealed class Game
         Step = end;
     }
 
-    /// <summary>Gives <paramref name="handle"/> the next id; ids count up from 0x100000 and are never given twice.</summary>
+    /// <summary>The next agent's id; ids count up from 0x100000 and are never given twice.</summary>
+    public int NewId() => _nextId++;
+
+    /// <summary>
+    /// Keeps <paramref name="handle"/> under a new key, by which it is found again: one key a handle, whatever its type,
+    /// never given twice, and not the id the game shows.
+    /// </summary>
     public int Add(object handle)
     {
-        _handles.Add(_nextId, handle);
-        return _nextId++;
+        _handles.Add(_nextKey, handle);
+        return _nextKey++;
     }
 
-    /// <summary>The handle with <paramref name="id"/>, or null once it is removed.</summary>
-    public object? Handle(int id) => _handles.GetValueOrDefault(id);
+    /// <summary>The handle with <paramref name="key"/>, or null once it is removed.</summary>
+    public object? Handle(int key) => _handles.GetValueOrDefault(key);
 
-    public void Remove(int id) => _handles.Remove(id);
+    public void Remove(int key) => _handles.Remove(key);
 
     /// <summary>Starts the random numbers over from <paramref name="seed"/>.</summary>
     public void Seed(int seed) => _random = (uint)seed;

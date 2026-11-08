@@ -20,6 +20,26 @@ public sealed partial class GameNatives
     [Native(Level.Close)]
     public int GetPlayerId(player? whichPlayer) => whichPlayer?.Number ?? 0;
 
+    // The slots common.j and blizzard.j name: users and computers 0 to 23, then neutral aggressive, victim, extra and
+    // passive. Only neutral passive's is measured.
+    [Native(Level.Close)]
+    public int GetBJMaxPlayers() => 24;
+
+    [Native(Level.Close)]
+    public int GetPlayerNeutralAggressive() => 24;
+
+    [Native(Level.Close)]
+    public int GetBJPlayerNeutralVictim() => 25;
+
+    [Native(Level.Close)]
+    public int GetBJPlayerNeutralExtra() => 26;
+
+    [Native(Level.Exact, Fact = "game-facts.md, Orders and events: a new item belongs to neutral passive (slot 27) (10-21)")]
+    public int GetPlayerNeutralPassive() => 27;
+
+    [Native(Level.Close)]
+    public int GetBJMaxPlayerSlots() => _players.Length;
+
     /// <summary>Text for <paramref name="toPlayer"/>, which goes in the run's log: <c>2.000 player 0: text</c>.</summary>
     [Native(Level.Recorded, Reason = "Shows text on the player's screen; the run's log records it with the player")]
     public void DisplayTextToPlayer(player? toPlayer, float x, float y, string? message) => Show(toPlayer, message);

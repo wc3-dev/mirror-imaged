@@ -28,7 +28,7 @@ public sealed class PlayerNativesTests
     {
         Assert.Equal(0x100000, _natives.Player(0)!.Id);
         Assert.Equal(0x10001B, _natives.Player(27)!.Id);
-        Assert.Same(_natives.Player(5), _game.Handle(_natives.Player(5)!.Id));
+        Assert.Same(_natives.Player(5), _game.Handle(_natives.Player(5)!.Key));
     }
 
     [Fact]

@@ -1,8 +1,9 @@
 namespace MirrorImaged.Lua;
 
 /// <summary>
-/// A game handle as Lua holds it: a userdata whose metatable is named <paramref name="Type"/>, so <c>tostring</c>
-/// writes <c>timer: 0000000000012340</c>. Pushing the same handle as the same type gives the same userdata while Lua
-/// holds it; as another type, another userdata, as the game does.
+/// A game handle as Lua holds it: a userdata whose metatable is named <paramref name="Type"/>, the type the handle is
+/// seen as, so <c>tostring</c> writes <c>timer: 0000000000012340</c>, and which holds <paramref name="Key"/>, the
+/// handle's own, by which C# finds it whatever type it is seen as. Pushing the same key as the same type gives the
+/// same userdata while Lua holds it; as another type, another userdata, as the game does.
 /// </summary>
-public readonly record struct LuaHandle(string Type, int Id);
+public readonly record struct LuaHandle(string Type, int Key);

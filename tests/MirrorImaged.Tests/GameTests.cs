@@ -76,17 +76,22 @@ public sealed class GameTests
     }
 
     [Fact]
-    public void Handles_get_ids_counting_up_from_0x100000_and_are_found_until_removed()
+    public void Ids_count_up_from_0x100000()
+    {
+        Assert.Equal(0x100000, _game.NewId());
+        Assert.Equal(0x100001, _game.NewId());
+    }
+
+    [Fact]
+    public void Handles_are_found_by_their_keys_until_removed_and_a_key_is_never_given_twice()
     {
         object first = new(), second = new();
+        int firstKey = _game.Add(first), secondKey = _game.Add(second);
 
-        Assert.Equal(0x100000, _game.Add(first));
-        Assert.Equal(0x100001, _game.Add(second));
-        Assert.Same(second, _game.Handle(0x100001));
-
-        _game.Remove(0x100000);
-        Assert.Null(_game.Handle(0x100000));
-        Assert.Equal(0x100002, _game.Add(new object()));
+        Assert.Same(second, _game.Handle(secondKey));
+        _game.Remove(firstKey);
+        Assert.Null(_game.Handle(firstKey));
+        Assert.Equal(3, new[] { firstKey, secondKey, _game.Add(new object()) }.Distinct().Count());
     }
 
     [Fact]

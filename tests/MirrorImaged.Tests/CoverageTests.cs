@@ -68,13 +68,17 @@ public sealed class CoverageTests
         Assert.Contains("mirror coverage", error);
     }
 
-    internal static (int Exit, string Output, string Error) Mirror(params string[] arguments)
+    internal static (int Exit, string Output, string Error) Mirror(params string[] arguments) => Mirror(new Dictionary<string, string?>(), arguments);
+
+    /// <summary>Runs <c>mirror</c> with the <paramref name="environment"/> variables set.</summary>
+    internal static (int Exit, string Output, string Error) Mirror(IReadOnlyDictionary<string, string?> environment, params string[] arguments)
     {
         var start = new ProcessStartInfo("dotnet", [Path.Combine(AppContext.BaseDirectory, "MirrorImaged.Cli.dll"), .. arguments])
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        foreach (var (name, value) in environment) start.Environment[name] = value;
         using var process = Process.Start(start)!;
         var error = process.StandardError.ReadToEndAsync();
         var output = process.StandardOutput.ReadToEnd();

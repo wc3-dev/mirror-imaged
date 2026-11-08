@@ -328,3 +328,71 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   back to a hub built for the next request) was built, tried and measured not to work: the hub read its request, but
   `ChangeLevel` from a `-loadfile` game does nothing or crashes the game (facts). It is removed; with no login needed, a
   launch per probe costs about 15 s. (W0-4)
+
+### The game's globals and blizzard.j (W1-1)
+
+- **D62. common.j's globals are generated with the natives,** as `GameNatives.Globals()` in `Generated/Globals.g.cs`:
+  each global's name and its value as C#, sorted by name. A value is an integer (any of JASS's forms, and the products
+  such as `MAP_LOCK_SPEED`'s `8192*2`, written out), a boolean, or the call of the native common.j calls, with integer
+  arguments (`ConvertPlayerColor(0)`, `GetPlayerNeutralPassive()`), so each handle is made by its native as the game
+  makes it, and no JASS is committed. Any other form, and an integer past 32 bits (`2147483648`, `$100000000`), stops
+  the generator, naming the global. 3.0.1.24371's common.j has 1,871 globals, all constants: 1,857 made by 82 of the 88
+  `Convert*` natives, 10 integers, 2 booleans and the two neutral players. A run sets them as Lua globals in that order,
+  after the natives and before the game's Lua functions and blizzard.j. Not measured: whether the game's are plain
+  globals a script can change, as they are here.
+- **D63. Every handle has a key, and Lua's handles hold it.** A handle's key is its own in its game, given when it is
+  made, whatever its type, and never given twice; it is not its id, the number the game shows (`GetHandleId`, W1-6).
+  The userdata Lua holds is made from the key and the type the handle is seen as (`LuaHandle(Type, Key)`; D41's "its
+  id" is now its key): the same key as the same type is the same userdata, as another type another, and `tostring`
+  and the metatable follow the type. A handle passed back is found by its key, so one seen as a parent type, as
+  `GetTriggerEventId`'s `eventid` will give `gameevent`, `limitop` and the other event types, is still found, and
+  `gameevent` 0 and `limitop` 0, both eventids standing for 0, are two handles; a handle that isn't of the parameter's
+  type is refused with D49's bad argument, as the type Lua sees is. Keying by id and type, as the first version did,
+  missed a handle seen as its parent, and an id alone is ambiguous between a converted value and an agent.
+- **D64. A Convert native gives the handle standing for its value:** one object per type and value, made the first
+  time and kept, whose id is the value, with a key of its own and no game id, so the agents' ids are as before (D47).
+  So the same value gives the same userdata and `==` holds, and the same value as another type is another handle
+  (`ConvertRace(0) ~= ConvertPlayerColor(0)`). All 88 are Close. `ConvertPlayerColor` and `ConvertRace` (facts:
+  `GetPlayerColor` equals `ConvertPlayerColor(n)` and `GetPlayerRace` `RACE_*` with `==`), and `ConvertAttackType`,
+  `ConvertDamageType` and `ConvertWeaponType` (the Moonwell.Damage gate's types, made once and compared with `==`)
+  become Exact in the tasks that add those getters, which the facts compare them with. Not measured: `GetHandleId` of
+  one (said to be the value; W1-6), and a value common.j doesn't name, which gives a handle like any other.
+- **D65. blizzard.j is transpiled at run time** from the install's `War3.w3mod:scripts/blizzard.j` (the root spells it
+  `Scripts/Blizzard.j`; its lookup ignores case, D24), with `common.j` registered first for the natives' return types,
+  by the upstream `War3Net.CodeAnalysis.Transpilers` 6.1.1 from nuget.org, rendered by its CSharp.lua with the default
+  settings. 6.1.1, not 6.0.2: 6.0.2 brings `War3Net.CSharpLua` 2.0.3, whose `NuGet.Packaging` 5.11.6 and
+  `Newtonsoft.Json` 9.0.1 fail the build on their advisories; 6.1.1 brings 2.0.4, which doesn't. No fork: two changes
+  are made to the JASS before transpiling, by War3Net's own `JassSyntaxRewriter`. A name that is a Lua keyword and not
+  a JASS one gets `_lua` after it, since War3Net writes it as it is and Lua can't load it (`SubStringBJ`'s parameter
+  `end`; `docs/upstream.md`), and JASS refuses `end_`. A `debug` statement is left out, Close: War3Net transpiles it as
+  if it had no `debug`, and the JASS manual says the game never runs one (claim, not measured; blizzard.j's
+  `PlayDialogueFromSpeakerEx` has one). The same two changes are to apply to a map's JASS (W1-7). The Lua runs as the
+  chunk `blizzard.lua`, after common.j's globals and the game's Lua functions (its globals use `FourCC` and
+  `__jarray`), before `war3map.lua`; an error in a BJ function reads `blizzard.lua:N:`, N the line in the cached file
+  (D66); the game's name for it isn't measured. Its globals make 4 timers and 3 groups, the handles after the 28
+  players, and call the slot natives (D67); none of its functions runs until a map calls one. They call the natives as
+  globals, looked up at each call, so a native a script replaces is what they call (facts). A blizzard.lua that
+  doesn't load or run stops the run before the map: `Simulation.Load` throws its `LuaException`
+  (`blizzard.lua:N: ...`), or, for a Missing native, comes back `Stopped` (D43). Without an install, `Simulation.Load`
+  throws a `DirectoryNotFoundException` ("A run needs blizzard.j from an installed Warcraft III, and there is none in
+  ..."), after reading the map, so a missing map is still reported as such. The tests of the runtime itself load their
+  maps through an internal seam, `Simulation.Load(path, blizzard, options)`, with `""` in place of blizzard.j, so CI
+  runs them on every platform; only the tests that need blizzard.j itself are `Needs=Game`.
+- **D66. The transpiled Lua is cached:** a transpile takes about 1.6 s in a new process (0.35 s opening the storage, the
+  rest parsing and transpiling; Release build). It is kept once a process, and between processes in
+  `%LOCALAPPDATA%\MirrorImaged\cache\blizzard-<hash>.lua`, the hash (SHA-256, its first 32 hexadecimal digits) of the
+  game's build key and of the bytes of the assemblies that make the Lua: MirrorImaged's own, War3Net's JASS parser and
+  transpiler, and CSharp.lua's renderer. So a change to any of them makes a new file, and nothing else does. A file is
+  written whole under another name and moved in place, so no process reads half of one. Each read marks the file used
+  (its write time is set to now), and writing one removes the `blizzard-*` files there not used for 7 days, so lanes
+  running other builds at once keep theirs. A cache that can't be read or written is passed over, and there is none
+  when the user's local application data folder is unknown or an assembly has no file (a single-file app). A
+  `mirror run` of a small map then takes about 0.2 s.
+- **D67. The slot natives:** `GetBJMaxPlayers` and `GetPlayerNeutralAggressive` 24, `GetBJPlayerNeutralVictim` 25,
+  `GetBJPlayerNeutralExtra` 26, `GetPlayerNeutralPassive` 27 (Exact: facts, a new item belongs to neutral passive, slot
+  27) and `GetBJMaxPlayerSlots` 28; the rest Close, the values the game has given since it had 24 players, not
+  measured here. `CreateGroup` makes a group with the next id, Close; what groups hold comes with the units (wave 2).
+- **D68. Left for W1-7,** whose JASS rules reach blizzard.j too, as it goes through the same transpiler: a whole number
+  given to a real stays a Lua integer (`bj_MELEE_MINE_SEARCH_RADIUS` is the integer 2000; `docs/upstream.md`), and
+  JASS's integer division is Lua's `//`, which floors where JASS cuts toward zero. What the game's own Lua gives for
+  these is not measured. After W1-1: 2 Exact, 108 Close, 2 Recorded, 1,723 Missing.

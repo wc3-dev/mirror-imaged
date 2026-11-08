@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using War3Net.CodeAnalysis.Jass;
+using War3Net.CodeAnalysis.Jass.Extensions;
 using War3Net.CodeAnalysis.Jass.Syntax;
 
 namespace MirrorImaged.NativesGenerator;
@@ -11,11 +13,15 @@ public sealed record JassParameter(string Type, string Name);
 
 public sealed record JassNative(string Name, IReadOnlyList<JassParameter> Parameters, string Returns);
 
-public sealed record JassScript(IReadOnlyList<JassType> Types, IReadOnlyList<JassNative> Natives);
+/// <summary>A global and the expression it is given, if any.</summary>
+public sealed record JassGlobal(string Name, string Type, JassExpressionSyntax? Value);
+
+public sealed record JassScript(IReadOnlyList<JassType> Types, IReadOnlyList<JassNative> Natives, IReadOnlyList<JassGlobal> Globals);
 
 /// <summary>
 /// Writes <c>src/MirrorImaged.Natives/Generated</c> from the game's <c>common.j</c> and <c>common.ai</c>: a class per
-/// handle type and a Missing stub per native, sorted by name, leaving out the natives written by hand.
+/// handle type and a Missing stub per native, sorted by name, leaving out the natives written by hand, and
+/// <c>common.j</c>'s globals with their values.
 /// </summary>
 public static partial class Generator
 {
@@ -45,7 +51,7 @@ public static partial class Generator
         "ulong", "unchecked", "unsafe", "ushort", "using", "virtual", "void", "volatile", "while",
     };
 
-    /// <summary>The handle types and natives a JASS script declares, in its order.</summary>
+    /// <summary>The handle types, natives and globals a JASS script declares, in its order.</summary>
     public static JassScript Read(string jass)
     {
         var declarations = JassSyntaxFactory.ParseCompilationUnit(jass).Declarations;
@@ -60,6 +66,16 @@ public static partial class Generator
                         ? list.ParameterList.Items.Select(parameter => new JassParameter(parameter.Type.GetFirstToken().Text, parameter.IdentifierName.Token.Text)).ToList()
                         : [],
                     native.ReturnClause.ReturnType.GetFirstToken().Text))
+                .ToList(),
+            declarations.OfType<JassGlobalsDeclarationSyntax>()
+                .SelectMany(globals => globals.GlobalDeclarations)
+                .Select(global => global switch
+                {
+                    JassGlobalConstantDeclarationSyntax constant => new JassGlobal(constant.IdentifierName.Token.Text, constant.Type.GetFirstToken().Text, constant.Value.Expression),
+                    JassGlobalVariableDeclarationSyntax { Declarator: JassVariableDeclaratorSyntax variable } => new JassGlobal(variable.IdentifierName.Token.Text, variable.Type.GetFirstToken().Text, variable.Value?.Expression),
+                    JassGlobalVariableDeclarationSyntax { Declarator: JassArrayDeclaratorSyntax array } => new JassGlobal(array.IdentifierName.Token.Text, array.Type.GetFirstToken().Text, null),
+                    _ => throw new InvalidDataException($"A global the generator can't read: {global}"),
+                })
                 .ToList());
     }
 
@@ -75,8 +91,9 @@ public static partial class Generator
 
     /// <summary>
     /// The generated files by name, from <paramref name="scripts"/> in the order of <see cref="Scripts"/>: the types,
-    /// then each script's natives but those in <paramref name="handWritten"/>.
+    /// each script's natives but those in <paramref name="handWritten"/>, and <c>common.j</c>'s globals.
     /// </summary>
+    /// <exception cref="InvalidDataException">A global of <c>common.j</c> has a value the generator can't write.</exception>
     public static SortedDictionary<string, string> Generate(IReadOnlyList<JassScript> scripts, string gameVersion, IReadOnlySet<string> handWritten)
     {
         var files = new SortedDictionary<string, string>(StringComparer.Ordinal);
@@ -85,6 +102,7 @@ public static partial class Generator
 
         var source = $"{string.Join(" and ", Scripts.Select(script => script.Name))}, game {gameVersion}";
         files["Types.g.cs"] = WriteTypes(scripts.SelectMany(script => script.Types), source);
+        files["Globals.g.cs"] = WriteGlobals(scripts[0].Globals, $"{Scripts[0].Name}, game {gameVersion}");
         return files;
     }
 
@@ -126,6 +144,43 @@ public static partial class Generator
         // The raw string above takes this file's line endings, which depend on how git checked it out.
         return $"{Header(source)}\n#nullable enable\n\nnamespace MirrorImaged.Natives;\n\npublic sealed partial class GameNatives\n{{\n{string.Join("\n", stubs)}}}\n"
             .ReplaceLineEndings("\n");
+    }
+
+    // The values are C# calling the natives as common.j does, so each Convert* handle is made as the game makes it.
+    static string WriteGlobals(IEnumerable<JassGlobal> globals, string source)
+    {
+        var values = globals.OrderBy(global => global.Name, StringComparer.Ordinal).Select(global =>
+            $"        (\"{global.Name}\", {Value(global) ?? throw new InvalidDataException($"The generator can't write the value of the global {global.Name}: {global.Value?.ToString() ?? "none"}")}),\n");
+        return $"{Header(source)}\n#nullable enable\n\nnamespace MirrorImaged.Natives;\n\npublic sealed partial class GameNatives\n{{\n"
+            + "    /// <summary>The globals common.j declares, sorted by name, with the values it gives them.</summary>\n"
+            + $"    public (string Name, object? Value)[] Globals() =>\n    [\n{string.Concat(values)}    ];\n}}\n";
+    }
+
+    // The forms common.j's globals take: an integer, a boolean, or a native called with integers; null for any other.
+    static string? Value(JassGlobal global)
+    {
+        if (global.Value is JassInvocationExpressionSyntax call)
+        {
+            var arguments = call.ArgumentList.ArgumentList.Items.Select(Integer).ToList();
+            return arguments.Contains(null) ? null : $"{call.IdentifierName.Token.Text}({string.Join(", ", arguments)})";
+        }
+        return global.Type switch
+        {
+            "integer" when global.Value is { } value => Integer(value),
+            "boolean" when global.Value is { } value && value.TryGetBooleanExpressionValue(out var boolean) => boolean ? "true" : "false",
+            _ => null,
+        };
+    }
+
+    static string? Integer(JassExpressionSyntax expression) => IntegerValue(expression)?.ToString(CultureInfo.InvariantCulture);
+
+    // An integer literal in any of JASS's forms, or a product of them (8192*2); War3Net throws for one past 32 bits.
+    static int? IntegerValue(JassExpressionSyntax expression)
+    {
+        if (expression is JassBinaryExpressionSyntax { OperatorToken.SyntaxKind: JassSyntaxKind.AsteriskToken } product)
+            return unchecked(IntegerValue(product.Left) * IntegerValue(product.Right));
+        try { return expression.TryGetIntegerExpressionValue(out var value) ? value : null; }
+        catch (OverflowException) { return null; }
     }
 
     static string Header(string source) => $"// Generated by MirrorImaged.NativesGenerator from {source}. Do not edit.\n";

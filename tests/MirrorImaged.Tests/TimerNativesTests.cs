@@ -216,7 +216,7 @@ public sealed class TimerNativesTests
 
         Assert.True(second.Disposed);
         Assert.False(second.Ran);
-        Assert.Null(_game.Handle(timer.Id));
+        Assert.Null(_game.Handle(timer.Key));
     }
 
     [Fact]

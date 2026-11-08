@@ -254,7 +254,7 @@ public sealed unsafe class LuaState : IDisposable
                         break;
                     case LuaHandle h:
                         length = Encoding.UTF8.GetBytes(h.Type, new Span<byte>(text, _capacity - (int)(text - _buffer)));
-                        result[i] = new() { Type = Value.Handle, IntegerValue = h.Id, StringValue = text, Length = (nuint)length };
+                        result[i] = new() { Type = Value.Handle, IntegerValue = h.Key, StringValue = text, Length = (nuint)length };
                         text += length;
                         break;
                     case var other: throw new ArgumentException($"A {other.GetType().Name} can't be passed to Lua.");
