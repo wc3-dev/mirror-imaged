@@ -52,6 +52,29 @@ public sealed class MirrorRunTests : IDisposable
         Assert.StartsWith("war3map.lua:2: The native ClearTextMessages is Missing", error);
     }
 
+    [InstallFact]
+    [Trait("Needs", "Game")]
+    public void Mirror_run_runs_a_JASS_map()
+    {
+        var map = _maps.Build("""
+            function Tick takes nothing returns nothing
+                call BJDebugMsg("tick " + I2S(7 / -2))
+            endfunction
+
+            function config takes nothing returns nothing
+            endfunction
+
+            function main takes nothing returns nothing
+                call TimerStart(CreateTimer(), 1, false, function Tick)
+            endfunction
+            """, War3Net.Build.Info.ScriptLanguage.Jass);
+
+        var (exit, output, _) = Mirror("run", map, "--seconds", "2");
+
+        Assert.Equal(0, exit);
+        Assert.Equal(string.Concat(Enumerable.Range(0, 24).Select(player => $"1.000 player {player}: tick -3\n")), output);
+    }
+
     [Theory]
     [InlineData("--seconds")]
     [InlineData("--seconds", "-1")]

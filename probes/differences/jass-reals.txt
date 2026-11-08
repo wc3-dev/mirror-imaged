@@ -1,0 +1,8 @@
+# Where MirrorImaged differs from the game's lines in expected/jass-reals.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# At -1, -1 + 0.001 and -1 - 0.001 come out a float step from the game's (D134): the game's look rounded toward minus
+# infinity (-0.99900001 and -1.00100005, which put the first within =='s margin and the second not), where the model
+# cuts them toward zero (W1-10's model; the positive side matches).
+- ladder -1 110000001000
++ ladder -1 100000001100

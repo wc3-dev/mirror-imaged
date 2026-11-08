@@ -116,9 +116,15 @@ public static class ProbeComparison
 
     static string Probes => Path.Combine(AppContext.BaseDirectory, "probes");
 
-    /// <summary>Every probe in <c>probes/</c>, by name.</summary>
+    /// <summary>Every probe in <c>probes/</c>, Lua and JASS, by name.</summary>
     public static IEnumerable<string> Names =>
-        Directory.GetFiles(Probes, "*.lua").Select(file => Path.GetFileNameWithoutExtension(file)).Order(StringComparer.Ordinal);
+        Directory.GetFiles(Probes, "*.lua").Concat(Directory.GetFiles(Probes, "*.j")).Select(file => Path.GetFileNameWithoutExtension(file)).Order(StringComparer.Ordinal);
+
+    /// <summary>Whether a probe is JASS, <c>probes/&lt;name&gt;.j</c>, which the game runs in its JASS machine (decisions D130).</summary>
+    public static bool IsJass(string name) => File.Exists(Path.Combine(Probes, name + ".j"));
+
+    /// <summary>A probe's script, Lua or JASS.</summary>
+    public static string Source(string name) => IsJass(name) ? ProbeMap.JassSource(name) : ProbeMap.Source(name);
 
     /// <summary>Whether a probe runs on the map with a computer and named slots (decisions D140).</summary>
     public static bool WithComputer(string name) => name is "events" or "lobby" or "data-names";
@@ -157,7 +163,8 @@ public static class ProbeComparison
         try
         {
             var map = Path.Combine(folder, name + ".w3x");
-            ProbeMap.Build(name, ProbeMap.Source(name), map, WithComputer(name), Change(name));
+            if (IsJass(name)) ProbeMap.BuildJass(name, ProbeMap.JassSource(name), map);
+            else ProbeMap.Build(name, ProbeMap.Source(name), map, WithComputer(name), Change(name));
             var data = ReadsData(name) ? StandardData.Installed(GameInstall.Require(), MapArchive.Read(map).Files.Info) : null;
             using var simulation = Simulation.Load(map, Frame, data: data);
             var file = $@"{ProbeMap.Folder}\{name}.pld";

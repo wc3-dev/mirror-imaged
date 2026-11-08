@@ -762,7 +762,7 @@ lines they kept the same each time.
 
 ## The number model's probes
 
-Twelve probes run twice each by the game runner from the PowerShell tool, with the same lines, 3.0.1.24371, single
+Eleven probes run twice each by the game runner from the PowerShell tool, with the same lines, 3.0.1.24371, single
 player, 11-08 (W1-10), their lines in `probes/expected`. Floats are given by their bits.
 
 - Subtraction (`numbers-ops`): a - b for a in [1, 2) and b 1 to 22 octaves smaller, both with every mantissa bit
@@ -831,6 +831,76 @@ player, 11-08 (W1-10), their lines in `probes/expected`. Floats are given by the
   failed), the next condition c4 took it (all three ran c4), destroying the stale c2 freed it again and c5 took it.
   `And(nil, nil)`, `Or(nil, nil)`, `Not(nil)`, `Condition(nil)` and `Filter(nil)` made after a destroy took no place;
   the next `Condition` did.
+
+## JASS maps
+
+Thirteen JASS probes and one Lua probe on 3.0.1.24371, 11-08 (W1-7), single player, `-loadfile`: the
+`probes/jass-*.j` maps, whose `war3map.j` the game runs in its JASS machine (`ProbeMap.BuildJass`, decisions D130),
+and `probes/blizzard-numbers.lua`, two runs each with the same lines, but `jass-integers` and
+`jass-executefunc-null` and `jass-threads`' later loops, one run each (after the code review); and a JASS map with a
+backslash in a rawcode, which never loaded. Their lines are
+in `probes/expected`. A real is written as its IEEE bits, worked out in JASS with exact steps (halving, doubling,
+subtracting 1 in [1, 2), `R2I` of a whole number).
+
+- Integers wrap at 32 bits: 2147483647 + 1 is -2147483648, -2147483648 - 1 is 2147483647, 2147483647 × 2 is -2,
+  65536 × 65536 is 0, 46341 × 46341 is -2147479015, 2147483647 × 2147483647 is 1, -(-2147483648) is -2147483648.
+  Division cuts toward zero: 7 / 2 = 3, -7 / 2 = -3, 7 / -2 = -3, -7 / -2 = 3, -1 / 3 = 0; blizzard.j's
+  `ModuloInteger` body gives 1 for (7, -3), 2 for (-7, 3), -4 for (-7, -3). An integer divided by zero (in a thread
+  `ExecuteFunc` started) ended that thread, and its caller went on; -2147483648 / -1 closed the game (exit code 1,
+  `BlizzardError`, no lines). A decimal literal past 32 bits wraps: 4294967295 is -1, 2147483648 and -2147483648 are
+  -2147483648, 4294967296 is 0, 99999999999 is 1215752191; the map loaded.
+- An integer given to a real is cut toward zero: 16777219 is 16777218, -16777219 is -16777218, 2147483647 is
+  2147483520, 33554435 is 33554432, alike set to a real variable, given to a real parameter, passed to `I2R`, added to
+  0.0 and written out as a literal (`set r = 16777219`). A function `returns real` that returns an integer gives the
+  integer's bits: 16777219 gave 0x01000003, -16777219 0xfefffffd, `i + 1` 0x01000004, a literal 16777219 0x01000003;
+  `return 1` gave a value that, doubled, never reached 1 (the thread stopped at the operation limit), so a denormal.
+  `return i + 0.5` gave 16777218 (a real sum).
+- A real literal: 0.1 reads 0x3dccccce, 0.2 0x3e4cccce, 0.7 0x3f333334 and 0.9 0x3f666667, each a float step above
+  the nearest, as `S2R` of the same text; 0.3 0x3e99999a and 0.001 0x3a83126f, the nearest; 16777217.0 16777216; a
+  literal of 39 digits 0. With a whole part it can differ from `S2R`: 1.001 0x3f8020c4 (`S2R` c5), 1.0001 0x3f800346
+  (47), 1.0000001 0x3f800000 (`S2R` 0x3f800002), 2.9 0x40399999 (9a), 1000000.0625 0x49742400 (01), 3.14159
+  0x40490fcf (d1), 123456.789 0x47f12064 (65); 0.123456789 0x3dfcd6ea both. All fit the whole part plus the decimals,
+  each read as `S2R` reads it, added in the game's float arithmetic (inferred from MirrorImaged's model of both,
+  decisions D134). A first version of the probe with exponent literals (`3.4e38`, `1.0e-3`, `3.0e9`) never loaded.
+- Real arithmetic: 1.0 / 3.0 gave 0x3eaaaaab, 2.0 / 3.0 0x3f2aaaab, the literals above summed and multiplied as the
+  game's Lua does (0.1 + 0.2 0x3e99999a, 3 × 0.1 0x3e99999a, 10 × 0.7 0x40e00001, 1 - 0.9 0x3dccccc8). 1.0 - 0.001
+  gave 0x3f7fbe76 and 1000.0 - 0.001 0x4479ffef, the exact differences cut toward zero; MirrorImaged's model of the
+  game's Lua gives 0x3f7fbe77 and 0x4479fff0. 1 - 2^-30, 1 - 2^-25, 1 - 2^-24 - 2^-26 and 2^24 - 1.5 gave the larger
+  number, and 1 + 0.001 0x3f8020c4. A real divided by zero (7.0 / 0) ended the thread.
+- `==` on reals holds within a margin. With a the base and the largest k for which a == a + k × u held, u a float step
+  there: a = 0, u = 2^-30: 1073741 both ways (so |a - b| up to 0.00099999923 equal, 0.00100000016 not); a = 1: 8388
+  steps of 2^-23 above, 16777 of 2^-24 below; 0.25: 33554 of 2^-25, 67108 of 2^-26; 4: 2097 of 2^-21, 4194 of 2^-22;
+  ±1000: 16 of 2^-14 both ways; 2^20: 1 of 2^-3 above, 3 of 2^-4 below; and for a from 2^n to 1.875 × 2^n in eighths:
+  n = 12, 2 steps of 2^-11 above (4 of 2^-12 below 2^12, else 2), n = 20 and 23, 1 step above (3 half steps below 2^n,
+  else 1). The same with the operands swapped. So |a - b| < 0.001, or under two float steps of the larger number,
+  holds. `!=` compares exactly (1.0 == 1.0001 and 1.0 != 1.0001 both true), and so do `<`, `>`, `<=` and `>=`; an
+  integer 1 == 1.0005 held, 1 == 1.002 didn't.
+- The operation limit: a thread ran `loop set n = n + 1 endloop` 428571 times before it stopped, with a call of an
+  empty function or of `GetHandleId(null)` each time 300000, `set k = k + 1` and `set n = k` with a local 333333, and
+  `exitwhen n > m` then `set n = n + 1` 230769 times: 3,000,000 operations of 7, 10, 10, 9 and 13. With `set n = n +
+  1` and `set q = n / 3` it ran 230769 times (13), with an `if r == 0.5 then endif` 250000 (12), with `set s = t + "a"`
+  230769 (13), with `set r = 1.0 + n` 214286 (14), and `set n = n + k` after an `if` that sets k, without an else and
+  with one, 187499 each (16). A thread that ran
+  six tenths of the limit, then `ExecuteFunc` of one that ran six tenths, then three tenths more, finished both; a
+  trigger action that ran six tenths, waited `TriggerSleepAction(0)`, and ran six tenths again finished.
+- A variable never set, read, ended its thread: a local integer added to, given to `I2S` or copied, a local real
+  added to, a local string joined or given to `StringLength`, a local boolean as a condition, a local timer compared
+  with null or given to `GetHandleId`, a global integer added to and a global timer compared with null; one set first
+  read 5. An integer array's unset element read 0 (global and local), a string array's null (`== null` true, `== ""`
+  false, length 0) and a timer array's null.
+- Null strings: `StringLength(null)` 0, `"a" + null` "a", `null + "b"` "b", `null + null` null (not ""),
+  `null == null` true, `null == ""` false, `"" == null` false, `StringCase(null, true)` and `SubString(null, 0, 1)`
+  null, `S2I(null)` 0, `S2R(null)` 0.000, `StringHash(null)` 0, `SaveStr(t, 1, 2, null)` true, then
+  `HaveSavedString` true and `LoadStr` null; `LoadStr` of a key never saved null too (`== null` true, `== ""` false).
+  None ended its thread. `ExecuteFunc(null)` and `ExecuteFunc("NoSuchFunction")` ran nothing and ended nothing: the
+  lines after each and the caller's came.
+- A `debug` statement (`debug call out(...)`, `debug set n = 2`) didn't run.
+- Rawcodes: 'hfoo' 1751543663, 'A0z~' 1093696126, 'a' 97; four bytes holding a UTF-8 letter read each byte after the
+  first as signed: 'éab' -1029086878, 'aéb' 1623370082, 'abé' 1633796777 (their bytes unsigned would give
+  -1012309662, 1640212834, 1633862569); 'ab"c' 1633821283. A map with `'a\bc'` never loaded.
+- `blizzard-numbers` (a Lua map): `ModuloInteger(7, -3)` -5, `(-7, 3)` 2, `(-7, -3)` -4, `(7, 3)` 1, so the game's own
+  Lua blizzard.j floors as Lua's `//`; `bj_MELEE_MINE_SEARCH_RADIUS` is the float 2000.0, `bj_cineFadeContinueRed` and
+  `bj_MELEE_CLEAR_UNITS_RADIUS` floats; `ModuloInteger(1, 0)` raised.
 
 ## Units
 

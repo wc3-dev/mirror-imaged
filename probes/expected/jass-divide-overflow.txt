@@ -1,0 +1,4 @@
+# probes/jass-divide-overflow.j on 3.0.1.24371, single player, 11-08 (W1-7): the game exited by itself (exit code 1,
+# BlizzardError) as the probe divided -2147483648 by -1, before any line.
+# "! the game closes" is the one line of a probe whose game closed first (decisions D122).
+! the game closes
