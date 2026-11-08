@@ -22,6 +22,7 @@ public sealed unsafe class LuaState : IDisposable
 
     readonly List<Func<object?[], object?[]>> _functions = [];
     readonly StateHandle _handle;
+    bool _yield;
 
     public LuaState()
     {
@@ -69,6 +70,37 @@ public sealed unsafe class LuaState : IDisposable
 
     internal object?[] Call(LuaFunction function, object?[] args) =>
         Use(l => Results(l, lua_gettop(l), mirror_callref(l, function.Reference, _handle.Write(args), args.Length)));
+
+    /// <summary>
+    /// Calls the global function <paramref name="name"/> in a new Lua thread, as <see cref="LuaFunction.Start"/> does.
+    /// </summary>
+    public LuaThread Start(string name) => Start(name, 0);
+
+    internal LuaThread Start(string? name, int reference)
+    {
+        var thread = new LuaThread(this, Use(l =>
+        {
+            int top = lua_gettop(l), made, status = mirror_start(l, name, reference, &made);
+            if (status != 0) throw Error(l, top);
+            return made;
+        }));
+        thread.Resume();
+        return thread;
+    }
+
+    internal (object?[] Results, bool Yielded) Resume(int thread) =>
+        Use(l =>
+        {
+            int top = lua_gettop(l), yielded, status = mirror_resume(l, thread, &yielded);
+            return yielded != 0 ? ([], true) : (Results(l, top, status, argument: true), false);
+        });
+
+    /// <summary>
+    /// Makes the Lua thread calling the C# function now running yield when that function returns, until it is resumed
+    /// (<see cref="LuaThread.Resume"/>); the last thing the function does. Where the thread can't yield (the main
+    /// thread, or past a C function), Lua raises its own error.
+    /// </summary>
+    public void Yield() => _yield = true;
 
     internal void Release(int reference)
     {
@@ -127,13 +159,13 @@ public sealed unsafe class LuaState : IDisposable
         return value;
     }
 
-    object?[] Results(nint l, int top, int status)
+    object?[] Results(nint l, int top, int status, bool argument = false)
     {
         if (status != 0) throw Error(l, top);
         try
         {
             var results = new object?[lua_gettop(l) - top];
-            for (int i = 0; i < results.Length; i++) results[i] = Read(l, top + 1 + i);
+            for (int i = 0; i < results.Length; i++) results[i] = Read(l, top + 1 + i, argument);
             return results;
         }
         finally { lua_settop(l, top); }
@@ -165,11 +197,17 @@ public sealed unsafe class LuaState : IDisposable
             var args = new object?[lua_gettop(l)];
             for (int i = 0; i < args.Length; i++) args[i] = state.Read(l, i + 1, argument: true);
             object?[] values;
+            state._yield = false;
             try { values = function(args); }
             finally
             {
                 foreach (var arg in args)
                     if (arg is LuaFunction { Kept: false } given) given.Dispose();
+            }
+            if (state._yield)
+            {
+                state._yield = false;
+                return Native.Yields;
             }
             *results = state._handle.Write(values);
             return values.Length;
@@ -181,13 +219,15 @@ public sealed unsafe class LuaState : IDisposable
                 *results = NoState;
                 return -1;
             }
+            state._yield = false;
             if (state.Halted is null && state.Halts?.Invoke(e) == true) state.Halted = e;
             *results = state._handle.Write([e.Message]);
             return state.Halted is null ? -1 : Native.Halts;
         }
     }
 
-    // An argument C# can't read comes as its type, so the C# function can refuse it and every function is let go of.
+    // An argument C# can't read comes as its type, so the C# function can refuse it and every function is let go of; so
+    // does what a thread returns.
     object? Read(nint l, int index, bool argument = false) => lua_type(l, index) switch
     {
         0 => null,

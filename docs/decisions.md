@@ -396,3 +396,54 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   given to a real stays a Lua integer (`bj_MELEE_MINE_SEARCH_RADIUS` is the integer 2000; `docs/upstream.md`), and
   JASS's integer division is Lua's `//`, which floors where JASS cuts toward zero. What the game's own Lua gives for
   these is not measured. After W1-1: 2 Exact, 108 Close, 2 Recorded, 1,723 Missing.
+
+### Triggers and threads (W1-2)
+
+The measurements are three probes, `probes/triggers*.lua`, in `docs/facts.md`, "Triggers and threads".
+
+- **D70. The script's callbacks run in Lua threads of their own,** as the game's do (not the main thread,
+  `coroutine.isyieldable()` false): a timer's callback, a condition or filter, a trigger's action and `ExecuteFunc`'s
+  function each start a thread (`LuaFunction.Start`, sandbox.c's `mirror_start` and `mirror_resume`). The script can't
+  yield one: there sandbox.c's `coroutine.yield` raises "attempt to yield across a C-call boundary" and
+  `coroutine.isyieldable` is false, while a coroutine the script makes yields as usual. A wait is the only yield: a C#
+  function asks for it (`LuaState.Yield`), and the trampoline yields the calling thread once C# has returned, so `pcall`
+  and `xpcall` across it keep working (facts). A trigger's actions and `ExecuteFunc`'s function are run on after their
+  wait; a timer's callback or a condition that waits is let go of, so it never goes on, as measured. The natives know no
+  Lua: the simulation gives them `IScriptThreads`, which starts and runs on threads. Not matched, as the game's threads
+  are stacks of their own rather than Lua coroutines: a wait past a C function (a `table.sort` comparator in an action)
+  raises here and waits in the game, and a wait in a coroutine the script made inside an action yields that coroutine
+  here and ends the action in the game. A wait in `main` raises Lua's "attempt to yield from outside a coroutine" (not
+  measured). The state now makes a table for its threads, which moves the addresses `LuaDeterminismTests` pins.
+- **D71. A wait ends at the first tenth of a second of game time after its timeout has passed,** counted in steps from
+  the start; a timeout of 0 or less takes 0.1 s. Close: the game's waits end mostly on that grid, at or one tenth after
+  the timeout, but differ between runs (facts); the rule matches 19 of the 28 measured, as well as any rule tried
+  (rounding the timeout to tenths and adding one matched 20), and is the simplest to state. A wait never ends in the
+  step it started in, so `PolledWait`'s loop always moves the clock. `PolledWait(1)` takes 1.1 s, as twice in the game.
+- **D72. `==` holds for the same handle seen as two types:** each handle type's metatable has an `__eq` comparing the
+  handles' keys (D63), so `GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED` and a widget equal to its unit, as the game
+  measures; `rawequal` stays false (D41). The game's `==` also holds between different handles with the same id
+  (`GetTriggerEventId()` with id 4 `==` `ConvertPlayerColor(4)`; `Condition(nil) == Filter(nil)`), which needs the id in
+  the userdata: left to W1-6 (handle ids), so `GetTriggerEventId`, `Condition` and `Filter` are Close until then.
+- **D73. Boolexprs:** `And` and `Or` run their second operand only when needed; a nil operand, `Not(nil)` and a nil
+  condition are false; a destroyed `Condition` or `Filter` fails without running, while a destroyed `And`, `Or` or `Not`
+  still runs. `Condition(nil)` and `Filter(nil)` each give one handle every call, which passes as a trigger's own
+  condition and is false in an `And`, `Or` or `Not`: this matches every measured case but one, `And(true,
+  Condition(nil))`, true in the game. In the game the two are one handle; here, as C# types, two.
+- **D74. A run takes the trigger's actions as it starts** (facts), so an action removed while a run goes on, by
+  `TriggerRemoveAction`, `TriggerClearActions` or `DestroyTrigger`, is let go of only once the trigger's last running
+  thread has ended. `DestroyTrigger` stops its events and lets a waiting run go on: the claim that it breaks the game's
+  handle stack isn't modelled.
+- **D75. The event responses read the running thread's firing:** its trigger, its event id and its game state, kept
+  across its waits. An event sets all three; `TriggerExecute` keeps the caller's event and names its trigger;
+  `TriggerEvaluate` names the trigger for its conditions; `ExecuteFunc` keeps the caller's. Outside an event the event
+  id is `ConvertGameEvent(0)` seen as `eventid` (the game's has id 0). Units, players and the other responses join it
+  in their tasks.
+- **D76. Events here:** timer events schedule themselves, not through a timer handle, so `GetExpiredTimer` is nil in
+  them, as measured; a timeout under 0.01 s is 0.01 s. Two expiries due in one step keep the queue's order (D45), though
+  the game ran a periodic event's expiry before a timer started later that fell due at the same moment: for W1-8's probe
+  of timer order. Variable events never fire, as in the game for a Lua global. Integer game states (divine intervention,
+  disconnected) are kept by `SetIntegerGameState`, which fires their events as measured, with the event id the
+  comparison's value less 255 (`ConvertGameEvent(-253)` for `EQUAL`). The time of day's events need its clock (W1-4):
+  their registrations are kept in `_stateEvents`, for the clock to fire with `Fire` and the id 3, by the rules in the
+  facts; until then `TriggerRegisterGameStateEvent` is Close. After W1-2: 32 Exact, 116 Close, 2 Recorded, 1,685
+  Missing.

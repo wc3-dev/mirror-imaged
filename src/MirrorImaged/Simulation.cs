@@ -32,7 +32,7 @@ public sealed partial class Simulation : IDisposable
     Simulation(byte[] script, string blizzard, SimulationOptions options)
     {
         _game = new Game(options.Seed);
-        _natives = new GameNatives(_game);
+        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this) };
         try
         {
             foreach (var native in typeof(GameNatives).GetMethods()
@@ -121,11 +121,50 @@ public sealed partial class Simulation : IDisposable
         }
     }
 
-    /// <summary>A Lua function a native keeps, such as a timer's: it runs as the game runs a callback.</summary>
+    // Runs a Lua thread as Protect runs Lua: null when it failed
+    LuaThread? Started(Func<LuaThread> start)
+    {
+        LuaThread? thread = null;
+        Protect(() => thread = start());
+        return thread;
+    }
+
+    // While the thread waits: a function that runs it on and answers whether it waits again
+    Func<bool>? Waiting(LuaThread? thread) => thread is { Waiting: true }
+        ? () =>
+        {
+            Protect(thread.Resume);
+            return thread.Waiting;
+        }
+        : null;
+
+    /// <summary>
+    /// A Lua function a native keeps, such as a timer's or a condition's. It runs in a thread of its own, as the game
+    /// runs a callback, where a wait never ends (decisions D70).
+    /// </summary>
     sealed class LuaCode(Simulation simulation, LuaFunction function) : IDisposable
     {
-        public void Run() => simulation.Protect(() => function.Call());
+        public LuaFunction Function => function;
+
+        public void Run() => simulation.Started(function.Start)?.Dispose();
+
+        // A condition passes on true or a number other than 0, and fails on anything else (probes triggers, triggers-2)
+        public bool Evaluate()
+        {
+            using var thread = simulation.Started(function.Start);
+            return thread is { Waiting: false, Results: [true or int and not 0 or float and not 0f, ..] };
+        }
 
         public void Dispose() => function.Dispose();
+    }
+
+    /// <summary>The threads a trigger's actions and ExecuteFunc's function run in, so they can wait.</summary>
+    sealed class ScriptThreads(Simulation simulation) : IScriptThreads
+    {
+        public Func<bool>? Start(Action code) => simulation.Waiting(simulation.Started(((LuaCode)code.Target!).Function.Start));
+
+        public Func<bool>? Start(string name) => simulation.Waiting(simulation.Started(() => simulation._lua.Start(name)));
+
+        public void Yield() => simulation._lua.Yield();
     }
 }

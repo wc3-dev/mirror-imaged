@@ -36,9 +36,13 @@ typedef struct Handle {
 
 #define HANDLES "mirror.handles"
 #define HALT "mirror.halt"
+#define THREADS "mirror.threads"
 
 /* what C#'s callback returns for an error that halts the run */
 #define HALTS (-2)
+
+/* what C#'s callback returns to make the thread calling it wait (yield) */
+#define YIELDS (-3)
 
 static const luaL_Reg libs[] = {
   {"_G", luaopen_base},
@@ -54,6 +58,30 @@ static const luaL_Reg libs[] = {
 static void drop (lua_State *L, const char *name) {
   lua_pushnil(L);
   lua_setfield(L, -2, name);
+}
+
+/* whether L is a thread the natives started (mirror_start): the game runs its callbacks in threads the script can't
+   yield, though a wait (a C# function's YIELDS) can */
+static int ownthread (lua_State *L) {
+  int own;
+  lua_getfield(L, LUA_REGISTRYINDEX, THREADS);
+  lua_pushthread(L);
+  own = lua_rawget(L, -2) != LUA_TNIL;
+  lua_pop(L, 2);
+  return own;
+}
+
+static int coyield (lua_State *L) {
+  if (ownthread(L)) {
+    lua_pushliteral(L, "attempt to yield across a C-call boundary");
+    return lua_error(L);
+  }
+  return lua_yield(L, lua_gettop(L));
+}
+
+static int coisyieldable (lua_State *L) {
+  lua_pushboolean(L, lua_isyieldable(L) && !ownthread(L));
+  return 1;
 }
 
 /* No io, debug or package; no dofile, loadfile or collectgarbage; os with only clock, date, difftime and
@@ -74,6 +102,18 @@ static int openlibs (lua_State *L) {
   drop(L, "random");
   drop(L, "randomseed");
   lua_pop(L, 1);
+  lua_getfield(L, -1, LUA_COLIBNAME);
+  lua_pushcfunction(L, coyield);
+  lua_setfield(L, -2, "yield");
+  lua_pushcfunction(L, coisyieldable);
+  lua_setfield(L, -2, "isyieldable");
+  lua_pop(L, 1);
+  lua_newtable(L);  /* the natives' threads, held weakly */
+  lua_createtable(L, 0, 1);
+  lua_pushliteral(L, "k");
+  lua_setfield(L, -2, "__mode");
+  lua_setmetatable(L, -2);
+  lua_setfield(L, LUA_REGISTRYINDEX, THREADS);
   lua_getfield(L, -1, LUA_OSLIBNAME);
   lua_createtable(L, 0, 4);
   for (name = os_kept; *name; name++) {
@@ -115,6 +155,13 @@ LUALIB_API void mirror_close (lua_State *L) {
   mirror_arena_free(arena);
 }
 
+/* == holds for the same handle seen as two types, as the game's does: GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED.
+   Handles are the only full userdata in the sandbox, so both are one. */
+static int handleeq (lua_State *L) {
+  lua_pushboolean(L, ((Handle *)lua_touserdata(L, 1))->id == ((Handle *)lua_touserdata(L, 2))->id);
+  return 1;
+}
+
 /* Pushes the userdata standing for handle id as the declared type named type: the same one while Lua holds it, with
    a metatable named after the type, so tostring writes "timer: <address>" as the game's does. */
 static void pushhandle (lua_State *L, int id, const char *type, size_t length) {
@@ -138,7 +185,10 @@ static void pushhandle (lua_State *L, int id, const char *type, size_t length) {
     h = (Handle *)lua_newuserdata(L, sizeof(Handle));
     h->id = id;
     h->type = lua_tostring(L, -4);  /* a short string, kept by the metatable's __name and the registry */
-    luaL_newmetatable(L, h->type);
+    if (luaL_newmetatable(L, h->type)) {
+      lua_pushcfunction(L, handleeq);
+      lua_setfield(L, -2, "__eq");
+    }
     lua_setmetatable(L, -2);
     lua_pushvalue(L, -1);
     lua_rawseti(L, -3, id);
@@ -251,6 +301,7 @@ static int trampoline (lua_State *L) {
     }
   }
   n = callback(L, &results);
+  if (n == YIELDS) return lua_yield(L, 0);
   if (n >= 0) {
     pushcsharp(L, results, n);
     return n;
@@ -370,4 +421,63 @@ LUALIB_API int mirror_setglobal (lua_State *L, const char *name, const ManagedVa
 LUALIB_API int mirror_register (lua_State *L, const char *name, void *state, int id) {
   Request r = {name, NULL, id, state, LUA_NOREF};
   return protect(L, doregister, &r, 0);
+}
+
+/* a new thread of the natives' own, to call the global name, or the function ref when there is no name; the
+   thread's reference is left in r->ref */
+static int dostart (lua_State *L) {
+  Request *r = (Request *)lua_touserdata(L, 1);
+  lua_State *co = lua_newthread(L);
+  lua_getfield(L, LUA_REGISTRYINDEX, THREADS);
+  lua_pushvalue(L, -2);
+  lua_pushboolean(L, 1);
+  lua_rawset(L, -3);
+  lua_pop(L, 1);
+  if (r->name == NULL) lua_rawgeti(L, LUA_REGISTRYINDEX, r->ref);
+  else lua_getglobal(L, r->name);
+  lua_xmove(L, co, 1);
+  r->ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  return 0;
+}
+
+/* Runs thread r->ref on. Ended, it is let go of and leaves what it returned, or raises its error; r->n is 1 when it
+   yielded instead, and it is kept. */
+static int doresume (lua_State *L) {
+  Request *r = (Request *)lua_touserdata(L, 1);
+  lua_State *co;
+  int status, n;
+  lua_rawgeti(L, LUA_REGISTRYINDEX, r->ref);
+  co = lua_tothread(L, -1);
+  status = lua_resume(co, L, 0);
+  r->n = status == LUA_YIELD;
+  if (r->n) {
+    lua_settop(co, 0);  /* what it yielded, which nothing reads */
+    return 0;
+  }
+  luaL_unref(L, LUA_REGISTRYINDEX, r->ref);  /* the thread stays on this stack until this returns */
+  if (status != LUA_OK) {
+    lua_xmove(co, L, 1);
+    return lua_error(L);
+  }
+  n = lua_gettop(co);
+  luaL_checkstack(L, n, "too many results");
+  lua_xmove(co, L, n);
+  return n;
+}
+
+/* starts the global name, or the function ref when there is no name, in a new thread kept as *thread, for
+   mirror_resume to run */
+LUALIB_API int mirror_start (lua_State *L, const char *name, int ref, int *thread) {
+  Request r = {name, NULL, 0, NULL, ref};
+  int status = protect(L, dostart, &r, 0);
+  *thread = r.ref;
+  return status;
+}
+
+/* runs the thread on until it ends, leaving what it returned, or yields (*yielded 1); an error ends it */
+LUALIB_API int mirror_resume (lua_State *L, int thread, int *yielded) {
+  Request r = {NULL, NULL, 0, NULL, thread};
+  int status = protect(L, doresume, &r, LUA_MULTRET);
+  *yielded = status == LUA_OK && r.n;
+  return status;
 }

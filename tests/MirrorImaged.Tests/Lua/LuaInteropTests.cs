@@ -27,15 +27,17 @@ public sealed class LuaInteropTests : IDisposable
         Assert.Equal(new LuaHandle("timer", 7), _lua.Run("return make()")[0]);
     }
 
-    // facts, "Handles and identity": the same object returned as another type is another userdata
+    // facts, "Handles and identity": the same object returned as another type is another userdata; == holds between
+    // them (probe triggers-2: GetTriggerWidget() == u, GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED)
     [Fact]
     public void AHandleIsTheSameUserdataAsOneTypeAndAnotherAsAnother()
     {
         _lua.Register("timer", args => [new LuaHandle("timer", (int)args[0]!)]);
         _lua.Register("agent", args => [new LuaHandle("agent", (int)args[0]!)]);
-        Assert.Equal([true, false, false, true], _lua.Run("""
+        Assert.Equal([true, false, false, true, true, false, true], _lua.Run("""
             local t = {[timer(1)] = 'one'}
-            return timer(1) == timer(1), timer(1) == timer(2), timer(1) == agent(1), t[timer(1)] == 'one'
+            return rawequal(timer(1), timer(1)), timer(1) == timer(2), rawequal(timer(1), agent(1)), t[timer(1)] == 'one',
+              timer(1) == agent(1), agent(1) == agent(2), t[agent(1)] == nil
             """));
         Assert.StartsWith("agent: ", (string)_lua.Run("return tostring(agent(1))")[0]!);
     }

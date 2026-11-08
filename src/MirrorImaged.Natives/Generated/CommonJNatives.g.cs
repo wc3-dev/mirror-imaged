@@ -88,9 +88,6 @@ public sealed partial class GameNatives
     public void AllowHeroGlowOnUnit(unit? whichUnit) => throw new MissingNativeException("AllowHeroGlowOnUnit");
 
     [Native(Level.Missing)]
-    public boolexpr? And(boolexpr? operandA, boolexpr? operandB) => throw new MissingNativeException("And");
-
-    [Native(Level.Missing)]
     public float Asin(float y) => throw new MissingNativeException("Asin");
 
     [Native(Level.Missing)]
@@ -1477,9 +1474,6 @@ public sealed partial class GameNatives
     public void CommandAI(player? num, int command, int data) => throw new MissingNativeException("CommandAI");
 
     [Native(Level.Missing)]
-    public conditionfunc? Condition(Func<bool>? func) => throw new MissingNativeException("Condition");
-
-    [Native(Level.Missing)]
     public bool CopySaveGame(string? sourceSaveName, string? destSaveName) => throw new MissingNativeException("CopySaveGame");
 
     [Native(Level.Missing)]
@@ -1579,9 +1573,6 @@ public sealed partial class GameNatives
     public trackable? CreateTrackable(string? trackableModelPath, float x, float y, float facing) => throw new MissingNativeException("CreateTrackable");
 
     [Native(Level.Missing)]
-    public trigger? CreateTrigger() => throw new MissingNativeException("CreateTrigger");
-
-    [Native(Level.Missing)]
     public ubersplat? CreateUbersplat(float x, float y, string? name, int red, int green, int blue, int alpha, bool forcePaused, bool noBirthTime) => throw new MissingNativeException("CreateUbersplat");
 
     [Native(Level.Missing)]
@@ -1621,22 +1612,13 @@ public sealed partial class GameNatives
     public float Deg2Rad(float degrees) => throw new MissingNativeException("Deg2Rad");
 
     [Native(Level.Missing)]
-    public void DestroyBoolExpr(boolexpr? e) => throw new MissingNativeException("DestroyBoolExpr");
-
-    [Native(Level.Missing)]
     public void DestroyCommandButtonEffect(commandbuttoneffect? whichEffect) => throw new MissingNativeException("DestroyCommandButtonEffect");
-
-    [Native(Level.Missing)]
-    public void DestroyCondition(conditionfunc? c) => throw new MissingNativeException("DestroyCondition");
 
     [Native(Level.Missing)]
     public void DestroyDefeatCondition(defeatcondition? whichCondition) => throw new MissingNativeException("DestroyDefeatCondition");
 
     [Native(Level.Missing)]
     public void DestroyEffect(effect? whichEffect) => throw new MissingNativeException("DestroyEffect");
-
-    [Native(Level.Missing)]
-    public void DestroyFilter(filterfunc? f) => throw new MissingNativeException("DestroyFilter");
 
     [Native(Level.Missing)]
     public void DestroyFogModifier(fogmodifier? whichFogModifier) => throw new MissingNativeException("DestroyFogModifier");
@@ -1675,9 +1657,6 @@ public sealed partial class GameNatives
     public void DestroyTimerDialog(timerdialog? whichDialog) => throw new MissingNativeException("DestroyTimerDialog");
 
     [Native(Level.Missing)]
-    public void DestroyTrigger(trigger? whichTrigger) => throw new MissingNativeException("DestroyTrigger");
-
-    [Native(Level.Missing)]
     public void DestroyUbersplat(ubersplat? whichSplat) => throw new MissingNativeException("DestroyUbersplat");
 
     [Native(Level.Missing)]
@@ -1709,9 +1688,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void DisableRestartMission(bool flag) => throw new MissingNativeException("DisableRestartMission");
-
-    [Native(Level.Missing)]
-    public void DisableTrigger(trigger? whichTrigger) => throw new MissingNativeException("DisableTrigger");
 
     [Native(Level.Missing)]
     public void DisallowHeroGlowOnUnit(unit? whichUnit) => throw new MissingNativeException("DisallowHeroGlowOnUnit");
@@ -1747,9 +1723,6 @@ public sealed partial class GameNatives
     public void EnableSelect(bool state, bool ui) => throw new MissingNativeException("EnableSelect");
 
     [Native(Level.Missing)]
-    public void EnableTrigger(trigger? whichTrigger) => throw new MissingNativeException("EnableTrigger");
-
-    [Native(Level.Missing)]
     public void EnableUserControl(bool b) => throw new MissingNativeException("EnableUserControl");
 
     [Native(Level.Missing)]
@@ -1775,12 +1748,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void EnumItemsInRect(rect? r, boolexpr? filter, Action? actionFunc) => throw new MissingNativeException("EnumItemsInRect");
-
-    [Native(Level.Missing)]
-    public void ExecuteFunc(string? funcName) => throw new MissingNativeException("ExecuteFunc");
-
-    [Native(Level.Missing)]
-    public filterfunc? Filter(Func<bool>? func) => throw new MissingNativeException("Filter");
 
     [Native(Level.Missing)]
     public void FinishUbersplat(ubersplat? whichSplat) => throw new MissingNativeException("FinishUbersplat");
@@ -2041,9 +2008,6 @@ public sealed partial class GameNatives
     public player? GetEventDetectingPlayer() => throw new MissingNativeException("GetEventDetectingPlayer");
 
     [Native(Level.Missing)]
-    public gamestate? GetEventGameState() => throw new MissingNativeException("GetEventGameState");
-
-    [Native(Level.Missing)]
     public string? GetEventPlayerChatString() => throw new MissingNativeException("GetEventPlayerChatString");
 
     [Native(Level.Missing)]
@@ -2114,9 +2078,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public int GetHeroXP(unit? whichHero) => throw new MissingNativeException("GetHeroXP");
-
-    [Native(Level.Missing)]
-    public int GetIntegerGameState(igamestate? whichIntegerGameState) => throw new MissingNativeException("GetIntegerGameState");
 
     [Native(Level.Missing)]
     public int GetIssuedOrderId() => throw new MissingNativeException("GetIssuedOrderId");
@@ -2470,15 +2431,6 @@ public sealed partial class GameNatives
     public destructable? GetTriggerDestructable() => throw new MissingNativeException("GetTriggerDestructable");
 
     [Native(Level.Missing)]
-    public int GetTriggerEvalCount(trigger? whichTrigger) => throw new MissingNativeException("GetTriggerEvalCount");
-
-    [Native(Level.Missing)]
-    public eventid? GetTriggerEventId() => throw new MissingNativeException("GetTriggerEventId");
-
-    [Native(Level.Missing)]
-    public int GetTriggerExecCount(trigger? whichTrigger) => throw new MissingNativeException("GetTriggerExecCount");
-
-    [Native(Level.Missing)]
     public player? GetTriggerPlayer() => throw new MissingNativeException("GetTriggerPlayer");
 
     [Native(Level.Missing)]
@@ -2492,9 +2444,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public trackable? GetTriggeringTrackable() => throw new MissingNativeException("GetTriggeringTrackable");
-
-    [Native(Level.Missing)]
-    public trigger? GetTriggeringTrigger() => throw new MissingNativeException("GetTriggeringTrigger");
 
     [Native(Level.Missing)]
     public item? GetUnequippedItem() => throw new MissingNativeException("GetUnequippedItem");
@@ -2846,12 +2795,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public bool IsTimerDialogDisplayed(timerdialog? whichDialog) => throw new MissingNativeException("IsTimerDialogDisplayed");
-
-    [Native(Level.Missing)]
-    public bool IsTriggerEnabled(trigger? whichTrigger) => throw new MissingNativeException("IsTriggerEnabled");
-
-    [Native(Level.Missing)]
-    public bool IsTriggerWaitOnSleeps(trigger? whichTrigger) => throw new MissingNativeException("IsTriggerWaitOnSleeps");
 
     [Native(Level.Missing)]
     public bool IsUnit(unit? whichUnit, unit? whichSpecifiedUnit) => throw new MissingNativeException("IsUnit");
@@ -3295,12 +3238,6 @@ public sealed partial class GameNatives
     public void NewSoundEnvironment(string? environmentName) => throw new MissingNativeException("NewSoundEnvironment");
 
     [Native(Level.Missing)]
-    public boolexpr? Not(boolexpr? operand) => throw new MissingNativeException("Not");
-
-    [Native(Level.Missing)]
-    public boolexpr? Or(boolexpr? operandA, boolexpr? operandB) => throw new MissingNativeException("Or");
-
-    [Native(Level.Missing)]
     public int OrderId(string? orderIdString) => throw new MissingNativeException("OrderId");
 
     [Native(Level.Missing)]
@@ -3551,9 +3488,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void ResetToGameCamera(float duration) => throw new MissingNativeException("ResetToGameCamera");
-
-    [Native(Level.Missing)]
-    public void ResetTrigger(trigger? whichTrigger) => throw new MissingNativeException("ResetTrigger");
 
     [Native(Level.Missing)]
     public void ResetUbersplat(ubersplat? whichSplat) => throw new MissingNativeException("ResetUbersplat");
@@ -3953,9 +3887,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SetImageType(image? whichImage, int imageType) => throw new MissingNativeException("SetImageType");
-
-    [Native(Level.Missing)]
-    public void SetIntegerGameState(igamestate? whichIntegerGameState, int value) => throw new MissingNativeException("SetIntegerGameState");
 
     [Native(Level.Missing)]
     public void SetIntroShotModel(string? introModelPath) => throw new MissingNativeException("SetIntroShotModel");
@@ -4483,27 +4414,6 @@ public sealed partial class GameNatives
     public void TimerDialogSetTitleColor(timerdialog? whichDialog, int red, int green, int blue, int alpha) => throw new MissingNativeException("TimerDialogSetTitleColor");
 
     [Native(Level.Missing)]
-    public triggeraction? TriggerAddAction(trigger? whichTrigger, Action? actionFunc) => throw new MissingNativeException("TriggerAddAction");
-
-    [Native(Level.Missing)]
-    public triggercondition? TriggerAddCondition(trigger? whichTrigger, boolexpr? condition) => throw new MissingNativeException("TriggerAddCondition");
-
-    [Native(Level.Missing)]
-    public void TriggerClearActions(trigger? whichTrigger) => throw new MissingNativeException("TriggerClearActions");
-
-    [Native(Level.Missing)]
-    public void TriggerClearConditions(trigger? whichTrigger) => throw new MissingNativeException("TriggerClearConditions");
-
-    [Native(Level.Missing)]
-    public bool TriggerEvaluate(trigger? whichTrigger) => throw new MissingNativeException("TriggerEvaluate");
-
-    [Native(Level.Missing)]
-    public void TriggerExecute(trigger? whichTrigger) => throw new MissingNativeException("TriggerExecute");
-
-    [Native(Level.Missing)]
-    public void TriggerExecuteWait(trigger? whichTrigger) => throw new MissingNativeException("TriggerExecuteWait");
-
-    [Native(Level.Missing)]
     public @event? TriggerRegisterCommandEvent(trigger? whichTrigger, int whichAbility, string? order) => throw new MissingNativeException("TriggerRegisterCommandEvent");
 
     [Native(Level.Missing)]
@@ -4525,9 +4435,6 @@ public sealed partial class GameNatives
     public @event? TriggerRegisterGameEvent(trigger? whichTrigger, gameevent? whichGameEvent) => throw new MissingNativeException("TriggerRegisterGameEvent");
 
     [Native(Level.Missing)]
-    public @event? TriggerRegisterGameStateEvent(trigger? whichTrigger, gamestate? whichState, limitop? opcode, float limitval) => throw new MissingNativeException("TriggerRegisterGameStateEvent");
-
-    [Native(Level.Missing)]
     public @event? TriggerRegisterLeaveRegion(trigger? whichTrigger, region? whichRegion, boolexpr? filter) => throw new MissingNativeException("TriggerRegisterLeaveRegion");
 
     [Native(Level.Missing)]
@@ -4544,12 +4451,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public @event? TriggerRegisterPlayerUnitEvent(trigger? whichTrigger, player? whichPlayer, playerunitevent? whichPlayerUnitEvent, boolexpr? filter) => throw new MissingNativeException("TriggerRegisterPlayerUnitEvent");
-
-    [Native(Level.Missing)]
-    public @event? TriggerRegisterTimerEvent(trigger? whichTrigger, float timeout, bool periodic) => throw new MissingNativeException("TriggerRegisterTimerEvent");
-
-    [Native(Level.Missing)]
-    public @event? TriggerRegisterTimerExpireEvent(trigger? whichTrigger, timer? t) => throw new MissingNativeException("TriggerRegisterTimerExpireEvent");
 
     [Native(Level.Missing)]
     public @event? TriggerRegisterTrackableHitEvent(trigger? whichTrigger, trackable? t) => throw new MissingNativeException("TriggerRegisterTrackableHitEvent");
@@ -4570,18 +4471,6 @@ public sealed partial class GameNatives
     public @event? TriggerRegisterUpgradeCommandEvent(trigger? whichTrigger, int whichUpgrade) => throw new MissingNativeException("TriggerRegisterUpgradeCommandEvent");
 
     [Native(Level.Missing)]
-    public @event? TriggerRegisterVariableEvent(trigger? whichTrigger, string? varName, limitop? opcode, float limitval) => throw new MissingNativeException("TriggerRegisterVariableEvent");
-
-    [Native(Level.Missing)]
-    public void TriggerRemoveAction(trigger? whichTrigger, triggeraction? whichAction) => throw new MissingNativeException("TriggerRemoveAction");
-
-    [Native(Level.Missing)]
-    public void TriggerRemoveCondition(trigger? whichTrigger, triggercondition? whichCondition) => throw new MissingNativeException("TriggerRemoveCondition");
-
-    [Native(Level.Missing)]
-    public void TriggerSleepAction(float timeout) => throw new MissingNativeException("TriggerSleepAction");
-
-    [Native(Level.Missing)]
     public void TriggerSyncReady() => throw new MissingNativeException("TriggerSyncReady");
 
     [Native(Level.Missing)]
@@ -4589,9 +4478,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void TriggerWaitForSound(sound? s, float offset) => throw new MissingNativeException("TriggerWaitForSound");
-
-    [Native(Level.Missing)]
-    public void TriggerWaitOnSleeps(trigger? whichTrigger, bool flag) => throw new MissingNativeException("TriggerWaitOnSleeps");
 
     [Native(Level.Missing)]
     public bool UnitAddAbility(unit? whichUnit, int abilityId) => throw new MissingNativeException("UnitAddAbility");

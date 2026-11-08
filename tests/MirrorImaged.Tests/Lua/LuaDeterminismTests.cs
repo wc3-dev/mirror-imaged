@@ -113,6 +113,6 @@ public sealed class LuaDeterminismTests
         Assert.Equal([PairsHash, Finalized, NewTable], result);
     }
 
-    const int PairsHash = 2155006, Finalized = 2000;
-    const string NewTable = "table: 00000000006441B0";
+    const int PairsHash = 4389208, Finalized = 2000;
+    const string NewTable = "table: 0000000000580CB0";
 }

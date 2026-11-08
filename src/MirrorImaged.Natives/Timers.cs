@@ -138,7 +138,12 @@ public sealed partial class GameNatives
         }
         var outer = _expired;
         _expired = t;
-        try { t.Callback?.Invoke(); }
+        try
+        {
+            // its expiry events fire first (facts, "Errors and callbacks")
+            foreach (var registered in t.ExpireEvents?.ToArray() ?? []) Fire(registered, Convert<gameevent>(TimerExpired));
+            t.Callback?.Invoke();
+        }
         finally { _expired = outer; }
     }
 
@@ -151,5 +156,5 @@ public sealed partial class GameNatives
     }
 
     // A callback a native lets go of is disposed when it can be, as a Lua function is (MirrorImaged's LuaCode).
-    static void Release(Action? callback) => (callback?.Target as IDisposable)?.Dispose();
+    static void Release(Delegate? callback) => (callback?.Target as IDisposable)?.Dispose();
 }
