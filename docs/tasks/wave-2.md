@@ -16,6 +16,8 @@ Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time.
   buffs, upgrades, destructables, doodads, and the gameplay constants), merged with the map's changes as the game
   merges them (facts, "Object data", "World Editor and map files").
 - One data model the world reads: an object by its id, each field by its code and level.
+- `GetLocalizedString`, `GetLocalizedHotkey` and `ParseTags` (string tables from the game's data; `blizzard.j` calls
+  `GetLocalizedString` often), left by W1-3.
 - Left by W1-4 for this task: an upgrade's level count (`GetPlayerTechMaxAllowed`'s default and the cap on
   `AddPlayerTechResearched`, D93), the map's day length and hours (`DayHours`, `DayLength`; D96), and the player
   names in `war3map.w3i` and `war3map.wts` (D93: a named slot reads its map name; the score screen showed "The Horde").
