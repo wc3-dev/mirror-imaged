@@ -405,7 +405,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
 - **D68. Left for W1-7,** whose JASS rules reach blizzard.j too, as it goes through the same transpiler: a whole number
   given to a real stays a Lua integer (`bj_MELEE_MINE_SEARCH_RADIUS` is the integer 2000; `docs/upstream.md`), and
   JASS's integer division is Lua's `//`, which floors where JASS cuts toward zero. What the game's own Lua gives for
-  these is not measured. After W1-1: 2 Exact, 108 Close, 2 Recorded, 1,723 Missing.
+  these is not measured (measured since: D131 to D133). After W1-1: 2 Exact, 108 Close, 2 Recorded, 1,723 Missing.
 
 ### Triggers and threads (W1-2)
 
@@ -500,7 +500,7 @@ functions before it was written.
   with Lua's `bad argument #n to 'X' (string expected, got nil)`, a number is written as `tostring` writes it (Lua's own
   `%.7g` through the library, and `.0` after a whole number), and the native gets the string up to its first NUL. This
   replaces D49's "a string takes nil as null". Measured on seven natives (nil), three (numbers) and three (NUL); that
-  the game binds every native alike is inferred.
+  the game binds every native alike is inferred. (A JASS map's natives take null strings: D136.)
 - **D81. The maths natives call the Lua library's float functions** (`native/mifloat.c`, through `MirrorImaged.Lua`'s
   `Native`, which `MirrorImaged.Natives` now references), so they give `math.*`'s bits here as the game's natives give
   the game's `math.*`'s: Close where that model is (D31, D32), the game's value beside the model's in the tests (34 of
@@ -700,8 +700,8 @@ measured and say so where not.
   reading of the four characters, a negative one in parentheses (`-'éab'` would read as a Lua comment). War3Net reads a
   byte from 0x80 up after the first as signed: `'éab'` (UTF-8 `C3 A9 61 62`) is -1029086878, where its bytes, and the
   old `FourCC`, give -1012309662. Neither that nor the game's reading of a backslash in a rawcode is measured: W1-7's
-  JASS probes are to settle rawcodes with high bytes. This reaches blizzard.j's rawcodes too, with the same values for
-  its rawcodes, which are all ASCII. The file runs in a Lua thread of its own, as W1-2 runs a callback; a wait in it
+  JASS probes are to settle rawcodes with high bytes (settled by D137: War3Net's reading is the game's). This reaches
+  blizzard.j's rawcodes too, with the same values for its rawcodes, which are all ASCII. The file runs in a Lua thread of its own, as W1-2 runs a callback; a wait in it
   (`TriggerSleepAction`) lets the rest of the file go (not measured). The Lua is loaded as the chunk named by the
   file's path, so an error in it reads `MyMap\save.pld:N:` (N the transpiled Lua's line, as D65's are), and runs with
   those natives and globals as they were before blizzard.j and the map ran, and `__jarray`, which War3Net makes a JASS
@@ -1155,7 +1155,7 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
 
 ### The Lua number model fitted to the game (W1-10)
 
-The measurements are twelve probes in `probes/` (`numbers-*`, `string-order`, `timers-2`, `condition-places`), each run
+The measurements are eleven probes in `probes/` (`numbers-*`, `string-order`, `timers-2`, `condition-places`), each run
 twice with the same lines by the game runner, 11-08, their lines in `probes/expected` and `docs/facts.md`, "The number model's probes". Each
 model was found in Python against those lines first, then written into `native/mifloat.c`.
 
@@ -1245,6 +1245,117 @@ model was found in Python against those lines first, then written into `native/m
   `And(nil, nil)`, `Or(nil, nil)`, `Not(nil)`, `Condition(nil)` and `Filter(nil)` made after a destroy took no place,
   and the next `Condition` did. After W1-10, with W2-1 merged first: 133 Exact, 266 Close, 11 Recorded, 1,425
   Missing, as after W2-1 (D216).
+
+### JASS maps (W1-7)
+
+The measurements are thirteen JASS probes, `probes/jass-*.j`, run in the game's JASS machine (D130), and
+`probes/blizzard-numbers.lua`, in `docs/facts.md`, "JASS maps", with their lines in `probes/expected`. W1-8's
+comparison (D120) runs them as it runs the Lua probes: `ProbeComparison` takes `probes/*.j` too, and builds and runs
+each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions below, `probes/differences` says so.
+
+- **D130. A JASS map runs as Lua.** `Simulation.Load` reads `war3map.lua`, else `war3map.j` (or `scripts\war3map.j`,
+  where older maps keep it); a map with both runs the one `war3map.w3i`'s script language names (not measured). A JASS
+  script is made into Lua by War3Net's transpiler against common.j's natives and
+  globals (declarations made from `GameNatives`, as the Preloader's, D102) and the installed blizzard.j, with JASS's
+  rules (D132 to D137), and runs as the chunk `war3map.lua`, its `config` and `main` as a Lua map's, so an error names
+  the Lua's line. JASS that doesn't parse, or calls, reads or sets a function or variable no file declares, stops the
+  load with an `InvalidDataException` ("The game wouldn't load ..."): the game didn't load a map whose JASS it refused
+  (a rawcode `'a\bc'`, and a first jass-numbers with exponent literals); that an undeclared name does the same is
+  inferred; Lua would call nil. Any other failure to make the Lua is MirrorImaged's, a `NotSupportedException` that says
+  so. A probe can be JASS: `ProbeMap.BuildJass` puts it in a `war3map.j` beside `out` and
+  `done` written in JASS, and calls no blizzard.j function, so the tests' seam (`Load(path, "")`, which transpiles
+  against common.j only) runs the JASS probes' maps on every platform; JASS has no `pcall`, so a probe runs what may
+  stop a thread in one of its own (`ExecuteFunc`), and a timer ends the probe 30 s in. The map with `'a\bc'`, which
+  gives no lines, is a game test's inline probe instead. The rewriting is `Jass.cs`'s, the JASS map's run
+  `Simulation.Jass.cs`'s.
+- **D131. blizzard.j two ways.** A Lua map's blizzard.j is the game's own Lua: there `ModuloInteger(7, -3)` is -5,
+  flooring as Lua's `//` does (probe blizzard-numbers), so the integer `/` stays War3Net's `//`; and a real global given
+  a whole number is a float (`bj_MELEE_MINE_SEARCH_RADIUS` 2000.0), so a whole number written where a real goes is
+  written as a real, in every place a real is taken: globals measured; locals, sets, arguments and returns inferred.
+  This settles D68's first part for Lua maps (`docs/upstream.md`). A JASS map's blizzard.j is transpiled with JASS's
+  rules, as the game's JASS machine runs it: there `ModuloInteger(7, -3)` is 1, measured on a copy of its body in probe
+  jass-numbers, inferred for blizzard.j's own. The two are cached apart: D66's hash takes the rules. A Preload file stays as D102 has it, without JASS's rules.
+- **D132. Integers.** +, - and * wrap at 32 bits, as Lua's integers here do (probe jass-numbers). `/` cuts toward zero
+  (`-7 / 2` is -3), where Lua's `//` floors, so it calls `MirrorImaged_Divide`. Dividing by zero ends the thread (probe
+  jass-divide-integer), and -2147483648 by -1 closes the game (probe jass-divide-overflow: exit code 1, `BlizzardError`),
+  here a `GameClosedException` stopping the run (D43): `war3map.lua:N: The game closes: ...`. A decimal integer past
+  32 bits wraps (probe jass-integers: 4294967295 is -1, 99999999999 is 1215752191), where Lua would read it as a float,
+  so it is written wrapped, and -2147483648 in hexadecimal, which Lua wraps too.
+- **D133. Integers given to reals** are cut toward zero, as `I2R` (D87): 16777219 is 16777218 set to a real, given to a
+  real parameter, passed to `I2R`, added to 0.0 and written out, where Lua's conversion rounds (16777220). A whole
+  number written out is converted as the JASS is rewritten; another passes through `MirrorImaged_Real` (Lua's
+  conversion where it is exact, else `I2R`), also as the integer side of a sum, product, quotient or comparison with a
+  real, and as a native's real argument (not measured for natives). A function returning real that returns an integer gives the integer's bits as a float, unconverted (16777219 gives
+  0x01000003; probes jass-numbers and jass-reals): `MirrorImaged_Bits`.
+- **D134. Reals.** The JASS machine's arithmetic is taken to be the game's Lua's (D27 to D29): every measured sum,
+  product and quotient agrees once its operands' bits do (1/3, 2/3, 10 × 0.7, 1 - 0.9, 0.1 + 0.2, 3 × 0.1, and the
+  drops of 1 - 2^-30 and the like, and since W1-10's model `1 - 0.001` and `1000 - 0.001`), inferred, not proved. One
+  pair doesn't: `-1 + 0.001` and `-1 - 0.001` (probe jass-reals' ladder at -1) come out a float step from the game's,
+  which look rounded toward minus infinity where the model cuts toward zero; W1-10's model's to settle. A real literal is read as the
+  game's JASS reads it: its whole part and its decimals each as `S2R` reads them, added in the game's arithmetic, and
+  written into the Lua as that float's exact digits (probe jass-literals: 0.1 is 0x3dccccce, a step above the nearest,
+  as `S2R`'s; 1.001 is 0x3f8020c4, a step below `S2R`'s; all 14 fit where D83's `S2R` does, and since W1-10 one
+  differs by its Close step). A real divided by zero ends the thread (probe jass-divide-real), where the game's Lua gives 2^127 (D29): a
+  division whose divisor isn't a nonzero number written out calls `MirrorImaged_DivideReal`. `==` on reals holds when
+  |a - b| < 0.001 or is under two float steps of the larger magnitude (probe jass-equal: the largest equal step on
+  either side at 0, ±1, 0.25, 4, ±1000, 2^20, and 2^12, 2^20 and 2^23 times 1 to 1.875, all fit, swapped too; probe
+  jass-reals agrees), `MirrorImaged_Equal`, also between an integer and a real; `!=` compares exactly (1.0 == 1.0001 and
+  1.0 != 1.0001 both hold), as do `<`, `>`, `<=` and `>=`. Why `==` has two margins isn't known.
+- **D135. The operation limit.** The game ends a JASS thread after 3,000,000 of its operations: loops of eleven
+  shapes ran 428571, 300000, 300000, 333333, 230769, and with an integer's `/`, a real's `==`, a string's `+`, an
+  integer added to a real, a read that may come before a set and one set on both sides of an if, 230769, 250000,
+  230769, 214286, 187499 and 187499 times, 7 to 16 operations each; a thread `ExecuteFunc` starts counts its own, and
+  its caller's count goes on after; a wait (`TriggerSleepAction`) starts the count again (probe jass-threads). A JASS
+  map's Lua state counts Lua instructions instead (`LuaState.OperationLimit`, a count hook set by `sandbox.c`'s
+  `mirror_limit`), from a thread's start and from each wait's end, and for the script's top, `config` and `main` each;
+  past it the thread raises "the thread passed JASS's operation limit", logged as an error (the game says nothing),
+  naming the script's line, and stops as the game's does. JASS's rules are C functions (D138), so only the
+  instructions calling them count. The limit is 2,100,100 instructions, the fewest by which no measured shape stops
+  before the game's does (the call of an empty function or a native, 7 instructions to 10 operations, sets it): the
+  eleven loops then run 1.00 to 2.10 times as often as in the game (525025, 300014, 300014, 700033, 300014, 233345,
+  262513, 233345, 233345, 190918, 262512), a local's arithmetic, cheapest in Lua, the most. Close: counting weighted
+  operations would need Lua's own loop changed. A Lua map has no limit, as in the game.
+- **D136. Variables never set, and null strings.** Reading a variable declared without a value before it is set ends
+  the thread (probe jass-threads: integers, reals, strings, booleans and handles, locals and globals, in arithmetic,
+  joins, conditions, comparisons with null and as arguments; set first, it reads fine). Such a variable starts as
+  `MirrorImaged_Unset`, and a read that may come before a set, by the order of its function's statements, goes
+  through `MirrorImaged_Read`, whose error names the variable: a set inside a loop counts only there, and inside an
+  `if` only there too, but for one made on every side of an if with an else (a side that returns not counting), and
+  one inside a `debug` statement, which never runs, not at all; a global is checked in every function until set
+  there. An array is never unset: an integer array's elements read 0, a string
+  array's null (here a plain table, where War3Net's `__jarray("")` would read ""), a handle array's null. A string's `+`
+  takes null as "", and null + null is null (`MirrorImaged_Join`), `null` written out too. In a JASS map natives take
+  null strings (this replaces D80 there; a Lua map, blizzard.j in it included, still refuses nil, as the game's Lua
+  binding does): `StringLength`, `S2I`, `S2R` and `StringHash` give 0, `SubString` and `StringCase` null, `SaveStr`
+  saves null and gives true, `LoadStr` loads it as null and a key never saved as null too (in Lua "", W1-3), and
+  `ExecuteFunc(null)` runs nothing, all measured (probes jass-threads and jass-executefunc-null); the other natives get
+  C#'s null, not measured, and what string natives give in a JASS map besides for a null argument isn't measured
+  apart from Lua's (the natives give the same). `ExecuteFunc` of a name no function has ran nothing in the game too;
+  here its thread raises, which the log shows, and the run goes on as the game's.
+- **D137. Rawcodes and debug statements.** The game reads a rawcode's bytes as War3Net does, each after the first from
+  0x80 up as signed (probe jass-rawcodes: 'éab' -1029086878, 'aéb' 1623370082, 'abé' 1633796777), so D102's values
+  are the game's; a quote in one is a byte as any other ('ab"c' 1633821283). The game refused a map with `'a\bc'`;
+  here War3Net reads the backslash as an escape and the map runs, not modelled. A `debug` statement never runs (probe
+  jass-debug), as D65 claimed.
+- **D138. The rules' helpers** are C functions in `sandbox.c` (`mirror_jass`, through `LuaState.AddJassFunctions`),
+  Lua globals named `MirrorImaged_*` set before blizzard.j in a JASS map's state only, so the operation limit counts
+  only their calls (D135), and declared to the transpiler, whose syntax factory takes only names JASS allows; a map
+  declaring one of these names would replace it, which no map does. An error they raise, a native's error and the
+  operation limit name the script's line, passing over MirrorImaged's own Lua (the chunk `mirror`), as a halt did
+  already. The rewriter knows each name's type from the files
+  as the transpiler does; `MirrorImaged_Read` is declared real to it, since what JASS's types change (an integer's `/`
+  and a string's `+`) is rewritten before the transpiler sees them.
+- **D139. The JASS maps in `Documents\Warcraft III\Maps`,** read-only: `mirror run` of each, 60 s, after W2-1's merge.
+  Of the 299 JASS maps (and 82 Lua ones, which stop as before), 292 run their script and `config` and stop at the first
+  line of `main`, `GetCameraMargin` (Missing, wave 5), as the Lua maps do (D99); five stop earlier at another Missing
+  native (`DialogCreate` twice and `CreateItemPool` among the globals or `main`'s setup, `Location`, and
+  `TriggerRegisterPlayerUnitEvent` through a BJ function); two don't load as Lua: a function with more than 200
+  locals, Lua's limit (Gaia's ORPG, Survival Chaos Reborn), left for later (JASS has no such limit; moving the extra
+  locals into a table would need the transpiler's output rewritten). The first run found two more, now handled: seven
+  maps declare a native themselves (`native UnitAlive takes unit id returns boolean`, `GetUnitGoldCost`), which the
+  transpiler took twice and refused, so a native the map declares is taken from the map alone; and one (WotLK RPG)
+  has statements after a `return`, which War3Net writes where Lua can't load them (`docs/upstream.md`), so they are
+  left out. After W1-7, with W1-8, W2-1 and W1-10 merged first, the natives' levels are unchanged.
 
 ### Every shipped map loads (W2-9)
 

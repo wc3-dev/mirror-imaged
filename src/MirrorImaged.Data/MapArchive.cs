@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using War3Net.Build;
 using War3Net.Build.Extensions;
+using War3Net.Build.Info;
 using War3Net.IO.Mpq;
 
 namespace MirrorImaged.Data;
@@ -20,11 +21,11 @@ public sealed class MapArchive
     readonly string _path;
     readonly Dictionary<uint, string> _strings = [];
 
-    MapArchive(string path, Map map, byte[]? script, byte[]? misc, IReadOnlyList<string> unread)
+    MapArchive(string path, Map map, (byte[]? Script, bool Jass) script, byte[]? misc, IReadOnlyList<string> unread)
     {
         _path = path;
         Files = map;
-        Script = script;
+        (Script, Jass) = script;
         Misc = misc;
         Unread = unread;
         foreach (var text in map.TriggerStrings?.Strings ?? []) _strings.TryAdd(text.Key, text.Value ?? "");
@@ -33,8 +34,15 @@ public sealed class MapArchive
     /// <summary>The files War3Net reads, in its <c>Map</c>.</summary>
     public Map Files { get; }
 
-    /// <summary>The map's <c>war3map.lua</c>, as it is stored; null for a map without one, as a JASS map is.</summary>
+    /// <summary>
+    /// The map's script as it is stored: its <c>war3map.lua</c> or its <c>war3map.j</c> (also as
+    /// <c>scripts\war3map.j</c>, where older maps keep it), the one <c>war3map.w3i</c>'s script language names when it
+    /// has both; null for a map with neither.
+    /// </summary>
     public byte[]? Script { get; }
+
+    /// <summary>Whether <see cref="Script"/> is JASS, a <c>war3map.j</c>.</summary>
+    public bool Jass { get; }
 
     /// <summary>The map's <c>war3mapMisc.txt</c>, its changes to the gameplay constants.</summary>
     public byte[]? Misc { get; }
@@ -90,7 +98,11 @@ public sealed class MapArchive
             BuffSkinObjectData = Read("war3mapSkin.w3h", reader => reader.ReadBuffObjectData()),
             UpgradeSkinObjectData = Read("war3mapSkin.w3q", reader => reader.ReadUpgradeObjectData()),
         };
-        return new MapArchive(path, map, Bytes(archive, "war3map.lua"), Bytes(archive, "war3mapMisc.txt"), unread);
+        // With both, war3map.w3i's script language chooses (decisions D130; not measured)
+        var (lua, jass) = (Bytes(archive, "war3map.lua"), Bytes(archive, "war3map.j") ?? Bytes(archive, @"scripts\war3map.j"));
+        (byte[]? Script, bool Jass) script = lua is not null && (jass is null || map.Info?.ScriptLanguage != ScriptLanguage.Jass) ? (lua, false)
+            : jass is not null ? (jass, true) : (null, false);
+        return new MapArchive(path, map, script, Bytes(archive, "war3mapMisc.txt"), unread);
     }
 
     /// <summary>A file of the map by its name in the archive (<c>war3mapImported\ui.toc</c>); null when it has none.</summary>

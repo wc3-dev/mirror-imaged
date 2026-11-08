@@ -28,6 +28,12 @@ public sealed partial class GameNatives
     /// <summary>The game's data the natives read: the standard objects and constants with the map's changes, and its files.</summary>
     public GameData Data { get; init; } = new(new StandardData());
 
+    /// <summary>
+    /// Whether the script is a JASS map's, run with JASS's rules (decisions D130): a string the game's JASS gives as null,
+    /// its Lua gives as "" (LoadStr).
+    /// </summary>
+    public bool Jass { get; init; }
+
     T Make<T>(T handle) where T : handle
     {
         handle.Id = _game.NewId();

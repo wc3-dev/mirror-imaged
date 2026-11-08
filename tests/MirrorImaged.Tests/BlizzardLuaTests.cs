@@ -57,6 +57,118 @@ public sealed class BlizzardLuaTests : IDisposable
         Assert.Equal(11, state.Call("Count")[0]);
     }
 
+    // War3Net writes them after Lua's return, which Lua refuses (WotLK RPG 17.11b's war3map.j has such a function)
+    [Fact]
+    public void Statements_after_a_return_are_left_out()
+    {
+        var lua = Blizzard.ToLua(
+            "native Fail takes nothing returns nothing",
+            """
+            function Early takes boolean b returns integer
+                if b then
+                    return 1
+                    call Fail()
+                endif
+                return 2
+                call Fail()
+            endfunction
+            """);
+
+        using var state = new LuaState();
+        state.Run(lua);
+
+        Assert.Equal(1, state.Call("Early", true)[0]);
+        Assert.Equal(2, state.Call("Early", false)[0]);
+    }
+
+    // a whole number given to a real is a real, as the game's own Lua blizzard.j has bj_MELEE_MINE_SEARCH_RADIUS (probe
+    // blizzard-numbers)
+    [Fact]
+    public void A_whole_number_where_a_real_goes_is_a_real()
+    {
+        var lua = Blizzard.ToLua(
+            "native Echo takes real r returns real",
+            """
+            globals
+                constant real RADIUS = 2000
+                real speed = -5
+            endglobals
+            function Half takes real r returns real
+                local real h = 3
+                set h = $10
+                return Echo(1) + h + r - 'a'
+            endfunction
+            function Zero takes nothing returns real
+                return 0
+            endfunction
+            """);
+
+        using var state = new LuaState();
+        state.Register("Echo", args => [args[0]]);
+        state.Run(lua);
+        state.Run("x = { math.type(RADIUS), math.type(speed), math.type(Half(1)), math.type(Zero()), RADIUS, speed, Half(1) }");
+
+        Assert.Equal(["float", "float", "float", "float", 2000f, -5f, -79f], state.Run("return table.unpack(x)"));
+    }
+
+    // With JASS's rules, a variable set on every side of an if needs no check after it, one set on one side does, and
+    // one set before the if needs none inside it (decisions D136)
+    [Fact]
+    public void A_variable_set_on_every_side_of_an_if_is_read_unchecked_after_it()
+    {
+        var lua = Jass.ToLua(
+            [War3Net.CodeAnalysis.Jass.JassSyntaxFactory.ParseCompilationUnit("native Show takes integer i returns nothing")],
+            """
+            function Read takes boolean b returns nothing
+                local integer both
+                local integer one
+                local integer early
+                set early = 0
+                if b then
+                    set both = 1
+                    set one = 1
+                    call Show(early)
+                elseif early == 0 then
+                    set both = 2
+                else
+                    set both = 3
+                    return
+                endif
+                call Show(both)
+                call Show(one)
+            endfunction
+            """,
+            rules: true);
+
+        Assert.DoesNotContain("MirrorImaged_Read(both", lua);
+        Assert.DoesNotContain("MirrorImaged_Read(early", lua);
+        Assert.Contains("MirrorImaged_Read(one, \"one\")", lua);
+    }
+
+    // a debug statement never runs (probe jass-debug), so a set in one leaves the variable unset (decisions D136)
+    [Fact]
+    public void A_set_in_a_debug_statement_leaves_the_variable_unset()
+    {
+        var lua = Jass.ToLua(
+            [War3Net.CodeAnalysis.Jass.JassSyntaxFactory.ParseCompilationUnit("native Show takes string s returns nothing")],
+            """
+            function Read takes boolean b returns nothing
+                local string s
+                debug set s = "a"
+                debug if b then
+                    set s = "b"
+                else
+                    set s = "c"
+                endif
+                call Show(s)
+            endfunction
+            """,
+            rules: true);
+
+        Assert.Contains("MirrorImaged_Read(s, \"s\")", lua);
+        Assert.DoesNotContain("\"a\"", lua);
+    }
+
     [Fact]
     public void The_cache_s_file_is_named_for_the_game_s_build_in_the_user_s_cache()
     {

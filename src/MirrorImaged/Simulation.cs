@@ -43,13 +43,16 @@ public sealed partial class Simulation : IDisposable
     readonly Game _game;
     readonly GameNatives _natives;
     readonly LuaState _lua = new() { Halts = e => e is MissingNativeException or GameClosedException };
+    readonly bool _jass;
     TimeSpan _time;
 
-    Simulation(GameData data, string blizzard, SimulationOptions options)
+    // script: the map's Lua, for a JASS map made from its war3map.j with JASS's rules, which the run keeps (decisions D130)
+    Simulation(GameData data, byte[] script, string blizzard, SimulationOptions options)
     {
         var info = data.Map!.Files.Info;
+        _jass = data.Map.Jass;
         _game = new Game(options.Seed);
-        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this), Documents = options.Documents, RunPreloadFile = RunPreloadFile, Data = data };
+        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this), Documents = options.Documents, RunPreloadFile = RunPreloadFile, Data = data, Jass = _jass };
         try
         {
             var (users, computers, others) = Lineup(info, options);
@@ -60,8 +63,10 @@ public sealed partial class Simulation : IDisposable
                 _lua[name] = value is handle h ? ToLua(h, h.GetType()) : value;
             AddLuaExtras();
             AddPreloader();
+            if (_jass) AddJassRules();
             _lua.Run(blizzard, "blizzard.lua");
-            Protect(() => _lua.Run(data.Map.Script!, "war3map.lua"));
+            if (_jass) _lua.OperationLimit = OperationLimit;
+            Protect(() => _lua.Run(script, "war3map.lua"));
             Protect(() => _lua.Call("config"));
             var flags = info?.MapFlags ?? 0;
             _natives.Seat(users, computers, others, flags.HasFlag(MapFlags.UseCustomForces), flags.HasFlag(MapFlags.FixedPlayerSettingsForCustomForces),
@@ -80,12 +85,15 @@ public sealed partial class Simulation : IDisposable
     }
 
     /// <summary>
-    /// Loads the map at <paramref name="path"/> and runs <c>blizzard.j</c>, its script and <c>config</c>, seats the
+    /// Loads the map at <paramref name="path"/> and runs <c>blizzard.j</c>, its script and <c>config</c> (a JASS map's
+    /// <c>war3map.j</c> made into Lua that keeps JASS's rules, and blizzard.j likewise), seats the
     /// players as the lobby does (<see cref="SimulationOptions.Users"/>, from the map's <c>war3map.w3i</c> unless the
     /// options say), and runs <c>main</c>; if a Missing native stops the run there, the simulation comes back
     /// <see cref="Stopped"/>.
     /// </summary>
-    /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>.</exception>
+    /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c> or <c>war3map.j</c>.</exception>
+    /// <exception cref="InvalidDataException">The map's <c>war3map.j</c> isn't JASS the game loads.</exception>
+    /// <exception cref="NotSupportedException">MirrorImaged can't make the map's <c>war3map.j</c> into Lua.</exception>
     /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> and standard data every run needs.</exception>
     /// <exception cref="LuaException"><c>blizzard.j</c>'s Lua doesn't load or run (<c>blizzard.lua:N: ...</c>), so no map can.</exception>
     /// <exception cref="ArgumentException">
@@ -95,23 +103,26 @@ public sealed partial class Simulation : IDisposable
     public static Simulation Load(string path, SimulationOptions? options = null)
     {
         var map = Read(path); // first, so a missing map says so whether or not the game is installed
-        var blizzard = Blizzard.Lua();
-        return new(new GameData(StandardData.Installed(GameInstall.Require(), map.Files.Info), map), blizzard, options ?? new SimulationOptions());
+        var blizzard = Blizzard.Lua(map.Jass);
+        var script = map.Jass ? JassLua(path, map.Script!, Blizzard.Syntax()) : map.Script!;
+        return new(new GameData(StandardData.Installed(GameInstall.Require(), map.Files.Info), map), script, blizzard, options ?? new SimulationOptions());
     }
 
     /// <summary>
     /// As <see cref="Load(string, SimulationOptions?)"/>, with <paramref name="blizzard"/> run in place of the
     /// installed game's <c>blizzard.j</c> and <paramref name="data"/> in place of its standard data (none when null):
-    /// <c>""</c> and the data a test gives for the tests of the runtime itself, which run without the game.
+    /// <c>""</c> and the data a test gives for the tests of the runtime itself, which run without the game. A JASS map's
+    /// script is then made into Lua knowing only common.j.
     /// </summary>
     internal static Simulation Load(string path, string blizzard, SimulationOptions? options = null, StandardData? data = null)
     {
         var map = Read(path);
-        return new(new GameData(data ?? new StandardData(), map), blizzard, options ?? new SimulationOptions());
+        var script = map.Jass ? JassLua(path, map.Script!, null) : map.Script!;
+        return new(new GameData(data ?? new StandardData(), map), script, blizzard, options ?? new SimulationOptions());
     }
 
     static MapArchive Read(string path) =>
-        MapArchive.Read(path) is { Script: not null } map ? map : throw new FileNotFoundException($"{path} has no war3map.lua; only Lua maps run so far", path);
+        MapArchive.Read(path) is { Script: not null } map ? map : throw new FileNotFoundException($"{path} has no war3map.lua or war3map.j", path);
 
     // Who the lobby seats: the people and computers the options name, else the map's first user and its computers, and
     // the map's neutral and rescuable slots, which always play. Checked against war3map.w3i's slots before any Lua runs:
