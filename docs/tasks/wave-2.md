@@ -6,6 +6,10 @@ of the tests, and every native a fact measures is Exact.
 
 Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time.
 
+Parallel lanes: decision numbers by range: W2-1 D200-D219, W2-2 D220-D239, W2-3 D240-D249, W2-4 D250-D259,
+W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289. Generated-file conflicts are resolved by re-running the generator.
+W2-1 started before wave 1 finished (11-08): it touches the data loading, which wave 1's open lanes don't.
+
 ## W2-1 Map files and the game's standard data
 
 - Every map file: `war3map.w3i` (players, forces, settings), `war3map.wts` strings (`TRIGSTR_n`), object data
@@ -20,7 +24,9 @@ Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time.
   `GetLocalizedString` often), left by W1-3.
 - Left by W1-4 for this task: an upgrade's level count (`GetPlayerTechMaxAllowed`'s default and the cap on
   `AddPlayerTechResearched`, D93), the map's day length and hours (`DayHours`, `DayLength`; D96), and the player
-  names in `war3map.w3i` and `war3map.wts` (D93: a named slot reads its map name; the score screen showed "The Horde").
+  names in `war3map.w3i` and `war3map.wts` (D141: only a computer reads its `war3map.w3i` name; a user is "Local
+  Player" or "Player N", an unplayed slot "Player N"; `Seat` passes a `TRIGSTR_n` name through as it is, so resolve it
+  through `war3map.wts`; then `GetPlayerName` can become Exact).
 - Like the W1-1 seam for `blizzard.j`: runtime tests and CI must be able to supply their own small data instead of
   the install's (rule 5).
 - Tests with maps built in the tests; a `Needs=Game` test that the standard footman, Paladin and Holy Light read the
