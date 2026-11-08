@@ -13,7 +13,7 @@ public sealed partial class GameNatives
     int _speed = 2, _difficulty; // MAP_SPEED_NORMAL, MAP_DIFFICULTY_EASY
     readonly Dictionary<int, int> _integerStates = [];
     double _day; // the time of day at _dayStep, in hours
-    long _dayStep;
+    long _dayStep, _dayVersion; // _dayVersion: which ScheduleDay's pass is still due
     float _dayScale = 1;
     bool _daySuspended;
 
@@ -43,15 +43,63 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Sets the time of day, which reads back at once as set; below 0 or above 23.99 (from 23.995, measured) it is 0.
-    /// Close: the game reads 0.1 back a float step under it (docs/facts.md), and a 7 set on a Moonwell check map read
-    /// 6.999999 later on (facts, 11-05), against the probe's 7 read at once (W1-9). Another state isn't kept.
+    /// A set fires the time's events inside the call (the events probe): GREATER_THAN and GREATER_THAN_OR_EQUAL when it
+    /// goes up from the limit or below to the limit or above, LESS_THAN and LESS_THAN_OR_EQUAL when it goes down from
+    /// above the limit to the limit or below, EQUAL when it lands on the limit with the day stopped (running, the day
+    /// fires it as it moves on, ScheduleDay), and NOT_EQUAL never. Close: the game reads some values back a few float
+    /// steps off, at once (0.1, 23.9) or after a frame (7 as 7.00000477; the lobby probe), and the frames after a set
+    /// do more than this (decisions D144). Another state isn't kept.
     /// </summary>
     [Native(Level.Close)]
     public void SetFloatGameState(fgamestate? whichFloatGameState, float value)
     {
         if (whichFloatGameState?.Id != 2) return;
-        _day = value is >= 0 and <= 23.99f ? value : 0;
-        _dayStep = _game.Step;
+        var old = TowardZero(Day());
+        var now = value is >= 0 and <= 23.99f ? value : 0;
+        (_day, _dayStep) = (now, _game.Step);
+        var stopped = _daySuspended || _dayScale == 0;
+        foreach (var (state, op, limit, registered) in _stateEvents.ToArray())
+            if (state == whichFloatGameState && old != now && op.Id switch
+                {
+                    0 or 1 => old > limit && limit >= now,
+                    2 => now == limit && stopped,
+                    3 or 4 => old <= limit && limit <= now,
+                    _ => false,
+                })
+                Fire(registered, Convert<gameevent>(3), state); // EVENT_GAME_STATE_LIMIT
+        ScheduleDay(fromSet: true);
+    }
+
+    // Schedules the next moment the running day passes a limit of the time's events, which fires them with the time
+    // at the limit (the events probe): forward its EQUAL, GREATER_THAN_OR_EQUAL and GREATER_THAN events, backward its
+    // EQUAL, LESS_THAN_OR_EQUAL and LESS_THAN ones. The day passes a limit it is at a day later, unless it was just set
+    // there: then it passes it at the next step.
+    void ScheduleDay(bool fromSet = false)
+    {
+        var version = ++_dayVersion;
+        if (_daySuspended || _dayScale == 0) return;
+        var (now, forward) = (Day(), _dayScale > 0);
+        double? nearest = null;
+        float limit = 0;
+        foreach (var (state, _, l, _) in _stateEvents)
+        {
+            if (state is not fgamestate { Id: 2 } || l is not (>= 0 and < 24)) continue;
+            var hours = forward ? l - now : now - l;
+            if (hours < 0 || hours == 0 && !fromSet) hours += 24;
+            if (hours < nearest || nearest is null) (nearest, limit) = (hours, l);
+        }
+        if (nearest is not { } distance) return;
+        var steps = Math.Max(1, Math.Ceiling(distance / (Math.Abs(_dayScale) * HoursPerSecond) * Game.StepsPerSecond));
+        if (steps >= 1L << 60) return; // past the clock's range: never
+        _game.At(_game.Step + (long)steps, () =>
+        {
+            if (version != _dayVersion) return;
+            (_day, _dayStep) = (limit, _game.Step);
+            foreach (var (state, op, l, registered) in _stateEvents.ToArray())
+                if (state is fgamestate { Id: 2 } && l == limit && (op.Id == 2 || (forward ? op.Id is 3 or 4 : op.Id is 0 or 1)))
+                    Fire(registered, Convert<gameevent>(3), state);
+            if (version == _dayVersion) ScheduleDay();
+        });
     }
 
     /// <summary>Sets the time's speed; an infinite or NaN scale is refused and the scale stays (not measured).</summary>
@@ -61,6 +109,7 @@ public sealed partial class GameNatives
         if (!float.IsFinite(r)) return;
         DayFromNow();
         _dayScale = r;
+        ScheduleDay();
     }
 
     [Native(Level.Exact, Fact = "game-facts.md, Time of day: GetTimeOfDayScale reads 1, then what was set (11-02)")]
@@ -72,6 +121,7 @@ public sealed partial class GameNatives
     {
         DayFromNow();
         _daySuspended = b;
+        ScheduleDay();
     }
 
     /// <summary>0 at the start.</summary>
@@ -129,4 +179,12 @@ public sealed partial class GameNatives
 
     [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: false in a -loadfile game")]
     public bool IsNoDefeatCheat() => false;
+
+    /// <summary>
+    /// Ends the game: the rest of the step still runs, the code after the call and a 0 s timer started before it among
+    /// it, then the clock stops for good; no end-level event fires. The score screen isn't simulated: a -loadfile game
+    /// skips it (facts, "Version and launching").
+    /// </summary>
+    [Native(Level.Exact, Fact = Events)]
+    public void EndGame(bool doScoreScreen) => _game.Ended = true;
 }

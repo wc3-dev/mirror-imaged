@@ -1,0 +1,12 @@
+# probes/forforce-wait.lua on 3.0.1.24371, single player, 11-08: the game's lines. One run.
+# A line starting "~ " varies from run to run: each {t} in it stands for a number, the rest must match exactly, and the
+# run may give it anywhere. The other lines come in order, exactly. Lines starting "# " are notes.
+1 base: ended
+2 create, destroy: ended
+3 ForForce empty: ended
+4 ForForce one: ended
+5 ForForce empty, destroy: waiting
+6 ForForce one, destroy: waiting
+7 next: ended
+8 polled: ended
+ids: force 1048708, then trigger 1048709, timer 1048711

@@ -11,24 +11,29 @@ public partial class player
     internal int Color, Controller, SlotState, RacePreference, Race; // the values of common.j's Convert constants
     internal int Team = -1, StartLocation = -1;
     internal bool Selectable = true;
+    internal bool Removed; // RemovePlayer has given it its result, and does nothing more to it
     internal float Handicap = 1, HandicapXP = 1, HandicapDamage = 1, HandicapReviveTime = 1;
     internal readonly int[] States = new int[26];
     internal readonly int[] Alliances = new int[28]; // bit n is alliancetype n towards that slot
     internal readonly Dictionary<int, int> TechMax = [], TechLevels = [];
 }
 
-// Players as a one-player -loadfile game starts them (the players probe, docs/facts.md "Players and the game"): slots 0
-// to 23 empty with no controller until the lobby seats them (Seat), the four neutral ones playing as creeps.
+// Players as a -loadfile game starts them (the players and lobby probes, docs/facts.md "Players and the game"): slots 0
+// to 23 empty, unnamed, with no controller and a random race preference until the lobby seats them (Seat), the four
+// neutral ones playing as creeps.
 public sealed partial class GameNatives
 {
-    const int Empty = 0, Playing = 1, Left = 2, User = 0, Computer = 1, Creep = 4, NoController = 5;
+    const int Empty = 0, Playing = 1, Left = 2, User = 0, Computer = 1, Creep = 4, NoController = 5, RandomRace = 32;
     const int GameResult = 0, Gold = 1, Lumber = 2, FoodCapCeiling = 6, GivesBounty = 7, Placed = 9;
 
     player _local;
 
     player[] MakePlayers()
     {
-        var players = Enumerable.Range(0, 28).Select(number => Make(new player { Number = number, Name = $"Player {number + 1}", Color = number })).ToArray();
+        var players = Enumerable.Range(0, 28).Select(number => Make(new player
+        {
+            Number = number, Name = number < 24 ? "" : $"Player {number + 1}", Color = number, RacePreference = RandomRace,
+        })).ToArray();
         foreach (var p in players)
         {
             p.States[GameResult] = 3; // PLAYER_GAME_RESULT_NEUTRAL
@@ -42,23 +47,26 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// Seats the players as the lobby does once <c>config</c> has run: people in <paramref name="users"/>, the first of
-    /// them the local player, called "Local Player" when alone, and computers in <paramref name="computers"/>, each
-    /// slot playing with its controller set, and the map's neutral and rescuable slots in <paramref name="others"/>,
-    /// playing with the controller <c>config</c> gave them; the other slots of 0 to 23 are empty. A playing slot whose
-    /// race is selectable gets the random preference; it and every slot without a fixed race get a random race, from a
-    /// generator of their own seeded by the run's seed, drawn for every slot in order so that a slot's race and the
-    /// map's own random numbers don't depend on who sits where. With <paramref name="customForces"/> the game type is
-    /// the map's settings, and with <paramref name="fixedSettings"/> too, alliance changes are locked (facts, "Version
-    /// and launching").
+    /// Seats the players as the lobby does once <c>config</c> has run (the players and lobby probes): people in
+    /// <paramref name="users"/>, the first of them the local player, called "Local Player" when alone, and computers in
+    /// <paramref name="computers"/>, each slot playing with its controller set, and the map's neutral and rescuable
+    /// slots in <paramref name="others"/>, playing with the controller <c>config</c> gave them; the other slots of 0 to
+    /// 23 are empty, on team -1, with their controller as <c>config</c> left it. A computer takes its slot's name in
+    /// <paramref name="names"/> (<c>war3map.w3i</c>'s), every other slot of 0 to 23 is "Player N". A playing slot whose
+    /// race is selectable gets the random preference, unless the map has custom forces with
+    /// <paramref name="fixedSettings"/>, which keep every preference; a slot whose preference names a race has it, and
+    /// the others get a random race, from a generator of their own seeded by the run's seed, drawn for every slot in
+    /// order so that a slot's race and the map's own random numbers don't depend on who sits where. Custom forces with
+    /// fixed settings also set <c>MAP_LOCK_ALLIANCE_CHANGES</c> and the flag 2^20, which <c>common.j</c> doesn't name.
     /// </summary>
     /// <exception cref="ArgumentException">As <see cref="CheckSeats"/>.</exception>
     public void Seat(IReadOnlyList<int> users, IReadOnlyList<int> computers, IReadOnlyList<int>? others = null,
-        bool customForces = false, bool fixedSettings = false)
+        bool customForces = false, bool fixedSettings = false, IReadOnlyDictionary<int, string>? names = null)
     {
         others ??= [];
         CheckSeats(users, [.. computers, .. others]);
         var races = new Game(_game.RunSeed ^ 0x52616365); // 'Race'
+        var fixedRaces = customForces && fixedSettings;
         foreach (var p in _players.Take(24))
         {
             var (user, computer) = (users.Contains(p.Number), computers.Contains(p.Number));
@@ -66,14 +74,15 @@ public sealed partial class GameNatives
             if (user || computer) p.Controller = user ? User : Computer;
             p.SlotState = playing ? Playing : Empty;
             p.States[Placed] = playing ? 1 : 0;
-            if (playing && p.Selectable) p.RacePreference = 32; // RACE_PREF_RANDOM
+            p.Name = computer && names?.GetValueOrDefault(p.Number) is { } name ? name : $"Player {p.Number + 1}";
+            if (!playing) p.Team = -1;
+            if (playing && p.Selectable && !fixedRaces) p.RacePreference = RandomRace;
             var drawn = races.RandomInt(1, 4);
-            p.Race = playing && FixedRace(p.RacePreference) is { } race ? race : drawn;
+            p.Race = FixedRace(p.RacePreference) ?? drawn;
         }
         _local = _players[users[0]];
         if (users.Count == 1) _local.Name = "Local Player";
-        _gameType = customForces ? 4 : 1; // GAME_TYPE_USE_MAP_SETTINGS, GAME_TYPE_MELEE
-        if (customForces && fixedSettings) _mapFlags |= 1024; // MAP_LOCK_ALLIANCE_CHANGES
+        if (fixedRaces) _mapFlags |= 1024 | 1 << 20; // MAP_LOCK_ALLIANCE_CHANGES
     }
 
     /// <summary>Refuses a lineup with no user, a slot outside 0 to 23, or a slot given twice.</summary>
@@ -140,9 +149,10 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// "Player N" for slot N - 1, and "Local Player" for the one person of a single-player game, as the facts and the
-    /// players probe read them. Close until the names a map gives its slots in <c>war3map.w3i</c> are read (W2-1): the
-    /// score screen showed one ("The Horde", facts).
+    /// "" for slots 0 to 23 until the lobby seats them, then "Player N" for slot N - 1, "Local Player" for the one person
+    /// of a single-player game and a computer's name in <c>war3map.w3i</c>, as the players and lobby probes read them.
+    /// Close until the strings file is read (W2-1): World Editor writes those names as <c>TRIGSTR_n</c>, which the game
+    /// reads from it.
     /// </summary>
     [Native(Level.Close)]
     public string? GetPlayerName(player? whichPlayer) => whichPlayer?.Name;
@@ -232,13 +242,20 @@ public sealed partial class GameNatives
         sourcePlayer is not null && otherPlayer is not null && whichAllianceSetting is { Id: >= 0 and < 32 }
         && (sourcePlayer.Alliances[otherPlayer.Number] & (1 << whichAllianceSetting.Id)) != 0;
 
-    /// <summary>One way: the other player's alliance back is left as it was. Close until W1-9: the game fires the alliance event inside the call (facts).</summary>
-    [Native(Level.Close)]
+    /// <summary>
+    /// One way: the other player's alliance back is left as it was. A change fires the source player's alliance events
+    /// inside the call (<see cref="AllianceChanged"/>); a player's alliance with itself doesn't change (measured for
+    /// passive).
+    /// </summary>
+    [Native(Level.Exact, Fact = "game-facts.md, Version and launching: alliances go one way (10-20); " + Events)]
     public void SetPlayerAlliance(player? sourcePlayer, player? otherPlayer, alliancetype? whichAllianceSetting, bool value)
     {
-        if (sourcePlayer is null || otherPlayer is null || whichAllianceSetting is not { Id: >= 0 and < 32 }) return;
-        var bit = 1 << whichAllianceSetting.Id;
-        sourcePlayer.Alliances[otherPlayer.Number] = value ? sourcePlayer.Alliances[otherPlayer.Number] | bit : sourcePlayer.Alliances[otherPlayer.Number] & ~bit;
+        if (sourcePlayer is null || otherPlayer is null || sourcePlayer == otherPlayer || whichAllianceSetting is not { Id: >= 0 and < 32 }) return;
+        var (was, bit) = (sourcePlayer.Alliances[otherPlayer.Number], 1 << whichAllianceSetting.Id);
+        var now = value ? was | bit : was & ~bit;
+        if (now == was) return;
+        sourcePlayer.Alliances[otherPlayer.Number] = now;
+        AllianceChanged(sourcePlayer, whichAllianceSetting.Id);
     }
 
     /// <summary>Whether the player is passive to the other.</summary>
@@ -259,14 +276,18 @@ public sealed partial class GameNatives
         whichPlayer is not null && whichPlayerState is { Id: >= 0 and < 26 } ? whichPlayer.States[whichPlayerState.Id] : 0;
 
     /// <summary>
-    /// Gold below 0 is 0 (the players probe), and lumber too (not measured); the rest is kept as set. Close until
-    /// W1-9: the game fires the player state event on every change that meets it (facts).
+    /// Gold below 0 is 0 (the players and events probes), and lumber too (inferred); the rest is kept as set. A change
+    /// fires the player's state events whose comparison the new value meets, inside the call
+    /// (<see cref="PlayerStateChanged"/>).
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: gold below 0 reads 0; " + Events)]
     public void SetPlayerState(player? whichPlayer, playerstate? whichPlayerState, int value)
     {
         if (whichPlayer is null || whichPlayerState is not { Id: >= 0 and < 26 }) return;
-        whichPlayer.States[whichPlayerState.Id] = whichPlayerState.Id is Gold or Lumber ? Math.Max(value, 0) : value;
+        if (whichPlayerState.Id is Gold or Lumber) value = Math.Max(value, 0);
+        if (whichPlayer.States[whichPlayerState.Id] == value) return;
+        whichPlayer.States[whichPlayerState.Id] = value;
+        PlayerStateChanged(whichPlayer, whichPlayerState, value);
     }
 
     [Native(Level.Close)]
@@ -345,15 +366,18 @@ public sealed partial class GameNatives
     public void BlzDecPlayerTechResearched(player? whichPlayer, int techid, int levels) => AddPlayerTechResearched(whichPlayer, techid, -levels);
 
     /// <summary>
-    /// Takes the player out of the game: defeat leaves its slot Left, any other result keeps it Playing; its alliances
-    /// stay; its <c>PLAYER_STATE_GAME_RESULT</c> becomes the result (not measured). Close until W1-9: the game fires
-    /// the victory or defeat event inside the call for a computer (facts; W1-9).
+    /// Takes the player out of the game, once: its <c>PLAYER_STATE_GAME_RESULT</c> becomes the result, victory keeps its
+    /// slot Playing and any other result leaves it Left (tie not measured), its alliances stay, and a player that isn't a
+    /// user fires its <c>EVENT_PLAYER_VICTORY</c> or <c>EVENT_PLAYER_DEFEAT</c> inside the call, after the change; a
+    /// user fires neither, a neutral result nothing. A player already taken out is left as it is.
     /// </summary>
-    [Native(Level.Close)]
+    [Native(Level.Exact, Fact = "game-facts.md, Version and launching: RemovePlayer, CustomVictoryBJ and CustomDefeatBJ (11-06); " + Events)]
     public void RemovePlayer(player? whichPlayer, playergameresult? gameResult)
     {
-        if (whichPlayer is null || gameResult is null) return;
+        if (whichPlayer is not { Removed: false } || gameResult is null) return;
+        whichPlayer.Removed = true;
         whichPlayer.States[GameResult] = gameResult.Id;
-        if (gameResult.Id == 1) whichPlayer.SlotState = Left; // PLAYER_GAME_RESULT_DEFEAT
+        if (gameResult.Id != 0) whichPlayer.SlotState = Left; // all but PLAYER_GAME_RESULT_VICTORY
+        if (whichPlayer.Controller != User && gameResult.Id is 0 or 1) FirePlayerEvent(whichPlayer, gameResult.Id == 0 ? PlayerVictory : PlayerDefeat, whichPlayer);
     }
 }

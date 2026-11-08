@@ -641,3 +641,94 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
   `Maps\lua-reference` runs through, and each stops at the first line of `main`, `GetCameraMargin` (wave 5); `main`'s
   player setup (`InitBlizzard`) comes after the cameras, sounds, regions and units, and its first player function,
   `InitBlizzardGlobals`, needs `Filter` (W1-2) and sounds first.
+
+### Player and game events (W1-9)
+
+The measurements are three probes, `probes/lobby.lua`, `events.lua` and `forforce-wait.lua`, in `docs/facts.md`,
+"Players and the game" and "Player and game events", with their lines in `probes/expected`.
+
+- **D140. A probe map with a computer** (`ProbeMap.Build(..., withComputer: true)`, and the runner's `Run` likewise),
+  for the lobby and events probes: a user in slot 0, a computer in 1 and a user slot 2 no one plays, named "Probe User",
+  "Probe Computer" and "Probe Empty" in `war3map.w3i`, human with a selectable race, in custom forces with fixed player
+  settings (0 and 2 in one force, 1 in the other, not allied). Its `config` first adds what it reads (the game type,
+  the lock flag, the local player, the counts, and each slot's name, slot state, controller, race and random
+  preference) to the global list `ProbeConfig`, one entry a call: so a probe sees what the lobby set before `config`,
+  and how often it ran (once, in the map's Lua state). One fixed layout, not options: both probes need the same, and
+  the other probes' map stays as it was.
+- **D141. The lobby before and after config** (the lobby probe). Before `config`, slots 0 to 23 are empty with no
+  controller, named "" and with the random race preference, the local player is slot 0, the game type melee, no map
+  flag set, 0 players and 24 teams. `config`'s settings stand until the lobby seats the players after it (D91), which
+  names a computer as `war3map.w3i` does and every other slot of 0 to 23 "Player N"; puts a slot no one plays on team
+  -1, with the controller `config` gave it; keeps every race preference when the map has custom forces with fixed player
+  settings, selectable or not (the same with and without `war3map.w3i`'s selectable-race flag), and otherwise makes a
+  playing selectable slot random, as before; gives a slot whose preference names a race that race, played or not; and,
+  for custom forces with fixed settings, sets `MAP_LOCK_ALLIANCE_CHANGES` and the flag 2^20, which `common.j` doesn't
+  name. So the lock isn't set inside `config` (it reads false there), against the task's premise, and the seating stays
+  after `config`. The game type is melee with custom forces too, which replaces D93's inference; custom forces
+  without fixed settings aren't measured. A computer's alliances, states, handicaps and placed state are a user's, as
+  D93 inferred. With `MAP_PLACEMENT_TEAMS_TOGETHER` the lobby put the players on start locations at random, different
+  in each run; that isn't simulated (D98), so `GetPlayerStartLocation` stays Close. World Editor writes the names as
+  `TRIGSTR_n`, read through the strings file in W2-1; until then a computer's name is `war3map.w3i`'s as it is.
+- **D142. RemovePlayer takes a player out once** (the events probe and the facts): the result is stored, victory keeps
+  the slot Playing and any other result leaves it Left (neutral measured, tie inferred), and a player that isn't a user
+  fires its victory or defeat event inside the call, after the change, with itself the trigger player. A user fires
+  neither, inside the call or a second later (victory measured here, defeat by the facts' `CustomDefeatBJ`); neutral
+  and tie fire nothing (neutral measured); `EVENT_PLAYER_LEAVE` never fires for it. A second call on the same player
+  does nothing, whatever the result. Who counts as a user is the controller: another person in a multiplayer game
+  isn't measured. Exact.
+- **D143. Alliance and player state events** (the events probe). `SetPlayerAlliance` fires only on a change, on the
+  giving player's registrations: its `EVENT_PLAYER_ALLIANCE_CHANGED` first, for `ALLIANCE_PASSIVE` only (alliance types
+  1 to 9 fire none), then the alliance type's own (`TriggerRegisterPlayerAllianceChange`), each with the event id
+  `EVENT_PLAYER_ALLIANCE_CHANGED` and no trigger player, reading the new alliance. A player's alliance with itself
+  doesn't change (passive measured). `SetPlayerState` fires the player's events for that state on a change to a value
+  that meets the comparison, the value stored (gold set to -1 fires as 0), with `NOT_EQUAL` a real comparison, unlike
+  the integer game states' (any change, D76); the event id is `EVENT_PLAYER_STATE_LIMIT` whatever the comparison,
+  `GetTriggerPlayer` the player and `GetEventPlayerState` the state. Outside an event `GetEventPlayerState` is the
+  state with id 0 (`PLAYER_STATE_GAME_RESULT`), not nil. `TriggerRegisterPlayerEvent` with `EVENT_PLAYER_STATE_LIMIT`
+  never fires; its input events (leave, chat, cinematic, arrows, mouse, keys) register and wait for wave 6. The three
+  registrations, `GetTriggerPlayer`, `GetEventPlayerState`, `SetPlayerAlliance` and `SetPlayerState` are Exact.
+- **D144. The time of day's events** (the events probe; triggers-3's reads fit too, so D76's inference holds). A set
+  fires inside `SetFloatGameState`, reading the value set, by where the time goes: `GREATER_THAN` and
+  `GREATER_THAN_OR_EQUAL` when it goes up from the limit or below to the limit or above, `LESS_THAN` and
+  `LESS_THAN_OR_EQUAL` when it goes down from above the limit to it or below (from the limit itself, nothing), `EQUAL`
+  when it lands on the limit, `NOT_EQUAL` never. As the day runs, it fires a limit's `EQUAL`,
+  `GREATER_THAN_OR_EQUAL` and `GREATER_THAN` events as it passes it forward, and its `EQUAL`, `LESS_THAN_OR_EQUAL` and
+  `LESS_THAN` ones backward, the time reading the limit exactly; here at the first step at or past it, with the time
+  set to the limit there (2.001 s from 11.9 at scale 1; the game's frame came at 1.9999), and again a day later. Not
+  modelled, so `TriggerRegisterGameStateEvent` stays Close: with the day stopped, the frame after a set to exactly the
+  limit fired all five again (the facts' "again within the next second"); 12 to 13 with the day stopped, after frames
+  at 12, fired nothing, where the same set within one instant fired the two upward comparisons; and with the day
+  running, a set that lands on the limit fired `EQUAL` only at the next frame, which the model follows by firing
+  `EQUAL` in a set only with the day stopped, and passing a limit the day was just set to at the next step. The game's
+  order among one moment's events (GT, GE, EQ forward; EQ, LE, LT backward; EQ, GT, GE in a set) isn't registration
+  order and isn't followed.
+- **D145. TriggerRegisterGameEvent never fires in a run:** none of its 16 events fired through the events probe, not
+  the timer event for its timers, the state event for its state sets, the victory event for its victories, nor the
+  end-level event for `EndGame`. Close: the game fires `EVENT_GAME_LOADED` after a saved game loads (facts,
+  "Initialisation"), which a run doesn't do. `GetWinningPlayer` stays Missing, with no event to read it in.
+- **D146. Filters** (the events probe). An enumeration's filter runs for each playing player of slots 0 to 23 in slot
+  order, with `GetFilterPlayer` that player (nil after; no enum or trigger player), and passes as a trigger's
+  condition does: 1 passes; 0, `"x"`, nil, a table and a raising filter fail; `Filter(nil)` passes without running; a
+  `Condition` serves too; `And` runs both operands for each player. `ForceEnumAllies` and `ForceEnumEnemies` run it
+  for every playing player, then test the alliance; `ForceEnumPlayersCounted` stops once the force holds the count,
+  without running the filter for the rest. Not matched: a destroyed filter given again ran a condition made after it,
+  through its reused handle id (W1-6), where here a destroyed filter reads as nil and every player passes; so the four
+  `ForceEnum*` stay Close, as `TriggerEvaluate` does for D73. A filter runs in a thread of its own, as a condition
+  (D70); W2-6 probes that.
+- **D147. EndGame ends the run** (`Simulation.Ended`): the rest of its step runs, the code after the call and a 0 s
+  timer started before it among it (measured), then the clock stops for good, a pause the map can't lift, and
+  `Advance` moves nothing. No event fires (D145). `doScoreScreen` changes nothing: a `-loadfile` game skips the score
+  screen (facts). Exact.
+- **D148. The lost wait after ForForce** (the forforce-wait probe, which reproduced the facts' three): a trigger's
+  wait right after a force `ForForce` had run over was destroyed never ended, whether the force held a player or not;
+  `ForForce` alone, or a force made and destroyed, didn't; and the next trigger's wait, 1.5 s later, and a
+  `PolledWait` after it ended. Modelled as a flag: destroying a force `ForForce` has run over makes the next
+  `TriggerSleepAction` never end. Why isn't known (the trigger and timer made after the force took new ids, so it isn't
+  an id reused at once); whether the wait must come right after, and what a wait already running does, aren't
+  measured. `ForForce` stays Close for the force's changes during it (D94).
+- **D149. The time of day read back** (the lobby probe, D96's question): with the day stopped, 7, 12, 18, 6 and 7.5
+  read back as set at once and in the same frame, and after a frame 7 read 7.00000477 (`40e0000a`), the others the
+  same; 0.1 read `3dccccc0` and 23.9 `41bf3332` already at once, where the players probe read `3dcccccc` and `41bf3333`.
+  So neither read gives the 11-05 map's 6.999999; the read drifts with the frames by a rule not found (times that are
+  binary fractions of 24 hours stay exact). D96's model stays, reading back as set, Close. After W1-9, on
+  `release/1.0.0` at W1-2's merge: 104 Exact, 262 Close, 7 Recorded, 1,462 Missing.

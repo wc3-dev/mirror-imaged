@@ -1,0 +1,38 @@
+# probes/events.lua on 3.0.1.24371, single player, 11-08, on the probe map with a computer: the game's lines. Two runs
+# of this probe, the same to the last digit; the times of the day's passes are marked to vary all the same. A first run
+# with RemovePlayer's results in another order is in docs/facts.md. EndGame's files are there too.
+# A line starting "~ " varies from run to run: each {t} in it stands for a number, the rest must match exactly, and the
+# run may give it anywhere. The other lines come in order, exactly. Lines starting "# " are notes.
+filter true 0,1>0 1; false 0,1>; is 1 0,1>1; after nil
+filter counted 1 0>0; counted 1 not 0 0,1>1; allies of 0 0,1>0; enemies of 0 0,1>1
+filter results 1 0,1>0 1; 0 0,1>; x 0,1>; nil 0,1>; table 0,1>
+filter condition c,c>0 1; and 0,0,1,1>; destroyed c,c>0 1; Filter(nil) >0 1; raises r,r>
+alliance 0>1 passive on c0:12:nil:true,p0:12:nil:true; again 
+alliance 0>1 passive off c0:12:nil:false,p0:12:nil:false; again 
+alliance 1>0 passive on c1:12:nil:false,p1:12:nil:false; off c1:12:nil:false,p1:12:nil:false
+alliance 0>1 vision on v0:12:nil:false; off v0:12:nil:false
+alliance 0>0 passive off  reads true; on 
+alliance changed by type 0 c0,/c0,; 1 /; 2 /; 3 /; 4 /; 5 /; 6 /; 7 /; 8 /; 9 /
+gold LT 0:11,1:11,1:11,0:11,0:11
+gold LE 0:11,1:11,2:11,2:11,1:11,0:11,0:11
+gold EQ 2:11,2:11
+gold GE 5:11,2:11,3:11,2:11,4:11
+gold GT 5:11,3:11,4:11
+gold NE 5:11,0:11,1:11,3:11,1:11,0:11,4:11,0:11
+lumber over 10.5 11 0 true playerstate true,12 0 true playerstate true; state limit event fired 0; outside 0
+time LT 2:10,7:12,11:11.5,13:11.5
+time LE 2:10,7:12,11:11.5,13:11.5
+time EQ 4:12,7:12
+time GE 1:20,4:12,6:13,10:14,12:12.5
+time GT 1:20,4:12,6:13,10:14,12:12.5
+time NE 
+time 6 inside: 3 true nil
+remove 1 is playing; victory 1VIC:14:1:playing:0 then playing 0; again  then playing 0
+remove 1 tie  then playing 0; defeat  then playing 0; neutral  then playing 0; game victory nil nil
+~ forward from 11.9 at {t}: inside ; then GT@{t}:12,GE@{t}:12,EQ@{t}:12
+~ backward from 12.1 at {t}: inside ; then EQ@{t}:12,LE@{t}:12,LT@{t}:12
+~ stopped at 12 at {t}: inside EQ@{t}:12,GT@{t}:12,GE@{t}:12; then EQ@{t}:12,GT@{t}:12,GE@{t}:12,LE@{t}:12,LT@{t}:12
+~ stopped, 12 to 13 at {t}: inside ; then 
+~ running, set 12 at {t}: inside LE@{t}:12,LT@{t}:12; then EQ@{t}:12,GT@{t}:12,GE@{t}:12
+0 victory: inside ; 1 s later ; slot playing 0; game victory nil nil
+game events fired 

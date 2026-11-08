@@ -63,9 +63,19 @@ public sealed class GameProbeTests
     [GameFact]
     public void The_fourth_triggers_probe_gives_the_lines_measured() => Measured("triggers-4");
 
-    static void Measured(string name)
+    // docs/facts.md, "Players and the game" and "Player and game events"
+    [GameFact]
+    public void The_lobby_probe_gives_the_lines_measured() => Measured("lobby", withComputer: true);
+
+    [GameFact]
+    public void The_events_probe_gives_the_lines_measured() => Measured("events", withComputer: true);
+
+    [GameFact]
+    public void The_forforce_wait_probe_gives_the_lines_measured() => Measured("forforce-wait");
+
+    static void Measured(string name, bool withComputer = false)
     {
-        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), TimeSpan.FromMinutes(2));
+        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), TimeSpan.FromMinutes(2), withComputer);
 
         Assert.True(run.State == ProbeState.Done, $"{run.State}: {run.Detail}");
         ExpectedLines.Assert(Path.Combine(AppContext.BaseDirectory, "probes", "expected", name + ".txt"), run.Lines);
