@@ -119,6 +119,19 @@ public sealed class DataNativesTests : IDisposable
         ], simulation.Log);
     }
 
+    // Inferred (decisions D206): World Editor writes the text a map shows as TRIGSTR_n, and the game shows the string
+    [Fact]
+    public void Text_shown_to_a_player_reads_a_trigstr_as_the_maps_string()
+    {
+        using var simulation = Run("""
+            DisplayTextToPlayer(Player(0), 0, 0, "TRIGSTR_001")
+            DisplayTimedTextToPlayer(Player(1), 0, 0, 5, "TRIGSTR_002")
+            DisplayTextToPlayer(Player(0), 0, 0, "TRIGSTR_999")
+            """, new StandardData());
+
+        Assert.Equal(["0.000 player 0: Probe Alpha", "0.000 player 1: The Horde", "0.000 player 0: TRIGSTR_999"], simulation.Log);
+    }
+
     // The lobby probe: with fixed player settings a computer reads its war3map.w3i name; the data probe: without, it is
     // "Computer (Normal)", and the person "Local Player" either way (decisions D210)
     [Theory]

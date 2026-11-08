@@ -92,7 +92,10 @@ public sealed partial class Simulation : IDisposable
     /// <see cref="Stopped"/>.
     /// </summary>
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c> or <c>war3map.j</c>.</exception>
-    /// <exception cref="InvalidDataException">The map's <c>war3map.j</c> isn't JASS the game loads.</exception>
+    /// <exception cref="InvalidDataException">
+    /// The map's <c>war3map.j</c> isn't JASS the game loads, or a file of the map can't be read, other than the terrain,
+    /// doodad and placed-unit files, which are left out (<see cref="Unread"/>); the message names it.
+    /// </exception>
     /// <exception cref="NotSupportedException">MirrorImaged can't make the map's <c>war3map.j</c> into Lua.</exception>
     /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> and standard data every run needs.</exception>
     /// <exception cref="LuaException"><c>blizzard.j</c>'s Lua doesn't load or run (<c>blizzard.lua:N: ...</c>), so no map can.</exception>

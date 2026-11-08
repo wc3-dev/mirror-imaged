@@ -364,9 +364,6 @@ public sealed partial class GameNatives
     public int TownWithMine() => throw new MissingNativeException("TownWithMine");
 
     [Native(Level.Missing)]
-    public bool UnitAlive(unit? id) => throw new MissingNativeException("UnitAlive");
-
-    [Native(Level.Missing)]
     public bool UnitInvis(unit? id) => throw new MissingNativeException("UnitInvis");
 
     [Native(Level.Missing)]

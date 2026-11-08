@@ -1,0 +1,22 @@
+# probes/units-decay.lua on 3.0.1.24371, single player, 11-08 (W2-2): the game's lines. Two runs, the same; each time is the first 0.25 s poll after the change.
+start 0.10
+hfoo death 0.10 life 0.0 alive false
+hrif death 0.10 life 0.0 alive false
+hbar death 0.10 life 0.0 alive false
+Hpal death 0.10 life 0.0 alive false
+hgry death 0.10 life 0.0 alive false
+exploded death 0.10 life 0.0 alive false
+suspended death 0.10 life 0.0 alive false
+removed death 0.10 life 0.0 alive false
+removed gone 0.25
+exploded gone 0.25
+hrif decay 1.80 life 0.0 alive false
+hgry gone 2.00
+hfoo decay 3.14 life 0.0 alive false
+suspended decay 3.14 life 0.0 alive false
+hbar gone 32.50
+hfoo still there false 0.0
+hrif still there false 0.0
+Hpal still there false 0.0
+suspended still there false 0.0
+corpse still there false 0.0

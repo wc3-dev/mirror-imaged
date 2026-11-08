@@ -1088,8 +1088,8 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
   sharing its `field` with others, or of the text files with an index, is that entry of a comma list (`Buttonpos`'s 0
   and 1, a unit's `Name`), an entry in quotes keeping its commas; a blank cell, `-` and `_` are none. Which fields
   apply to which object isn't checked: any field reads its column, so an ability's field read on another ability
-  reads the other's column of that place. Not measured: units' (`useUnit`, `useHero`, `useBuilding`) are W2-2's,
-  abilities' (`useSpecific`) and changes stored by column W2-8's.
+  reads the other's column of that place. Not measured: units' (`useUnit`, `useHero`, `useBuilding`) are W2-2's
+  (answered by D220: the natives don't read them), abilities' (`useSpecific`) and changes stored by column W2-8's.
 - **D206. A `TRIGSTR_n` given to a native that reads it is the map's string n,** resolved where its string argument is
   read (D80), n read as `atoi` reads it after the prefix in capitals (`TRIGSTR_` and `TRIGSTR_abc` are string 0,
   `TRIGSTR_-1` none); a string the file doesn't have stays as it is. The data probe measured which natives read it:
@@ -1136,7 +1136,7 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
   TOC files of wave 5). The terrain's heights (`Terrain`, the game-facts' rules for `GetLocationZ`, each corner rule
   tested) wait for W2-6's `GetLocationZ`, which also measures the off-map edge (inferred: a point off the map reads
   its nearest edge); bridges and walkable destructables are W2-4's. `GetObjectName` is W2-2's (it reads a name even
-  for an object the set leaves out: fapo's under Melee with The Frozen Throne), a kind's ordered objects for the random
+  for an object the set leaves out: fapo's under Melee with The Frozen Throne; done, D229), a kind's ordered objects for the random
   item and creep natives W2-3's, `ParseTags` W2-8's, and the sound files' lengths `later.md`'s (wave 5).
 - **D213. The data probes are compared as every probe is (D120),** each on its own map: `ProbeComparison.Change` gives
   a probe's change (`DataProbeMaps`), in the game and in MirrorImaged alike, with one probe file a map. In MirrorImaged
@@ -1146,7 +1146,8 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
   `data-sets` stop at `GetObjectName` and `CreateUnit` (wave 2) and `data-tags` at `ParseTags` (W2-8), recorded in
   `probes/differences`, so their data are tested by `GameDataTests` and `InstalledDataTests`.
 - **D214. A real the map changes is kept as decimal text without an exponent** (`0.00001`), as `Integer` reads text
-  as `atoi` does and would read `1E-05` as 1; shortcut: a real under 1e-28 is kept as 0. A whole number past the
+  as `atoi` does and would read `1E-05` as 1; shortcut: a real under 1e-28 is kept as 0 (replaced by D233: every
+  digit, as the decimal text cut digits from about 1e-21). A whole number past the
   integers' range reads as the range's end, as the C library's `strtol` holds it (`Integer`), not 0.
 - **D215. A day of no length or no hours is the standard one:** a map's `DayLength` or `DayHours` of 0 or below (or
   not a number) is passed over for 480 s and 24 hours, rather than a day that never moves or divides by 0. Not
@@ -1390,3 +1391,145 @@ cliff type 0 and a random unit mode 641, each in a reader D300 and D301 don't to
   `ForsakenKingdom/Scenario/(1)ForgottenHollow.w3x` (Lua) at `Location` before it; none logs a script error, and the
   run takes 70 to 90 s. So every shipped map runs its script and `config`, and where they stop after `main`'s first line
   shows only once `GetCameraMargin` exists.
+
+### Units (W2-2)
+
+The probes `units`, `units-decay`, `units-attribute` and `units-primary` (`docs/facts.md`, "Units") measured what the
+workspace's facts left open; the choices below follow them where they measured and say so where not. What W2-2 leaves
+is in W2-3, W2-5, W2-6 and W2-7 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
+
+- **D220. A unit is its handle's data** (`unit` in `MirrorImaged.Natives`, as D90 keeps a player's): its type (the
+  data model's object, D200), owner, place, life and mana and their most, flags, and a table of what the unit's own
+  sets changed, by field id (a value of another field type there is passed over, so a `Convert` of a map's own can't
+  break a read). A unit field reads that table, else its type's data: a number, a word read as the
+  constant `common.j` gives it, or a list of words read as flags (armour, defence, regeneration and move types, the
+  primary attribute, targeted as, classification, placement prevented by); where the field is the unit's state (life,
+  mana, move speed, turn rate, acquisition range, fly height, armour, sight) it reads and sets that, as its native
+  does. D205's question is answered: the fields' `useUnit`, `useHero` and `useBuilding` aren't read, as the game set a
+  barracks' formation rank and level (both not for buildings by the metadata) and a footman's hero-only death message
+  flag; what acts as a hero's alone is the data only a hero has: its attributes and their gains per level, its proper
+  names (`upro`) and its primary attribute (`upra`) (D227). The units the probes measured are the tests' data; every
+  field the probe read and set is in `probes/expected/units.txt`, compared with the install's data (D232).
+- **D221. Units take ids as any handle** (D110): one each, a Paladin too (probe units), from `CreateUnit` and
+  `BlzCreateUnitWithSkin`, which World Editor's `war3map.lua` calls for the placed units; `war3mapUnits.doo` is
+  never read for them (D212). `CreateUnit` is nil for an id that is no unit's (an item's, a destructable's, an
+  ability's, 0, one the balance set leaves out) and for no player. A hero (its id starting with a capital, as
+  `IsHeroUnitId` reads) starts at level 1 with 25 life a strength and 15 mana an intelligence (the constants'
+  `StrHitPointBonus` and `IntManaBonus`), as the facts and the probe read; the rest of heroes is W2-3's. No list of
+  the game's units is kept yet: the enumerations bring one (W2-6).
+- **D222. Life is the most life less the damage, in floats** (probe units): a set keeps `max - (max - value)`, so
+  0.41 reads 0.4100037 on a footman of 420 and 0.4099731 on a Paladin of 650, and a unit whose life then reads below
+  0.405 dies inside the call (0.405 kills the footman, not the Paladin). The most life changes it only when it falls
+  below the life. A dead unit's life can be set, from 0 to its most, and it stays dead. Mana is kept as set, from 0 to
+  its most. Both read Exact on every measured case.
+- **D223. A unit stands where it is put** (Close): `CreateUnit` and `SetUnitX`/`SetUnitY` keep the place given, as the
+  game does on open ground (probe units, facts), but the game moves a unit made where others stand off them and one
+  made off the map onto it ((5000, -5000) to (2032, -2000) on the 32 by 32 probe map), which needs the pathing and the
+  map's bounds: wave 3 and W2-6. `SetUnitPosition` waits for them too. The probe makes each unit on a spot of its own
+  (a grid 200 apart) so its other lines don't depend on it. `BlzGetUnitZ` and `BlzGetLocalUnitZ` read the ground
+  (W2-1's `Terrain`), not the unit's height, as the facts measure; the local one is Close (not measured).
+- **D224. Facing and turning are Close.** A facing is kept from 0 below 360 by `%` in degrees, which matches every
+  facing from -360 to 720 the probe made but 400 (40.00002 in the game, a float step off); the game's reduction of
+  larger angles (1e9 reads 0, 100000 280.0085) wasn't found among a dozen float and double models tried. `SetUnitFacing`
+  reads the old facing at once and turns the short way round (half a turn going up), modelled as a steady pace from
+  1/32 s after the call, at 16 x the type's turn rate less 3.2 radians a second, at least 0.5: the footman's, knight's
+  and gryphon rider's steady pace (6.4, 4.8 and 3.2 for 0.6, 0.5 and 0.4) fit that line exactly; the game eases into
+  the end (the knight's last tenth of a turn takes 0.3 s) and its frames don't fall on the clock's steps. The type's
+  rate, not the unit's: a footman set to 0.2 turned as at 0.6. `SetUnitFacingTimed` turns over the time given (not
+  measured). `BlzSetUnitFacingEx` turns at once (Exact). The turn rate itself is kept as an angle from 0.001 below 2
+  pi, as the probe read it (-1 reads 5.283185, 7 0.7168145, 7.5 1.216815, 0 0.001); an angle more than a turn away
+  comes round by a float modulo (Close: not measured).
+- **D225. Unit events fire in the call, by kind** (probe units): a death fires the unit's widget death events
+  (`TriggerRegisterDeathEvent`), then its owner's player-unit events, then its own unit events, each kind in the order
+  registered (the probe registered unit, player, widget, unit and saw widget, player, unit, unit); a decay, an owner
+  change and an order the player-unit events then the unit's. The registrations are kept per unit and per player in the
+  order made, so an event reads only its unit's and its owner's, and each registration knows its list, so
+  `DestroyTrigger` reads only its own; an empty list goes, and a unit's goes with it (Release: 8,000 deaths took 24 to
+  42 ms with no registration, 31 to 38 with one each, 46 to 54 with each trigger destroyed in its own death action;
+  destroying 8,000 one-registration triggers 5 to 11 ms). `TriggerRegisterPlayerUnitEvent`'s filter never runs and
+  doesn't hold the event back, as measured, so `GetFilterUnit` waits for the enumerations (W2-6). The responses read the
+  firing (D75): `GetTriggerUnit` in every unit event, `GetTriggerWidget` only in the widget event, `GetDyingUnit` only
+  in the unit and player-unit deaths, `GetTriggerPlayer` the owner but in the widget event, `GetKillingUnit` nil for
+  every death this wave makes, `GetDecayingUnit`, `GetChangingUnit`, `GetChangingUnitPrevOwner`, `GetOrderedUnit` and
+  `GetIssuedOrderId` in their own events, nil or 0 elsewhere (not measured outside them). The other unit events register
+  and never fire until their waves; `TriggerRegisterUnitStateEvent` and `TriggerRegisterFilterUnitEvent` stay Missing
+  (W2-10).
+- **D226. SetUnitOwner** (probe units, the facts' "Orders and events"): a living unit gets a stop (851972) whose order
+  events read the old owner, then changes hands, then fires its owner change on the new owner's registrations
+  (`GetTriggerPlayer` the new owner, `GetChangingUnitPrevOwner` the old); given to the owner it has, nothing happens; a
+  dead unit gets no stop. The stop only fires its events: orders are wave 3's. When a stop's event gives the unit away
+  first, the call changes nothing more (not measured; the model's, so a map can't fire a second change). Not here:
+  the `undefend` (852056) a unit with Defend gets after the change, in the game also for a dead one on its old owner's
+  registration, which needs abilities (W2-7, W2-10; recorded in `probes/differences/units.txt`), so `SetUnitOwner` is
+  Close; so are `KillUnit` and `RemoveUnit` (`undefend` before a death, twice on a removal) and `PauseUnit` (the
+  stunned order and `undefend` on a pause, the earlier move given back on unpausing; game-facts, "Orders and events"),
+  whose order events are W2-10's. The colour becomes the new owner's when asked, kept
+  with `SetUnitColor`'s, `SetUnitScale`'s x and `SetUnitVertexColor`'s parts (kept from 0 to 255), all Recorded: no
+  native reads them back (the scale and tint fields keep the type's and 255, probe units).
+- **D227. The hero attributes and the field quirks** (probe units, units-attribute, units-primary): reading a hero
+  attribute field (`UNIT_IF_AGILITY` and the eight like it, which have no metadata rows) on a unit that isn't a hero
+  closes the game, and so does setting its primary attribute to an attribute (3 measured; 1 and 2 inferred), so they
+  stop the run with `GameClosedException` (D122); setting a hero attribute there does the same here, inferred from the
+  read (not measured). Its gains per level read 0 and refuse a set, its proper names read "" and keep none. On a hero
+  the attributes read the type's, the ones with a bonus refuse a set and, with no bonuses yet, read the attribute, as
+  the permanent ones do here (the game read a permanent one 1 after its own set: W2-3), so `BlzGetUnitIntegerField` is
+  Close; a hero's level set to n reads n + 1 (7 to 8, 3 to 4), inferred: both from level 1, where adding n fits as
+  well (W2-3 to probe from level 5). The primary attribute and the tint fields take a set (true) but keep
+  their value; the shadow's size, the sight and hiding on the minimap the same; the most pitch and roll read 0 and
+  refuse every set; the least attack range refuses a unit without an attack; a ground unit's fly height field takes no
+  set, a flier's does, and a flier's most fly height keeps its height between its least (`moveFloor`) and the most.
+  Left to W2-3, recorded as differences: an attribute set changes only the field here (the game's strength 30 gave the
+  Paladin 850 life), the permanent attributes (read 1 after a set of 7 and of 0) aren't modelled, and a hero's proper
+  name is the first of its type's (the game draws one and numbers it). So `BlzSetUnitIntegerField` and
+  `BlzGetUnitStringField` are Close.
+- **D228. A death and its body** (probe units-decay, game-facts): a unit dies once; its body decays its death time
+  later (`UNIT_RF_DEATH_TIME`, the type's `death` unless set), firing the decay events, and is gone `DecayTime` plus
+  `BoneDecayTime` after that (2 + 88: the facts' "about 90 s after decay"; inferred from the constants, as the probe
+  stopped at 45 s within the 2 minutes the runner gives one, D120; W2-10 is to probe it, and `UnitTests`' 93.25 s is
+  this inference); a building fires no decay and is gone its death time plus `StructureDecayTime` later (2.34 + 30,
+  measured); a unit whose death type doesn't decay fires none and is gone at its death time (the gryphon rider); a hero
+  stays (W2-3 revives it); an exploded unit is gone after the step. `UnitSuspendDecay` keeps the body, but its decay
+  event still comes, as measured; a body whose time came while suspended goes in the step its decay is let go (not
+  measured); a corpse from `CreateCorpse` never decays (none in 45 s). `RemoveUnit` leaves the unit
+  as it was for the rest of its step, alive or dead, and gone after it: every getter then reads 0 or nil, as Lua's
+  handle reads as null (D41); a unit removed and then killed in its step stays as a body, as the probe saw. Gone is
+  when the step's queue reaches it (`Game.At` in the step), so a 0 s timer started after the removal reads it gone, as
+  the facts' does. The body's times are Exact but the bone decay's length; `KillUnit` and `RemoveUnit` are Close for
+  their `undefend` (D226).
+- **D229. GetObjectName** reads the name of a unit, item, ability or upgrade (its first level's), in that order, the
+  map's changes and `TRIGSTR_n` read, and "Default string" for anything else, buffs and destructables too (probe units;
+  game-facts: a new buff's and destructable's). It names an object the balance set leaves out too (fapo "Apothecary"
+  under Melee with The Frozen Throne, D212), so `StandardData` keeps those objects apart (`Absent`) rather than dropping
+  them: they don't exist for any other native. Exact.
+- **D230. IsUnitType** reads the kinds the probe measured on twelve units: hero, dead, structure, flying, ground (not
+  flying and not a structure), attacks ground and attacks flying from its enabled weapons' targets, melee (its first
+  weapon of type `normal`) and ranged (another type), and its classification's giant, summoned, undead, mechanical,
+  peon, sapper, townhall, ancient and tauren. Close: stunned, plagued, snared, poisoned, polymorphed, sleeping,
+  resistant, ethereal and magic immune need buffs and abilities (wave 4) and read false.
+- **D231. Speeds and ranges** (probe units): move speed kept from the constants' `MinUnitSpeed` to `MaxUnitSpeed`, a
+  unit that can't move keeping 0; an acquisition range of 50 or less not taken, nor any by a unit without an attack,
+  which reads 0 (Close: 51 to 54 not measured); where a map's least move speed passes its most, the most (not
+  measured); a most mana below 0 keeps the mana at 0 (not measured); a type's default acquisition range its day sight
+  where the data has
+  none (a barracks' 900); the propulsion window read in radians as `Deg2Rad` makes them, its default in degrees; the
+  fly height read at once, whatever the rate (the game draws the rise). `BlzPauseUnitEx` is a count of its own that
+  `IsUnitPaused` doesn't read; what a pause holds back is wave 3's.
+- **D232. The units probes read the install's data** in MirrorImaged, as the data probes do (D213):
+  `ProbeComparison.ReadsData` takes the names starting `units` too. A probe that closes the game on one call is a
+  probe of its own (`units-attribute`, `units-primary`), as D122's closing probes are, since the game's lines are
+  written only at the end. `triggers-2`, which runs without data, now runs past its `CreateUnit` (nil without a
+  footman), so the differences its stop hid are recorded: ids (D110), the clock's steps (D45, D71), the time of day's
+  events (D144), and its unit line.
+- **D233. W2-1's small items:** a real the map changes is kept as its shortest float digits written without an
+  exponent, every digit (`0.000000000000000000001234567`), replacing D214's decimal text, which cut digits from about
+  1e-21; `DisplayTextToPlayer` and `DisplayTimedTextToPlayer` read a `TRIGSTR_n` (D206, tested); and
+  `Simulation.Load` lists its `InvalidDataException`.
+- **D234. After W2-2,** with W1-10 merged first: 204 Exact, 287 Close, 15 Recorded, 1,329 Missing. Left, with where
+  (`docs/tasks/wave-2.md`): heroes' attribute state, levels and proper names (W2-3); a widget for destructable deaths in
+  the unit events (W2-4); the weapon fields (`BlzGetUnitWeapon*Field`), armour, killers and damage (W2-5); groups and
+  the game's list of units, `GetFilterUnit`, `SetUnitPosition`, locations, the map's bounds and the move hook for
+  regions (W2-6); `undefend` and the abilities' natives (W2-7); the order events of `KillUnit`, `RemoveUnit`,
+  `PauseUnit` and `SetUnitOwner`, the bone decay's length, `CreateCorpse` past 45 s, timed life, summons, sleep, unit
+  state and filter events, unit counts, `CreateUnitByName` and `UnitId`, and the rest of the unit natives (W2-10);
+  orders, the pathing and moving units off each other (wave 3); animation, time scale and the other natives that only
+  show (wave 5).
