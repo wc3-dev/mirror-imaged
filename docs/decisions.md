@@ -600,8 +600,11 @@ measured and say so where not.
   `GameNatives` by reflection (the transpiler needs a function's declaration to call it inside an expression, and no
   game file is needed). The rewriter now also writes a rawcode as its value: War3Net writes it as `FourCC("...")` with
   its text as it is, so `'ab"c'` breaks out of the string and `'\abc'` reads `\a` as one byte; the value is War3Net's
-  reading of the four characters (the game's reading of a backslash in one isn't measured). This reaches blizzard.j's
-  rawcodes too, with the same values. The Lua is loaded as the chunk named by the file's path, so an error in it reads
+  reading of the four characters, a negative one in parentheses (`-'éab'` would read as a Lua comment). War3Net reads a
+  byte from 0x80 up after the first as signed: `'éab'` (UTF-8 `C3 A9 61 62`) is -1029086878, where its bytes, and the
+  old `FourCC`, give -1012309662. Neither that nor the game's reading of a backslash in a rawcode is measured: W1-7's
+  JASS probes are to settle rawcodes with high bytes. This reaches blizzard.j's rawcodes too, with the same values for
+  its rawcodes, which are all ASCII. The Lua is loaded as the chunk named by the file's path, so an error in it reads
   `MyMap\save.pld:N:` (N the transpiled Lua's line, as D65's are), and runs with those natives and globals as they were
   before blizzard.j and the map ran, and `__jarray`, which War3Net makes a JASS array with. So a native the map
   replaced isn't what a file calls, and a file's `PreloadFiles` isn't the map's (inferred: the game runs a Preload file

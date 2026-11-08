@@ -177,6 +177,27 @@ public sealed class FileSimulationTests : IDisposable
         Assert.Equal(["0.000 print: 1633821283\t1549886051"], simulation.Log);
     }
 
+    // A rawcode with a byte from 0x80 up is negative as War3Net reads it (D102, not measured), and is negated as a
+    // number, not turned into a Lua comment.
+    [Fact]
+    public void A_negative_rawcode_can_be_negated()
+    {
+        _documents.CustomMapData["raw.pld"] = Encoding.UTF8.GetBytes("""
+            function PreloadFiles takes nothing returns nothing
+            call StoreInteger(InitGameCache("c"), "m", "high", 'éab')
+            call StoreInteger(InitGameCache("c"), "m", "negated", -'éab')
+            endfunction
+            """);
+
+        using var simulation = Load("""
+            Preloader("raw.pld")
+            print(GetStoredInteger(InitGameCache("c"), "m", "high"), GetStoredInteger(InitGameCache("c"), "m", "negated"))
+            """);
+
+        Assert.Null(simulation.Stopped);
+        Assert.Equal(["0.000 print: -1029086878\t1029086878"], simulation.Log);
+    }
+
     [Fact]
     public void A_player_name_carries_a_piece_out_of_a_file()
     {

@@ -53,12 +53,14 @@ public sealed partial class Simulation
             return [];
         });
         _lua.Run("""
-            local load, assert, error, setmetatable, jass = load, assert, error, setmetatable, {}
+            local load, error, setmetatable, jass = load, error, setmetatable, {}
             for name in preloaderNames:gmatch('%S+') do jass[name] = _G[name] end
             setmetatable(jass, {__index = function(_, name) error(name .. " is not a native or a global of common.j", 2) end})
             preloader(function(lua, path)
               local file = setmetatable({}, {__index = jass})
-              assert(load(lua, '@' .. path, 't', file))()
+              local run, problem = load(lua, '@' .. path, 't', file)
+              if not run then error(problem, 0) end
+              run()
               file.PreloadFiles()
             end)
             preloaderNames, preloader = nil, nil

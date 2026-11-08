@@ -131,11 +131,14 @@ static class Blizzard
         }
 
         // War3Net writes a rawcode as FourCC("...") with its text as it is, so a quote in it breaks out of the string and
-        // a backslash starts a Lua escape; its value is written instead (decisions D102).
+        // a backslash starts a Lua escape; its value is written instead (decisions D102), a negative one in parentheses,
+        // since -'éab' would otherwise read --1029086878, a Lua comment.
         protected override bool RewriteLiteralExpression(JassLiteralExpressionSyntax literal, out JassExpressionSyntax result)
         {
             if (literal.SyntaxKind != JassSyntaxKind.FourCCLiteralExpression) return base.RewriteLiteralExpression(literal, out result);
-            result = JassSyntaxFactory.LiteralExpression(JassSyntaxFactory.Literal(JassLiteral.ParseFourCC(literal.Token.Text)));
+            var value = JassLiteral.ParseFourCC(literal.Token.Text);
+            result = JassSyntaxFactory.LiteralExpression(JassSyntaxFactory.Literal(value));
+            if (value < 0) result = JassSyntaxFactory.ParenthesizedExpression(result);
             return true;
         }
 
