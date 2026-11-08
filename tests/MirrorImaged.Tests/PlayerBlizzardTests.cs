@@ -9,7 +9,8 @@ public sealed class PlayerBlizzardTests : IDisposable
     public void Dispose() => _maps.Dispose();
 
     // config as World Editor writes it for two allied players and a third on its own; main, InitBlizzard's player parts.
-    // The players probe (docs/facts.md, "Players and the game") read the neutral victim's alliances and bounty after them.
+    // The players probe (docs/facts.md, "Players and the game") read the neutral victim's alliances and bounty after them;
+    // the lobby probe, that slot 2, which no one plays, is on team -1.
     [InstallFact]
     public void World_editors_config_and_blizzard_j_s_player_setup_run_on_the_natives()
     {
@@ -56,7 +57,7 @@ public sealed class PlayerBlizzardTests : IDisposable
             "0.000 print: true\ttrue\tfalse\ttrue",
             "0.000 print: true\tfalse\ttrue\ttrue\t0",
             "0.000 print: 2147483647\t0\t25",
-            "0.000 print: 3\ttrue\t1\t1\t-7744.0",
+            "0.000 print: 3\ttrue\t-1\t1\t-7744.0",
         ], simulation.Log);
     }
 }

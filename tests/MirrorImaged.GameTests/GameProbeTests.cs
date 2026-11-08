@@ -35,7 +35,7 @@ public sealed class GameProbeTests
     [MemberData(nameof(Probes))]
     public void A_probe_gives_the_games_lines_in_the_game_and_in_MirrorImaged(string name)
     {
-        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), ProbeComparison.Longest);
+        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), ProbeComparison.Longest, ProbeComparison.WithComputer(name));
         Assert.True(run.State is ProbeState.Done or ProbeState.Closed, $"{run.State}: {run.Detail}");
         IReadOnlyList<string> lines = run.State == ProbeState.Closed ? [ProbeComparison.Closes] : run.Lines;
         Assert.True(File.Exists(ProbeComparison.Expected(name)), $"""
@@ -76,5 +76,19 @@ public sealed class GameProbeTests
         Assert.StartsWith("error: ", run.Lines[1]);
         Assert.Contains("a line is at most 253 bytes, a backslash counting two, with no line break", run.Lines[1]);
         Assert.Equal(2, run.Lines.Count);
+    }
+
+    // EndGame's evidence (decisions D147): the events probe's code after it and a 0 s timer started before it write their
+    // files, and the end-level event's action never writes its own. Its lines are the theory's.
+    [GameFact]
+    public void The_events_probe_writes_the_files_EndGame_lets_it_write()
+    {
+        var files = new[] { "events-after.pld", "events-timer.pld", "events-end.pld" }.Select(file => Path.Combine(GameRunner.Default.Data, file)).ToList();
+        files.ForEach(File.Delete);
+
+        var run = GameRunner.Default.Run("events", ProbeMap.Source("events"), ProbeComparison.Longest, withComputer: true);
+
+        Assert.True(run.State == ProbeState.Done, $"{run.State}: {run.Detail}");
+        Assert.Equal([true, true, false], files.Select(File.Exists));
     }
 }

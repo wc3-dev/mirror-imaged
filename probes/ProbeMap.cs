@@ -37,7 +37,13 @@ public static partial class ProbeMap
     /// the probe too.
     /// </param>
     /// <param name="path">The map to write.</param>
-    public static void Build(string name, string lua, string path)
+    /// <param name="withComputer">
+    /// A map of three named slots in place of one: a user (slot 0), a computer (1) and a user no one plays (2), each named
+    /// in <c>war3map.w3i</c> ("Probe User", "Probe Computer", "Probe Empty") with a selectable race, in custom forces
+    /// with fixed player settings (0 and 2 in one force, 1 in the other). Its <c>config</c> adds what it reads before
+    /// it sets anything to the global list <c>ProbeConfig</c>, one string a call.
+    /// </param>
+    public static void Build(string name, string lua, string path, bool withComputer = false)
     {
         if (!Name().IsMatch(name))
             throw new ArgumentException($"A probe's name is letters, digits and dashes, not \"{name}\"", nameof(name));
@@ -90,20 +96,7 @@ public static partial class ProbeMap
             {{lua}}
             end)
 
-            function config()
-                SetMapName("MirrorImaged probe")
-                SetPlayers(1)
-                SetTeams(1)
-                SetGamePlacement(MAP_PLACEMENT_USE_MAP_SETTINGS)
-                DefineStartLocation(0, 0.0, 0.0)
-                SetPlayerStartLocation(Player(0), 0)
-                SetPlayerColor(Player(0), ConvertPlayerColor(0))
-                SetPlayerRacePreference(Player(0), RACE_PREF_HUMAN)
-                SetPlayerRaceSelectable(Player(0), true)
-                SetPlayerController(Player(0), MAP_CONTROL_USER)
-                SetPlayerSlotAvailable(Player(0), MAP_CONTROL_USER)
-                InitGenericPlayerSlots()
-            end
+            {{(withComputer ? ConfigWithComputer : Config)}}
 
             local function mark(file)
                 PreloadGenClear()
@@ -126,11 +119,71 @@ public static partial class ProbeMap
         info.MapName = name;
         info.MapFlags &= ~MapFlags.MeleeMap;
         info.Forces[0].Players = new Bitmask32(1);
+        if (withComputer)
+        {
+            info.MapFlags |= MapFlags.UseCustomForces | MapFlags.FixedPlayerSettingsForCustomForces;
+            var start = info.Players[0].StartPosition;
+            info.Players.Clear();
+            info.Players.AddRange([Slot(0, PlayerController.User, "Probe User"), Slot(1, PlayerController.Computer, "Probe Computer"), Slot(2, PlayerController.User, "Probe Empty")]);
+            info.Forces[0].Players = new Bitmask32(0b101);
+            info.Forces.Add(new ForceData { Name = "Computer", Players = new Bitmask32(0b10) });
+
+            PlayerData Slot(int id, PlayerController controller, string slotName) =>
+                new() { Id = id, Controller = controller, Race = PlayerRace.Human, Flags = PlayerFlags.RaceSelectable, Name = slotName, StartPosition = start };
+        }
         var builder = new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info), Script = script });
         builder.AddFiles(MpqFile.New(new MemoryStream(Minimap), "war3mapMap.tga"));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         builder.Build(path);
     }
+
+    // config as World Editor writes it for one user player.
+    const string Config = """
+        function config()
+            SetMapName("MirrorImaged probe")
+            SetPlayers(1)
+            SetTeams(1)
+            SetGamePlacement(MAP_PLACEMENT_USE_MAP_SETTINGS)
+            DefineStartLocation(0, 0.0, 0.0)
+            SetPlayerStartLocation(Player(0), 0)
+            SetPlayerColor(Player(0), ConvertPlayerColor(0))
+            SetPlayerRacePreference(Player(0), RACE_PREF_HUMAN)
+            SetPlayerRaceSelectable(Player(0), true)
+            SetPlayerController(Player(0), MAP_CONTROL_USER)
+            SetPlayerSlotAvailable(Player(0), MAP_CONTROL_USER)
+            InitGenericPlayerSlots()
+        end
+        """;
+
+    // config for the computer map, with what the lobby had set before it: the game type, MAP_LOCK_ALLIANCE_CHANGES, the
+    // local player, the player and team counts, and each slot's name, slot state, controller and race as their ids.
+    const string ConfigWithComputer = """
+        function config()
+            local slots = {}
+            for i = 0, 2 do
+                local p = Player(i)
+                slots[#slots + 1] = string.format("%d %s %d %d %d %s", i, GetPlayerName(p), GetHandleId(GetPlayerSlotState(p)),
+                    GetHandleId(GetPlayerController(p)), GetHandleId(GetPlayerRace(p)), tostring(IsPlayerRacePrefSet(p, RACE_PREF_RANDOM)))
+            end
+            ProbeConfig = ProbeConfig or {}
+            ProbeConfig[#ProbeConfig + 1] = string.format("type %d lock %s local %d players %d teams %d; %s",
+                GetHandleId(GetGameTypeSelected()), tostring(IsMapFlagSet(MAP_LOCK_ALLIANCE_CHANGES)), GetPlayerId(GetLocalPlayer()),
+                GetPlayers(), GetTeams(), table.concat(slots, "; "))
+            SetMapName("MirrorImaged probe")
+            SetPlayers(3)
+            SetTeams(2)
+            SetGamePlacement(MAP_PLACEMENT_TEAMS_TOGETHER)
+            for i = 0, 2 do
+                DefineStartLocation(i, 0.0, 0.0)
+                SetPlayerStartLocation(Player(i), i)
+                SetPlayerColor(Player(i), ConvertPlayerColor(i))
+                SetPlayerRacePreference(Player(i), RACE_PREF_HUMAN)
+                SetPlayerRaceSelectable(Player(i), true)
+                SetPlayerController(Player(i), i == 1 and MAP_CONTROL_COMPUTER or MAP_CONTROL_USER)
+                SetPlayerTeam(Player(i), i == 1 and 1 or 0)
+            end
+        end
+        """;
 
     // An uncompressed 32-bit TGA, top row first.
     static byte[] MakeMinimap(int size)

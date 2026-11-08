@@ -75,7 +75,8 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// <summary>The game's executable.</summary>
     public string Game => game;
 
-    string Data => Path.Combine(documents, "CustomMapData", ProbeMap.Folder);
+    /// <summary>The folder the probes write to, <c>CustomMapData\MirrorImaged</c> in the game's documents.</summary>
+    public string Data => Path.Combine(documents, "CustomMapData", ProbeMap.Folder);
 
     // Beside the maps' folder: the hashes of the account's files that probe runs made, one a line (named when it held
     // only replays).
@@ -88,7 +89,8 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// <exception cref="InvalidOperationException">A Warcraft III that this runner didn't start is running.</exception>
     /// <exception cref="ArgumentException">The name is not a probe's, or makes the map's path too long for the game.</exception>
     /// <exception cref="TimeoutException">Another run kept the game longer than five minutes.</exception>
-    public ProbeRun Run(string name, string lua, TimeSpan timeout)
+    /// <param name="withComputer">The probe map with a computer and named slots (<see cref="ProbeMap.Build"/>).</param>
+    public ProbeRun Run(string name, string lua, TimeSpan timeout, bool withComputer = false)
     {
         using var one = new Mutex(false, OneRunAtATime);
         bool mine;
@@ -109,7 +111,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         {
             if (Process.GetProcessesByName("Warcraft III").Length > 0)
                 throw new InvalidOperationException("Warcraft III is already running; the runner uses only a game it starts itself");
-            return RunAlone(name, lua, timeout);
+            return RunAlone(name, lua, timeout, withComputer);
         }
         finally
         {
@@ -117,7 +119,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         }
     }
 
-    ProbeRun RunAlone(string name, string lua, TimeSpan timeout)
+    ProbeRun RunAlone(string name, string lua, TimeSpan timeout, bool withComputer)
     {
         var map = MapPath(maps, name);
         var output = Path.Combine(Data, name + ".pld");
@@ -143,7 +145,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         GameProcess? running = null;
         try
         {
-            ProbeMap.Build(name, lua, map);
+            ProbeMap.Build(name, lua, map, withComputer);
             Directory.CreateDirectory(Data);
             File.Delete(output);
             File.Delete(loaded);

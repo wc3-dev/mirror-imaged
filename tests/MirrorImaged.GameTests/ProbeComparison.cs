@@ -55,6 +55,9 @@ public static class ProbeComparison
     public static IEnumerable<string> Names =>
         Directory.GetFiles(Probes, "*.lua").Select(file => Path.GetFileNameWithoutExtension(file)).Order(StringComparer.Ordinal);
 
+    /// <summary>Whether a probe runs on the map with a computer and named slots (decisions D140).</summary>
+    public static bool WithComputer(string name) => name is "events" or "lobby";
+
     /// <summary>The game's lines of a probe, <c>probes/expected/&lt;probe&gt;.txt</c>.</summary>
     public static string Expected(string name) => Path.Combine(Probes, "expected", name + ".txt");
 
@@ -72,10 +75,10 @@ public static class ProbeComparison
         try
         {
             var map = Path.Combine(folder, name + ".w3x");
-            ProbeMap.Build(name, ProbeMap.Source(name), map);
+            ProbeMap.Build(name, ProbeMap.Source(name), map, WithComputer(name));
             using var simulation = Simulation.Load(map, Frame);
             var file = $@"{ProbeMap.Folder}\{name}.pld";
-            for (var time = TimeSpan.Zero; time < Longest && simulation.Stopped is null && !simulation.Documents.CustomMapData.ContainsKey(file); time += TimeSpan.FromSeconds(1))
+            for (var time = TimeSpan.Zero; time < Longest && simulation is { Stopped: null, Ended: false } && !simulation.Documents.CustomMapData.ContainsKey(file); time += TimeSpan.FromSeconds(1))
             {
                 try { simulation.Advance(TimeSpan.FromSeconds(1)); }
                 catch (LuaException) when (simulation.Stopped is not null) { }
@@ -89,7 +92,8 @@ public static class ProbeComparison
             if (simulation.Stopped is not null)
                 return (null, simulation.Stopped.Message.Split('\n')[0]);
             var error = simulation.Log.LastOrDefault(entry => entry.Contains(" error: "));
-            return (null, $"no lines in {Longest.TotalSeconds} simulated seconds{(error is null ? "" : $"; the last error: {error}")}");
+            var why = simulation.Ended ? "the game ended without lines" : $"no lines in {Longest.TotalSeconds} simulated seconds";
+            return (null, $"{why}{(error is null ? "" : $"; the last error: {error}")}");
         }
         finally
         {

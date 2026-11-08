@@ -1,0 +1,20 @@
+# Where MirrorImaged differs from the game's lines in expected/lobby.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# ConfigureNeutralVictim is blizzard.j's, which the comparison runs without (D120; W1-10): the neutral victim's
+# alliance to slot 1.
+- alliances 0>1 0, 1>0 0, 0>2 0, 2>0 0, 1>2 0, 2>1 0, 1>1 255, 2>2 255, 1>24 0, 24>1 0, 1>25 0, 25>1 1, 1>26 0, 1>27 1, 27>1 1, 2>27 1, 27>2 1, 1>3 0
++ alliances 0>1 0, 1>0 0, 0>2 0, 2>0 0, 1>2 0, 2>1 0, 1>1 255, 2>2 255, 1>24 0, 24>1 0, 1>25 0, 25>1 0, 1>26 0, 1>27 1, 27>1 1, 2>27 1, 27>2 1, 1>3 0
+
+# GetPlayersAll is blizzard.j's (D120; W1-10): its error ends the probe, so the lines after it are missing.
+- enum players: 0 1; allies of 1: 1; enemies of 1: 0; all: 0 1
++ error: war3map.lua:111: attempt to call a nil value (global 'GetPlayersAll')
+- type GAME_TYPE_MELEE placement MAP_PLACEMENT_TEAMS_TOGETHER players 3 teams 2 map flags 1024 1048576
+- suspended 7: 7 40e00000, 7 40e00000, 7.00000477 40e0000a, 7.00000477 40e0000a
+- suspended 12: 12 41400000, 12 41400000, 12 41400000, 12 41400000
+- suspended 18: 18 41900000, 18 41900000, 18 41900000, 18 41900000
+- suspended 6: 6 40c00000, 6 40c00000, 6 40c00000, 6 40c00000
+- suspended 0.1: 0.0999999046 3dccccc0, 0.0999999046 3dccccc0, 0.0999999046 3dccccc0, 0.0999999046 3dccccc0
+- suspended 23.9: 23.8999977 41bf3332, 23.8999977 41bf3332, 23.8999977 41bf3332, 23.8999977 41bf3332
+- suspended 7.5: 7.5 40f00000, 7.5 40f00000, 7.5 40f00000, 7.5 40f00000
+- running 7: at once 7 40e00000; 0 s later 7 40e00000

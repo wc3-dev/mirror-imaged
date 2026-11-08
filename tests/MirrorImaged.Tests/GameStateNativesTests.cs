@@ -221,15 +221,18 @@ public sealed class GameStateNativesTests
     }
 
     // facts: a map with custom forces and fixed player settings starts with MAP_LOCK_ALLIANCE_CHANGES set; set false, it
-    // reads false. The probe: a map without custom forces has no flag set and plays melee.
+    // reads false. The lobby probe: set once the lobby has seated the players, with 2^20, and the game type is melee.
+    // The players probe: a map without custom forces has no flag set and plays melee.
     [Fact]
-    public void Custom_forces_with_fixed_settings_lock_alliances_and_use_the_maps_settings()
+    public void Custom_forces_with_fixed_settings_lock_alliances_and_play_melee()
     {
         var locked = _natives.ConvertMapFlag(1024);
+        Assert.False(_natives.IsMapFlagSet(locked));
         _natives.Seat([0], [], customForces: true, fixedSettings: true);
 
         Assert.True(_natives.IsMapFlagSet(locked));
-        Assert.Same(_natives.ConvertGameType(4), _natives.GetGameTypeSelected());
+        Assert.True(_natives.IsMapFlagSet(_natives.ConvertMapFlag(1 << 20)));
+        Assert.Same(_natives.ConvertGameType(1), _natives.GetGameTypeSelected());
         _natives.SetMapFlag(locked, false);
         Assert.False(_natives.IsMapFlagSet(locked));
     }
@@ -242,10 +245,12 @@ public sealed class GameStateNativesTests
         Assert.All(Enumerable.Range(0, 21), n => Assert.False(_natives.IsMapFlagSet(_natives.ConvertMapFlag(1 << n))));
     }
 
-    // the probe: players and teams as config set them, an undefined start location at 0, 0
+    // the probe: players and teams as config set them, an undefined start location at 0, 0; the lobby probe: before
+    // config, 0 players and 24 teams
     [Fact]
     public void The_maps_setup_reads_back()
     {
+        Assert.Equal([0, 24], [_natives.GetPlayers(), _natives.GetTeams()]);
         _natives.SetPlayers(3);
         _natives.SetTeams(2);
         _natives.DefineStartLocation(1, -7744, 960.5f);
