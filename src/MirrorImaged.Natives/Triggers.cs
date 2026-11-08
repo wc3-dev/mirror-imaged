@@ -256,9 +256,10 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Runs every condition in order, also after one has failed, and answers whether all passed: true with none. A
-    /// condition that raises, or waits, fails. Counts nothing; a disabled trigger's conditions run too.
+    /// condition that raises, or waits, fails. Counts nothing; a disabled trigger's conditions run too. Close: with
+    /// Condition(nil) in an And, Or or Not it gives the model's value, not the game's (decisions D114).
     /// </summary>
-    [Native(Level.Exact, Fact = Probe1 + "; " + Probe2 + "; " + Handles)]
+    [Native(Level.Close)]
     public bool TriggerEvaluate(trigger? whichTrigger) =>
         whichTrigger is not null && In(Current with { Trigger = whichTrigger }, () => Passes(whichTrigger));
 
@@ -345,16 +346,20 @@ public sealed partial class GameNatives
         return place;
     }
 
-    /// <summary>The second operand runs only when the first passes; a nil operand is false.</summary>
-    [Native(Level.Exact, Fact = Probe3 + "; " + Handles)]
+    /// <summary>
+    /// The second operand runs only when the first passes; a nil operand is false. Not matched: with Condition(nil) in
+    /// it, 6 of the 21 cases measured differ, such as And(t, Condition(nil)) for a condition t that passes, which passes
+    /// in the game and fails here (decisions D114).
+    /// </summary>
+    [Native(Level.Close)]
     public boolexpr? And(boolexpr? operandA, boolexpr? operandB) => Make(new boolexpr { Junction = Junction.And, A = operandA, B = operandB });
 
-    /// <summary>The second operand runs only when the first fails; a nil operand is false.</summary>
-    [Native(Level.Exact, Fact = Probe3)]
+    /// <summary>The second operand runs only when the first fails; a nil operand is false. Close as And (decisions D114).</summary>
+    [Native(Level.Close)]
     public boolexpr? Or(boolexpr? operandA, boolexpr? operandB) => Make(new boolexpr { Junction = Junction.Or, A = operandA, B = operandB });
 
-    /// <summary>Not(nil) is false.</summary>
-    [Native(Level.Exact, Fact = Probe3)]
+    /// <summary>Not(nil) is false. Close as And (decisions D114).</summary>
+    [Native(Level.Close)]
     public boolexpr? Not(boolexpr? operand) => Make(new boolexpr { Junction = Junction.Not, A = operand });
 
     /// <summary>A destroyed And, Or or Not still runs where it was added.</summary>
@@ -369,7 +374,7 @@ public sealed partial class GameNatives
     public void DestroyCondition(conditionfunc? c) => Destroy(c);
 
     /// <summary>As DestroyCondition.</summary>
-    [Native(Level.Exact, Fact = Probe2)]
+    [Native(Level.Exact, Fact = Probe2 + "; " + Handles)]
     public void DestroyFilter(filterfunc? f) => Destroy(f);
 
     /// <summary>
@@ -492,17 +497,25 @@ public sealed partial class GameNatives
         _ => false,
     };
 
-    // A destroyed And, Or or Not still runs where it was added; a Condition's or a Filter's place is freed (decisions D115)
+    // A destroyed Condition or Filter frees its place and stays the place's: where it is held, or given later, it runs
+    // whatever the place holds, nothing until a new one takes it (decisions D115). A destroyed And, Or or Not still runs
+    // where it was added.
     void Destroy(boolexpr? e)
     {
         if (e is null) return;
-        if (e.Place is { Code: { } code } place)
+        if (e.Place is { } place)
         {
-            Release(code);
+            if (place.Code is null) return;
+            Release(place.Code);
             place.Code = null;
             _places.Enqueue(place);
+            return;
         }
         _game.Remove(e.Key);
+        // Condition(nil) and Filter(nil) are one handle in the game (decisions D114)
+        if (e != _noCondition && e != _noFilter) return;
+        if (_noCondition is not null) _game.Remove(_noCondition.Key);
+        if (_noFilter is not null) _game.Remove(_noFilter.Key);
     }
 
     void Execute(trigger t, Firing firing) =>

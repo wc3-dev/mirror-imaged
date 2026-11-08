@@ -1,4 +1,4 @@
-# probes/arguments.lua on 3.0.1.24371, single player, 11-08: the game's lines.
+# probes/arguments.lua on 3.0.1.24371, single player, 11-08: the game's lines. Three runs, the same lines.
 # Lines starting "# " are notes.
 TimerGetTimeout trigger error bad argument #1 to 'TimerGetTimeout' (timer expected)
 TimerGetTimeout race error bad argument #1 to 'TimerGetTimeout' (timer expected)

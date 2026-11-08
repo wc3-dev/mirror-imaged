@@ -1,5 +1,5 @@
-# probes/handles.lua on 3.0.1.24371, single player, 11-08: the game's lines. Two runs, the same lines; the first ran an
-# older identity part, which stopped at t == ConvertPlayerColor(n) (an agent's == refuses a handle that isn't one).
+# probes/handles.lua on 3.0.1.24371, single player, 11-08: the game's lines. Four runs, the same lines; the first ran
+# an older identity part, which stopped at t == ConvertPlayerColor(n) (an agent's == refuses a handle that isn't one).
 # Lines starting "# " are notes.
 first 1048690 players 1048584 1048586 1048646 1048584
 blizzard 1048577 1048578 1048579 1048580 1048581 1048582 1048583

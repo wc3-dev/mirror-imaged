@@ -36,6 +36,39 @@ public sealed class HandleTests : IDisposable
         Assert.Equal(["1 1\t1 1\t1 1\t1 1\t1 1", "1 1\t1 1\t1 1\t1 1", "1 1\t1 1\t1 1"], Printed(simulation));
     }
 
+    // probe handles-3: giving a native a callback, or running one, takes no id
+    [Fact]
+    public void A_callback_given_or_run_takes_no_id()
+    {
+        using var simulation = Load("""
+            local yes = function() return true end
+            function MirrorProbeNothing() end
+            local function taken(call) local before = GetHandleId(CreateTimer()) call() return GetHandleId(CreateTimer()) - before - 1 end
+            local t, f, trig = CreateTimer(), CreateForce(), CreateTrigger()
+            print(taken(function() TimerStart(t, 100, false, yes) end), taken(function() TimerStart(t, 100, false, nil) end), taken(function() ForForce(f, yes) end),
+              taken(function() ExecuteFunc("MirrorProbeNothing") end), taken(function() TriggerExecute(trig) end), taken(function() TriggerEvaluate(trig) end))
+            """);
+
+        Assert.Equal(["0\t0\t0\t0\t0\t0"], Printed(simulation));
+    }
+
+    // probe handles-2: a handle whose userdata Lua collected comes back as another userdata, the same while held
+    [Fact]
+    public void A_handle_lua_collected_comes_back_as_another_userdata()
+    {
+        using var simulation = Load("""
+            local ht, h = InitHashtable(), CreateTimer()
+            SaveTimerHandle(ht, 0, 0, h)
+            local before = tostring(h)
+            local weak = setmetatable({}, {__mode = "v"})
+            weak[1], h = h, nil
+            for i = 1, 300000 do local junk = {i} end
+            print(weak[1] == nil, tostring(LoadTimerHandle(ht, 0, 0)) == before, rawequal(LoadTimerHandle(ht, 0, 0), LoadTimerHandle(ht, 0, 0)))
+            """);
+
+        Assert.Equal(["true\tfalse\ttrue"], Printed(simulation));
+    }
+
     // probe handles: a Convert handle's id is its value, and it takes none; nil, nothing and the event outside one are 0
     [Fact]
     public void A_converted_handles_id_is_its_value_and_nil_is_0()

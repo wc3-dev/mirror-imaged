@@ -1,6 +1,6 @@
 # probes/handles-2.lua on 3.0.1.24371, single player, 11-08: the game's lines. Three runs gave each new timer's id in turn,
 # with these lines but for where another id came among the four "new" ones (first twice, last once); these lines
-# twice since. Lines starting "# " are notes.
+# three times since. Lines starting "# " are notes.
 freed
 collected true
 at once 2 other

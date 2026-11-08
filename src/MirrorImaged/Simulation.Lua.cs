@@ -57,7 +57,7 @@ public sealed partial class Simulation
         // destroyed one reads as null, but GetHandleId, the one native taking any handle, reads its id (probe handles).
         if (value is LuaHandle h && typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}") is { } declared && type.IsAssignableFrom(declared)
             && _game.Handle(h.Key) is var found && (found is null || type.IsInstanceOfType(found)))
-            return found ?? (type == typeof(handle) ? new handle { Id = h.Id } : null);
+            return found ?? (type == typeof(handle) ? new handle { Id = h.Id, Key = h.Key } : null);
         // The game's message names no type given for a handle or a function (probe arguments)
         throw BadArgument(position, function, $"{(type.IsSubclassOf(typeof(Delegate)) ? "function" : type.Name)} expected");
     }

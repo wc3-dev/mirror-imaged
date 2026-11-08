@@ -125,6 +125,82 @@ public sealed class TriggerTests : IDisposable
         Assert.Equal(["0.000 true\ttrue\ttrue\tfalse\tfalse\tfalse\ttrue\tz"], Printed(simulation));
     }
 
+    // Every case the probes triggers-2, triggers-3, handles and handles-3 measured with Condition(nil) (cn) in a trigger's
+    // conditions, the game's result beside the model's (decisions D114): t and u pass, f fails, x passes. A list of
+    // several is a trigger's conditions in turn.
+    static readonly (string Conditions, bool Game, bool Model)[] NilConditionCases =
+    [
+        ("cn", true, true),
+        ("Not(cn)", true, true),
+        ("Not(Not(cn))", false, false),
+        ("And(cn, f)", false, false),
+        ("And(cn, x)", false, false),
+        ("Or(cn, f)", false, false),
+        ("And(t, cn)", true, false),
+        ("And(t, Not(cn))", false, true),
+        ("Not(And(t, cn))", false, true),
+        ("And(t, And(cn, x))", false, false),
+        ("And(Or(f, t), cn)", false, false),
+        ("Or(f, cn)", false, false),
+        ("t, Not(cn)", true, true),
+        ("t, cn", true, true),
+        ("And(t, Or(cn, f))", false, false),
+        ("And(t, Not(Not(cn)))", false, false),
+        ("Or(f, Not(cn))", true, true),
+        ("And(Not(f), cn)", false, false),
+        ("And(t, And(u, cn))", true, false),
+        ("And(Not(cn), t)", false, true),
+        ("And(And(t, u), Not(cn))", false, true),
+    ];
+
+    [Fact]
+    public void Condition_nil_in_a_boolexpr_gives_the_games_result_in_15_of_the_21_cases_measured()
+    {
+        using var simulation = Load($$"""
+            local cn = Condition(nil)
+            local yes, no = function() return true end, function() return false end
+            local t, u, f, x = Condition(yes), Condition(yes), Condition(no), Condition(yes)
+            local function evaluate(...) local trig = CreateTrigger() for _, c in ipairs({...}) do TriggerAddCondition(trig, c) end return TriggerEvaluate(trig) end
+            {{string.Join("\n", NilConditionCases.Select(c => $"print(evaluate({c.Conditions}))"))}}
+            """);
+
+        Assert.Equal(NilConditionCases.Select(c => $"0.000 {(c.Model ? "true" : "false")}"), Printed(simulation));
+        Assert.Equal(15, NilConditionCases.Count(c => c.Game == c.Model));
+    }
+
+    // W1-9's probe events: a destroyed Filter given to ForceEnumPlayers after a Condition had taken its place ran the new
+    // condition; a destroyed condition given to a native is its place's (decisions D115)
+    [Fact]
+    public void A_destroyed_condition_given_to_a_native_runs_what_its_place_holds()
+    {
+        using var simulation = Load(Cond + """
+            local df = Filter(function() ran[#ran + 1] = "d" return true end)
+            DestroyFilter(df)
+            local t = CreateTrigger()
+            TriggerAddCondition(t, df)
+            print("empty", TriggerEvaluate(t), done())
+            cond("c", true)
+            print("taken", TriggerEvaluate(t), evaluate(And(df, cond("y", true))), GetHandleId(df) > 0, done())
+            """);
+
+        Assert.Equal(["0.000 empty\tfalse\t", "0.000 taken\ttrue\ttrue\ttrue\tc,c,y"], Printed(simulation));
+    }
+
+    // Condition(nil) and Filter(nil) are one handle in the game: destroying either destroys both (decisions D114; not
+    // measured)
+    [Fact]
+    public void Destroying_Condition_nil_destroys_Filter_nil()
+    {
+        using var simulation = Load(Cond + """
+            local cn, fn = Condition(nil), Filter(nil)
+            print(evaluate(fn))
+            DestroyCondition(cn)
+            print(evaluate(fn), evaluate(cn), GetHandleId(fn) == GetHandleId(cn), GetHandleId(fn) > 0)
+            """);
+
+        Assert.Equal(["0.000 true", "0.000 false\tfalse\ttrue\ttrue"], Printed(simulation));
+    }
+
     // facts: a self-removing condition ran
     [Fact]
     public void A_removed_or_destroyed_condition_stops_running_and_a_destroyed_one_fails()
@@ -208,7 +284,7 @@ public sealed class TriggerTests : IDisposable
             cond("x4", true) cond("y4", true)
             print("two", TriggerEvaluate(t), done())
             dc = cond("d5", true) t = trig(dc) DestroyCondition(dc)
-            CreateTimer() CreateTrigger() Condition(nil)
+            CreateTimer() CreateTrigger()
             cond("n5", true)
             print("after other handles", TriggerEvaluate(t), done())
             dc = cond("d6", true) t = trig(Not(dc)) DestroyCondition(dc)
