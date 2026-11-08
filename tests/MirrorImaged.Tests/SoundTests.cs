@@ -276,8 +276,9 @@ public sealed class SoundTests : IDisposable
     }
 
     // probes sounds and sounds-2: playing from StartSound, in its instant too, for its length; a looping one on; one of
-    // no file never; stopped at once, with a fade too; a second start, in the same instant or later, leaves its end;
-    // started again after it ended, it plays again; SetSoundDuration doesn't change how long it plays
+    // no file never; stopped at once, but with a fade in its start's instant only to that instant's end and with a fade
+    // 0.5 s in on to its end; a second start, in the same instant or later, leaves its end; started again after it
+    // ended, it plays again; SetSoundDuration doesn't change how long it plays
     [Fact]
     public void A_sound_reads_playing_from_its_start_for_its_length()
     {
@@ -291,19 +292,23 @@ public sealed class SoundTests : IDisposable
         natives.SetSoundDuration(set, 3000);
         var stopped = Make(natives);
         var faded = Make(natives);
+        var fadedLater = Make(natives);
         Assert.False(natives.GetSoundIsPlaying(plain));
-        foreach (var s in new[] { plain, loop, missing, twice, again, set, stopped, faded }) natives.StartSound(s);
+        foreach (var s in new[] { plain, loop, missing, twice, again, set, stopped, faded, fadedLater }) natives.StartSound(s);
         natives.StartSound(twice);
         natives.StopSound(stopped, false, false);
         natives.StopSound(faded, false, true);
 
-        Assert.Equal([true, true, false, true, true, true, false, false], new[] { plain, loop, missing, twice, again, set, stopped, faded }.Select(natives.GetSoundIsPlaying));
-        Advance(0.6);
+        Assert.Equal([true, true, false, true, true, true, false, true], new[] { plain, loop, missing, twice, again, set, stopped, faded }.Select(natives.GetSoundIsPlaying));
+        Advance(0.5);
+        natives.StopSound(fadedLater, false, true);
+        Advance(0.1);
+        Assert.False(natives.GetSoundIsPlaying(faded));
         natives.StartSound(again);
         Advance(0.6);
-        Assert.Equal([true, true, true, true], new[] { plain, twice, again, set }.Select(natives.GetSoundIsPlaying));
+        Assert.Equal([true, true, true, true, true], new[] { plain, twice, again, set, fadedLater }.Select(natives.GetSoundIsPlaying));
         Advance(0.1);
-        Assert.Equal([false, true, false, false, false], new[] { plain, loop, twice, again, set }.Select(natives.GetSoundIsPlaying));
+        Assert.Equal([false, true, false, false, false, false], new[] { plain, loop, twice, again, set, fadedLater }.Select(natives.GetSoundIsPlaying));
         natives.StartSound(plain);
         Advance(1);
         Assert.True(natives.GetSoundIsPlaying(plain));

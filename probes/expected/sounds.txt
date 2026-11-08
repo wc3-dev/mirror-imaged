@@ -1,6 +1,6 @@
-# 3.0.1.24371, 11-08 (W5-2): the probe's lines as the game gave them, every volume group muted. Six runs, the same lines
-# but: at 2.0 s position read playing in the fourth and pitch 2 in the fourth and sixth (each {w}); and the waits, 1.5 or
-# 1.4 s, then 0.5 or 0.6 s, then 0.3 or 0.2 s (each {t}); see docs/facts.md, "Sounds".
+# 3.0.1.24371, 11-08 (W5-2): the probe's lines as the game gave them, every volume group muted. Seven runs, the same lines
+# but: at 2.0 s position read playing in the fourth and pitch 2 in the fourth, sixth and seventh (each {w}); and the waits,
+# 1.5 or 1.4 s, then 0.4 to 0.6 s, then 0.2 or 0.3 s (each {t}); see docs/facts.md, "Sounds".
 file Units\Human\HeroPaladin\HeroPaladinWhat1.wav 1288
 file Units\Human\HeroPaladin\HeroPaladinWhat1.flac 1288
 file Units\Human\HeroPaladin\HeroPaladinWhat1.ogg 1288

@@ -10,12 +10,8 @@
 - label HeroPaladinWhat duration 1184 playing false loading false
 + label HeroPaladinWhat duration 0 playing false loading false
 
-# StopSound with a fade read playing in its instant in the game, in every run kept; here it stops at once (D522, Close).
-- 0.0 faded duration 1288 playing true loading false
-+ 0.0 faded duration 1288 playing false loading false
-
-# The game reads a sound playing a while past its length, as its start waits a varying while (about 1 s in this probe,
-# 3.7 to 4 s in sounds-2); here it plays from StartSound for its length (D522, Close). These reads were the same in every
+# The game reads a sound playing a while past its length, as its start waits a varying while (0.8 to 1.4 s in this probe,
+# 3.6 to 4.0 s in sounds-2); here it plays from StartSound for its length (D522, Close). These reads were the same in every
 # run whose lines were kept (not the second's before 2.0 s, nor the fifth's timed reads); the ones that varied (at 2.0 s,
 # played from 1000 ms and at pitch 2) are {w} in the expected file.
 - 0.6 position duration 1288 playing true loading false

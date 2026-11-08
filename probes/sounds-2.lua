@@ -58,7 +58,7 @@ StartSound(twice)
 SetSoundPlayPosition(position, 1000)
 KillSoundWhenDone(killed)
 
-local playing, time = {}, 0
+local playing, stopped, time = {}, {}, 0
 for i, entry in ipairs(sounds) do playing[i] = GetSoundIsPlaying(entry[2]) end
 local poll = CreateTimer()
 TimerStart(poll, 0.05, true, guard(function()
@@ -68,6 +68,7 @@ TimerStart(poll, 0.05, true, guard(function()
     for i, entry in ipairs(sounds) do
         local now = GetSoundIsPlaying(entry[2])
         if now ~= playing[i] then out(string.format('%s %s at %.2f', entry[1], now and 'plays' or 'stops', time)) end
+        if not now and playing[i] then stopped[entry[1]] = time end
         playing[i] = now
     end
     if time > 5.99 then
@@ -75,6 +76,8 @@ TimerStart(poll, 0.05, true, guard(function()
         for i, entry in ipairs(sounds) do
             if playing[i] then out(entry[1] .. ' plays at 6') end
         end
+        -- stopped with a fade 0.5 s in, whether it played on to about its end, as plain did
+        out('faded 0.5 stops within 0.1 s of plain ' .. tostring(stopped['faded 0.5'] ~= nil and stopped.plain ~= nil and math.abs(stopped['faded 0.5'] - stopped.plain) < 0.11))
     end
 end))
 

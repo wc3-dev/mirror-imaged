@@ -267,7 +267,12 @@ public sealed partial class StandardData
             {
                 if (!Storages.TryGetValue(place, out var storage) || storage.Build != build)
                 {
-                    storage?.Dispose();
+                    // The old build's data goes with its storage; a run still holding it reads no more sound files
+                    if (storage is not null)
+                    {
+                        lock (storage) storage.Dispose();
+                        foreach (var old in Cache.Keys.Where(cached => cached.Folder == place).ToList()) Cache.Remove(old);
+                    }
                     Storages[place] = storage = CascStorage.Open(folder);
                 }
                 byte[]? Stored(string path) { lock (storage) return storage.Read(path); }

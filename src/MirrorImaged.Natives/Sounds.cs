@@ -1,3 +1,5 @@
+using MirrorImaged.World;
+
 namespace MirrorImaged.Natives;
 
 public partial class sound
@@ -6,13 +8,14 @@ public partial class sound
     internal bool Looping;
     internal float Pitch = 1;
     internal double End;  // seconds: it reads playing until then; 0 before its first start
+    internal long Started = -1;  // the step of its last start
     internal string SpeakerKey = "", TextKey = "";
 }
 
 // Sounds as the probes sounds and sounds-2 measure them (docs/facts.md, "Sounds"): nothing is played. A sound's length is
 // its file's, read from the map or the install (GameData.SoundLength), and it reads playing from StartSound for that
-// long. The game reads a sound playing longer, as its start waits a varying while (a 1.288 s sound until 2 to 5 s after
-// StartSound), so GetSoundIsPlaying is Close (decisions D520 to D524).
+// long. The game reads a sound playing longer, as its start waits a varying while (0.8 to 1.4 s in probe sounds, 3.6 to
+// 4.0 s in sounds-2), so GetSoundIsPlaying is Close (decisions D520 to D524).
 public sealed partial class GameNatives
 {
     const string Sounds = "facts.md, Sounds: probes sounds and sounds-2 (11-08)";
@@ -55,7 +58,8 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// From StartSound until the sound's length has passed, divided by its pitch, or until it is stopped; a looping one
-    /// until stopped, and one of length 0 never. Close: the game's start waits a varying while, 1 to 4 s in the probes (D522).
+    /// until stopped, and one of length 0 never. Close: the game's start waits a varying while, 0.8 to 4.0 s in the probes
+    /// (D522).
     /// </summary>
     [Native(Level.Close)]
     public bool GetSoundIsPlaying(sound? soundHandle) => soundHandle?.End > Seconds;
@@ -70,16 +74,25 @@ public sealed partial class GameNatives
     {
         if (soundHandle is null || GetSoundIsPlaying(soundHandle) || GetSoundDuration(soundHandle) == 0) return;
         soundHandle.End = soundHandle.Looping ? double.PositiveInfinity : Seconds + Played(soundHandle, 0);
+        soundHandle.Started = _game.Step;
     }
 
+    /// <summary>As StartSound; a fade in changes nothing here (not measured).</summary>
     [Native(Level.Close)]
     public void StartSoundEx(sound? soundHandle, bool fadeIn) => StartSound(soundHandle);
 
-    /// <summary>Stops it at once, a fade too; it isn't destroyed, killWhenDone or not (its length still reads).</summary>
+    /// <summary>
+    /// Stops it at once. With a fade, it reads playing to the end of the instant it started in, if that is now, else on to
+    /// its end: fitted to two cases (a fade stop in StartSound's instant read playing then and not 0.6 s later; one 0.5 s
+    /// after it read playing to about its end in seven runs; D522). It isn't destroyed, killWhenDone or not (its length still
+    /// reads).
+    /// </summary>
     [Native(Level.Close)]
     public void StopSound(sound? soundHandle, bool killWhenDone, bool fadeOut)
     {
-        if (soundHandle is not null) soundHandle.End = 0;
+        if (soundHandle is null) return;
+        if (!fadeOut) soundHandle.End = 0;
+        else if (soundHandle.Started == _game.Step) soundHandle.End = Math.Min(soundHandle.End, (_game.Step + 1) / (double)Game.StepsPerSecond);
     }
 
     /// <summary>A sound playing stops reading playing at once and keeps its length; one not playing is destroyed (D522).</summary>
@@ -102,7 +115,10 @@ public sealed partial class GameNatives
         if (soundHandle is not null && GetSoundIsPlaying(soundHandle) && !soundHandle.Looping) soundHandle.End = Seconds + Played(soundHandle, millisecs);
     }
 
-    /// <summary>The next start plays it faster or slower: pitch 2 for half its length.</summary>
+    /// <summary>
+    /// The next start plays it faster or slower: pitch 2 for half its length. A pitch set while it plays changes nothing
+    /// until its next start (not measured).
+    /// </summary>
     [Native(Level.Close)]
     public void SetSoundPitch(sound? soundHandle, float pitch)
     {
@@ -115,7 +131,7 @@ public sealed partial class GameNatives
     /// <summary>
     /// Waits in a trigger's actions until the sound has <paramref name="offset"/> seconds left, then 0.15 s more, ending
     /// on a tenth as TriggerSleepAction's waits do: 0.2 s for a sound not playing or a negative offset, 0.1 s for nil.
-    /// Close: this matches 47 of the 56 waits measured (D524).
+    /// Close: this matches 61 of the 75 waits measured (D524).
     /// </summary>
     [Native(Level.Close)]
     public void TriggerWaitForSound(sound? s, float offset) =>

@@ -1,7 +1,8 @@
-# 3.0.1.24371, 11-08 (W5-2): the probe's lines as the game gave them, every volume group muted. Five runs, the same lines
+# 3.0.1.24371, 11-08 (W5-2): the probe's lines as the game gave them, every volume group muted. Seven runs, the same lines
 # but when the sounds stopped reading playing (from 1000 ms 3.65 to 4.30 s, at pitch 2 4.30 to 4.65, the rest 4.85 to
-# 5.25), so those lines move (~) and read {t}; and the waits, of which the first read 1.5 s and 1.4 in the fifth run,
-# 0.5's 1.0, 1.0, 0.9, 1.0 and 0.9 s and nil's 0.1, 0.1, 0.1, 0.2 and 0.1 s (each {t}); see docs/facts.md, "Sounds".
+# 5.25), so those lines move (~) and read {t}; and three waits (each {t}): the first 1.5 s, and 1.4 in the fifth to
+# seventh runs; 0.5's 1.0, 1.0, 0.9, 1.0, 0.9, 1.0 and 0.9 s; nil's 0.1, 0.1, 0.1, 0.2, 0.1, 0.1 and 0.1 s. The line after
+# "loop plays at 6" came with the seventh run; see docs/facts.md, "Sounds".
 music ArthasTheme 122305
 music BloodElfTheme 144561
 music Comradeship 124865
@@ -79,11 +80,12 @@ label HeroPaladinPissed 2536
 pitch 0.5 plays at 6
 label QuestNew plays at 6
 loop plays at 6
+faded 0.5 stops within 0.1 s of plain true
 wait 0 {t}
-wait ended {t}
+wait ended 0.2
 wait 0.5 {t}
-wait set 3000 {t}
-wait idle {t}
-wait idle 2 {t}
+wait set 3000 1.5
+wait idle 0.2
+wait idle 2 0.2
 wait nil {t}
-wait label -1 {t}
+wait label -1 0.2
