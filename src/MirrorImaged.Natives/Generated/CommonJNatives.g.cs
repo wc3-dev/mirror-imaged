@@ -34,9 +34,6 @@ public sealed partial class GameNatives
     public lightning? AddLightningEx(string? codeName, bool checkVisibility, float x1, float y1, float z1, float x2, float y2, float z2) => throw new MissingNativeException("AddLightningEx");
 
     [Native(Level.Missing)]
-    public void AddPlayerTechResearched(player? whichPlayer, int techid, int levels) => throw new MissingNativeException("AddPlayerTechResearched");
-
-    [Native(Level.Missing)]
     public void AddResourceAmount(unit? whichUnit, int amount) => throw new MissingNativeException("AddResourceAmount");
 
     [Native(Level.Missing)]
@@ -247,9 +244,6 @@ public sealed partial class GameNatives
     public unit? BlzCreateUnitWithSkin(player? id, int unitid, float x, float y, float face, int skinId) => throw new MissingNativeException("BlzCreateUnitWithSkin");
 
     [Native(Level.Missing)]
-    public void BlzDecPlayerTechResearched(player? whichPlayer, int techid, int levels) => throw new MissingNativeException("BlzDecPlayerTechResearched");
-
-    [Native(Level.Missing)]
     public void BlzDestroyFrame(framehandle? frame) => throw new MissingNativeException("BlzDestroyFrame");
 
     [Native(Level.Missing)]
@@ -272,9 +266,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void BlzEndUnitAbilityCooldown(unit? whichUnit, int abilCode) => throw new MissingNativeException("BlzEndUnitAbilityCooldown");
-
-    [Native(Level.Missing)]
-    public bool BlzForceHasPlayer(force? whichForce, player? whichPlayer) => throw new MissingNativeException("BlzForceHasPlayer");
 
     [Native(Level.Missing)]
     public void BlzFrameAddText(framehandle? frame, string? text) => throw new MissingNativeException("BlzFrameAddText");
@@ -1498,9 +1489,6 @@ public sealed partial class GameNatives
     public fogmodifier? CreateFogModifierRect(player? forWhichPlayer, fogstate? whichState, rect? where, bool useSharedVision, bool afterUnits) => throw new MissingNativeException("CreateFogModifierRect");
 
     [Native(Level.Missing)]
-    public force? CreateForce() => throw new MissingNativeException("CreateForce");
-
-    [Native(Level.Missing)]
     public image? CreateImage(string? file, float sizeX, float sizeY, float sizeZ, float posX, float posY, float posZ, float originX, float originY, float originZ, int imageType) => throw new MissingNativeException("CreateImage");
 
     [Native(Level.Missing)]
@@ -1588,9 +1576,6 @@ public sealed partial class GameNatives
     public void DefeatConditionSetDescription(defeatcondition? whichCondition, string? description) => throw new MissingNativeException("DefeatConditionSetDescription");
 
     [Native(Level.Missing)]
-    public void DefineStartLocation(int whichStartLoc, float x, float y) => throw new MissingNativeException("DefineStartLocation");
-
-    [Native(Level.Missing)]
     public void DefineStartLocationLoc(int whichStartLoc, location? whichLocation) => throw new MissingNativeException("DefineStartLocationLoc");
 
     [Native(Level.Missing)]
@@ -1613,9 +1598,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void DestroyFogModifier(fogmodifier? whichFogModifier) => throw new MissingNativeException("DestroyFogModifier");
-
-    [Native(Level.Missing)]
-    public void DestroyForce(force? whichForce) => throw new MissingNativeException("DestroyForce");
 
     [Native(Level.Missing)]
     public void DestroyGroup(group? whichGroup) => throw new MissingNativeException("DestroyGroup");
@@ -1798,13 +1780,7 @@ public sealed partial class GameNatives
     public void FogModifierStop(fogmodifier? whichFogModifier) => throw new MissingNativeException("FogModifierStop");
 
     [Native(Level.Missing)]
-    public void ForForce(force? whichForce, Action? callback) => throw new MissingNativeException("ForForce");
-
-    [Native(Level.Missing)]
     public void ForGroup(group? whichGroup, Action? callback) => throw new MissingNativeException("ForGroup");
-
-    [Native(Level.Missing)]
-    public void ForceAddPlayer(force? whichForce, player? whichPlayer) => throw new MissingNativeException("ForceAddPlayer");
 
     [Native(Level.Missing)]
     public void ForceCampaignSelectScreen() => throw new MissingNativeException("ForceCampaignSelectScreen");
@@ -1813,28 +1789,7 @@ public sealed partial class GameNatives
     public void ForceCinematicSubtitles(bool flag) => throw new MissingNativeException("ForceCinematicSubtitles");
 
     [Native(Level.Missing)]
-    public void ForceClear(force? whichForce) => throw new MissingNativeException("ForceClear");
-
-    [Native(Level.Missing)]
-    public void ForceEnumAllies(force? whichForce, player? whichPlayer, boolexpr? filter) => throw new MissingNativeException("ForceEnumAllies");
-
-    [Native(Level.Missing)]
-    public void ForceEnumEnemies(force? whichForce, player? whichPlayer, boolexpr? filter) => throw new MissingNativeException("ForceEnumEnemies");
-
-    [Native(Level.Missing)]
-    public void ForceEnumPlayers(force? whichForce, boolexpr? filter) => throw new MissingNativeException("ForceEnumPlayers");
-
-    [Native(Level.Missing)]
-    public void ForceEnumPlayersCounted(force? whichForce, boolexpr? filter, int countLimit) => throw new MissingNativeException("ForceEnumPlayersCounted");
-
-    [Native(Level.Missing)]
-    public void ForcePlayerStartLocation(player? whichPlayer, int startLocIndex) => throw new MissingNativeException("ForcePlayerStartLocation");
-
-    [Native(Level.Missing)]
     public void ForceQuestDialogUpdate() => throw new MissingNativeException("ForceQuestDialogUpdate");
-
-    [Native(Level.Missing)]
-    public void ForceRemovePlayer(force? whichForce, player? whichPlayer) => throw new MissingNativeException("ForceRemovePlayer");
 
     [Native(Level.Missing)]
     public void ForceUICancel() => throw new MissingNativeException("ForceUICancel");
@@ -1990,9 +1945,6 @@ public sealed partial class GameNatives
     public item? GetEnumItem() => throw new MissingNativeException("GetEnumItem");
 
     [Native(Level.Missing)]
-    public player? GetEnumPlayer() => throw new MissingNativeException("GetEnumPlayer");
-
-    [Native(Level.Missing)]
     public unit? GetEnumUnit() => throw new MissingNativeException("GetEnumUnit");
 
     [Native(Level.Missing)]
@@ -2038,25 +1990,10 @@ public sealed partial class GameNatives
     public unit? GetFilterUnit() => throw new MissingNativeException("GetFilterUnit");
 
     [Native(Level.Missing)]
-    public float GetFloatGameState(fgamestate? whichFloatGameState) => throw new MissingNativeException("GetFloatGameState");
-
-    [Native(Level.Missing)]
     public int GetFoodMade(int unitId) => throw new MissingNativeException("GetFoodMade");
 
     [Native(Level.Missing)]
     public int GetFoodUsed(int unitId) => throw new MissingNativeException("GetFoodUsed");
-
-    [Native(Level.Missing)]
-    public gamedifficulty? GetGameDifficulty() => throw new MissingNativeException("GetGameDifficulty");
-
-    [Native(Level.Missing)]
-    public placement? GetGamePlacement() => throw new MissingNativeException("GetGamePlacement");
-
-    [Native(Level.Missing)]
-    public gamespeed? GetGameSpeed() => throw new MissingNativeException("GetGameSpeed");
-
-    [Native(Level.Missing)]
-    public gametype? GetGameTypeSelected() => throw new MissingNativeException("GetGameTypeSelected");
 
     [Native(Level.Missing)]
     public int GetHandleId(handle? h) => throw new MissingNativeException("GetHandleId");
@@ -2081,9 +2018,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public int GetHeroXP(unit? whichHero) => throw new MissingNativeException("GetHeroXP");
-
-    [Native(Level.Missing)]
-    public int GetIntegerGameState(igamestate? whichIntegerGameState) => throw new MissingNativeException("GetIntegerGameState");
 
     [Native(Level.Missing)]
     public int GetIssuedOrderId() => throw new MissingNativeException("GetIssuedOrderId");
@@ -2206,46 +2140,7 @@ public sealed partial class GameNatives
     public player? GetOwningPlayer(unit? whichUnit) => throw new MissingNativeException("GetOwningPlayer");
 
     [Native(Level.Missing)]
-    public bool GetPlayerAlliance(player? sourcePlayer, player? otherPlayer, alliancetype? whichAllianceSetting) => throw new MissingNativeException("GetPlayerAlliance");
-
-    [Native(Level.Missing)]
-    public playercolor? GetPlayerColor(player? whichPlayer) => throw new MissingNativeException("GetPlayerColor");
-
-    [Native(Level.Missing)]
-    public mapcontrol? GetPlayerController(player? whichPlayer) => throw new MissingNativeException("GetPlayerController");
-
-    [Native(Level.Missing)]
-    public float GetPlayerHandicap(player? whichPlayer) => throw new MissingNativeException("GetPlayerHandicap");
-
-    [Native(Level.Missing)]
-    public float GetPlayerHandicapDamage(player? whichPlayer) => throw new MissingNativeException("GetPlayerHandicapDamage");
-
-    [Native(Level.Missing)]
-    public float GetPlayerHandicapReviveTime(player? whichPlayer) => throw new MissingNativeException("GetPlayerHandicapReviveTime");
-
-    [Native(Level.Missing)]
-    public float GetPlayerHandicapXP(player? whichPlayer) => throw new MissingNativeException("GetPlayerHandicapXP");
-
-    [Native(Level.Missing)]
-    public string? GetPlayerName(player? whichPlayer) => throw new MissingNativeException("GetPlayerName");
-
-    [Native(Level.Missing)]
-    public race? GetPlayerRace(player? whichPlayer) => throw new MissingNativeException("GetPlayerRace");
-
-    [Native(Level.Missing)]
     public int GetPlayerScore(player? whichPlayer, playerscore? whichPlayerScore) => throw new MissingNativeException("GetPlayerScore");
-
-    [Native(Level.Missing)]
-    public bool GetPlayerSelectable(player? whichPlayer) => throw new MissingNativeException("GetPlayerSelectable");
-
-    [Native(Level.Missing)]
-    public playerslotstate? GetPlayerSlotState(player? whichPlayer) => throw new MissingNativeException("GetPlayerSlotState");
-
-    [Native(Level.Missing)]
-    public int GetPlayerStartLocation(player? whichPlayer) => throw new MissingNativeException("GetPlayerStartLocation");
-
-    [Native(Level.Missing)]
-    public int GetPlayerState(player? whichPlayer, playerstate? whichPlayerState) => throw new MissingNativeException("GetPlayerState");
 
     [Native(Level.Missing)]
     public int GetPlayerStructureCount(player? whichPlayer, bool includeIncomplete) => throw new MissingNativeException("GetPlayerStructureCount");
@@ -2254,25 +2149,10 @@ public sealed partial class GameNatives
     public int GetPlayerTaxRate(player? sourcePlayer, player? otherPlayer, playerstate? whichResource) => throw new MissingNativeException("GetPlayerTaxRate");
 
     [Native(Level.Missing)]
-    public int GetPlayerTeam(player? whichPlayer) => throw new MissingNativeException("GetPlayerTeam");
-
-    [Native(Level.Missing)]
-    public int GetPlayerTechCount(player? whichPlayer, int techid, bool specificonly) => throw new MissingNativeException("GetPlayerTechCount");
-
-    [Native(Level.Missing)]
-    public int GetPlayerTechMaxAllowed(player? whichPlayer, int techid) => throw new MissingNativeException("GetPlayerTechMaxAllowed");
-
-    [Native(Level.Missing)]
-    public bool GetPlayerTechResearched(player? whichPlayer, int techid, bool specificonly) => throw new MissingNativeException("GetPlayerTechResearched");
-
-    [Native(Level.Missing)]
     public int GetPlayerTypedUnitCount(player? whichPlayer, string? unitName, bool includeIncomplete, bool includeUpgrades) => throw new MissingNativeException("GetPlayerTypedUnitCount");
 
     [Native(Level.Missing)]
     public int GetPlayerUnitCount(player? whichPlayer, bool includeIncomplete) => throw new MissingNativeException("GetPlayerUnitCount");
-
-    [Native(Level.Missing)]
-    public int GetPlayers() => throw new MissingNativeException("GetPlayers");
 
     [Native(Level.Missing)]
     public float GetRectCenterX(rect? whichRect) => throw new MissingNativeException("GetRectCenterX");
@@ -2365,19 +2245,7 @@ public sealed partial class GameNatives
     public float GetSpellTargetY() => throw new MissingNativeException("GetSpellTargetY");
 
     [Native(Level.Missing)]
-    public startlocprio? GetStartLocPrio(int whichStartLoc, int prioSlotIndex) => throw new MissingNativeException("GetStartLocPrio");
-
-    [Native(Level.Missing)]
-    public int GetStartLocPrioSlot(int whichStartLoc, int prioSlotIndex) => throw new MissingNativeException("GetStartLocPrioSlot");
-
-    [Native(Level.Missing)]
     public location? GetStartLocationLoc(int whichStartLocation) => throw new MissingNativeException("GetStartLocationLoc");
-
-    [Native(Level.Missing)]
-    public float GetStartLocationX(int whichStartLocation) => throw new MissingNativeException("GetStartLocationX");
-
-    [Native(Level.Missing)]
-    public float GetStartLocationY(int whichStartLocation) => throw new MissingNativeException("GetStartLocationY");
 
     [Native(Level.Missing)]
     public bool GetStoredBoolean(gamecache? cache, string? missionKey, string? key) => throw new MissingNativeException("GetStoredBoolean");
@@ -2398,9 +2266,6 @@ public sealed partial class GameNatives
     public unit? GetSummoningUnit() => throw new MissingNativeException("GetSummoningUnit");
 
     [Native(Level.Missing)]
-    public int GetTeams() => throw new MissingNativeException("GetTeams");
-
-    [Native(Level.Missing)]
     public int GetTerrainCliffLevel(float x, float y) => throw new MissingNativeException("GetTerrainCliffLevel");
 
     [Native(Level.Missing)]
@@ -2408,9 +2273,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public int GetTerrainVariance(float x, float y) => throw new MissingNativeException("GetTerrainVariance");
-
-    [Native(Level.Missing)]
-    public float GetTimeOfDayScale() => throw new MissingNativeException("GetTimeOfDayScale");
 
     [Native(Level.Missing)]
     public player? GetTournamentFinishNowPlayer() => throw new MissingNativeException("GetTournamentFinishNowPlayer");
@@ -2725,9 +2587,6 @@ public sealed partial class GameNatives
     public bool IsLocationVisibleToPlayer(location? whichLocation, player? whichPlayer) => throw new MissingNativeException("IsLocationVisibleToPlayer");
 
     [Native(Level.Missing)]
-    public bool IsMapFlagSet(mapflag? whichMapFlag) => throw new MissingNativeException("IsMapFlagSet");
-
-    [Native(Level.Missing)]
     public bool IsMaskedToPlayer(float x, float y, player? whichPlayer) => throw new MissingNativeException("IsMaskedToPlayer");
 
     [Native(Level.Missing)]
@@ -2735,27 +2594,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public bool IsMultiboardMinimized(multiboard? lb) => throw new MissingNativeException("IsMultiboardMinimized");
-
-    [Native(Level.Missing)]
-    public bool IsNoDefeatCheat() => throw new MissingNativeException("IsNoDefeatCheat");
-
-    [Native(Level.Missing)]
-    public bool IsNoVictoryCheat() => throw new MissingNativeException("IsNoVictoryCheat");
-
-    [Native(Level.Missing)]
-    public bool IsPlayerAlly(player? whichPlayer, player? otherPlayer) => throw new MissingNativeException("IsPlayerAlly");
-
-    [Native(Level.Missing)]
-    public bool IsPlayerEnemy(player? whichPlayer, player? otherPlayer) => throw new MissingNativeException("IsPlayerEnemy");
-
-    [Native(Level.Missing)]
-    public bool IsPlayerInForce(player? whichPlayer, force? whichForce) => throw new MissingNativeException("IsPlayerInForce");
-
-    [Native(Level.Missing)]
-    public bool IsPlayerObserver(player? whichPlayer) => throw new MissingNativeException("IsPlayerObserver");
-
-    [Native(Level.Missing)]
-    public bool IsPlayerRacePrefSet(player? whichPlayer, racepreference? pref) => throw new MissingNativeException("IsPlayerRacePrefSet");
 
     [Native(Level.Missing)]
     public bool IsPointBlighted(float x, float y) => throw new MissingNativeException("IsPointBlighted");
@@ -3136,9 +2974,6 @@ public sealed partial class GameNatives
     public void PauseCompAI(player? p, bool pause) => throw new MissingNativeException("PauseCompAI");
 
     [Native(Level.Missing)]
-    public void PauseGame(bool flag) => throw new MissingNativeException("PauseGame");
-
-    [Native(Level.Missing)]
     public void PauseUnit(unit? whichUnit, bool flag) => throw new MissingNativeException("PauseUnit");
 
     [Native(Level.Missing)]
@@ -3299,9 +3134,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void RemoveLocation(location? whichLocation) => throw new MissingNativeException("RemoveLocation");
-
-    [Native(Level.Missing)]
-    public void RemovePlayer(player? whichPlayer, playergameresult? gameResult) => throw new MissingNativeException("RemovePlayer");
 
     [Native(Level.Missing)]
     public void RemoveRect(rect? whichRect) => throw new MissingNativeException("RemoveRect");
@@ -3526,15 +3358,6 @@ public sealed partial class GameNatives
     public void SetEdCinematicAvailable(int campaignNumber, bool available) => throw new MissingNativeException("SetEdCinematicAvailable");
 
     [Native(Level.Missing)]
-    public void SetEnemyStartLocPrio(int whichStartLoc, int prioSlotIndex, int otherStartLocIndex, startlocprio? priority) => throw new MissingNativeException("SetEnemyStartLocPrio");
-
-    [Native(Level.Missing)]
-    public void SetEnemyStartLocPrioCount(int whichStartLoc, int prioSlotCount) => throw new MissingNativeException("SetEnemyStartLocPrioCount");
-
-    [Native(Level.Missing)]
-    public void SetFloatGameState(fgamestate? whichFloatGameState, float value) => throw new MissingNativeException("SetFloatGameState");
-
-    [Native(Level.Missing)]
     public void SetFogStateRadius(player? forWhichPlayer, fogstate? whichState, float centerx, float centerY, float radius, bool useSharedVision) => throw new MissingNativeException("SetFogStateRadius");
 
     [Native(Level.Missing)]
@@ -3542,15 +3365,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SetFogStateRect(player? forWhichPlayer, fogstate? whichState, rect? where, bool useSharedVision) => throw new MissingNativeException("SetFogStateRect");
-
-    [Native(Level.Missing)]
-    public void SetGameDifficulty(gamedifficulty? whichdifficulty) => throw new MissingNativeException("SetGameDifficulty");
-
-    [Native(Level.Missing)]
-    public void SetGamePlacement(placement? whichPlacementType) => throw new MissingNativeException("SetGamePlacement");
-
-    [Native(Level.Missing)]
-    public void SetGameSpeed(gamespeed? whichspeed) => throw new MissingNativeException("SetGameSpeed");
 
     [Native(Level.Missing)]
     public void SetGameTypeSupported(gametype? whichGameType, bool value) => throw new MissingNativeException("SetGameTypeSupported");
@@ -3598,9 +3412,6 @@ public sealed partial class GameNatives
     public void SetImageType(image? whichImage, int imageType) => throw new MissingNativeException("SetImageType");
 
     [Native(Level.Missing)]
-    public void SetIntegerGameState(igamestate? whichIntegerGameState, int value) => throw new MissingNativeException("SetIntegerGameState");
-
-    [Native(Level.Missing)]
     public void SetIntroShotModel(string? introModelPath) => throw new MissingNativeException("SetIntroShotModel");
 
     [Native(Level.Missing)]
@@ -3646,16 +3457,7 @@ public sealed partial class GameNatives
     public bool SetLightningColor(lightning? whichBolt, float r, float g, float b, float a) => throw new MissingNativeException("SetLightningColor");
 
     [Native(Level.Missing)]
-    public void SetMapDescription(string? description) => throw new MissingNativeException("SetMapDescription");
-
-    [Native(Level.Missing)]
-    public void SetMapFlag(mapflag? whichMapFlag, bool value) => throw new MissingNativeException("SetMapFlag");
-
-    [Native(Level.Missing)]
     public void SetMapMusic(string? musicName, bool random, int index) => throw new MissingNativeException("SetMapMusic");
-
-    [Native(Level.Missing)]
-    public void SetMapName(string? name) => throw new MissingNativeException("SetMapName");
 
     [Native(Level.Missing)]
     public void SetMaxCheckpointSaves(int maxCheckpointSaves) => throw new MissingNativeException("SetMaxCheckpointSaves");
@@ -3682,64 +3484,13 @@ public sealed partial class GameNatives
     public void SetPlayerAbilityAvailable(player? whichPlayer, int abilid, bool avail) => throw new MissingNativeException("SetPlayerAbilityAvailable");
 
     [Native(Level.Missing)]
-    public void SetPlayerAlliance(player? sourcePlayer, player? otherPlayer, alliancetype? whichAllianceSetting, bool value) => throw new MissingNativeException("SetPlayerAlliance");
-
-    [Native(Level.Missing)]
-    public void SetPlayerColor(player? whichPlayer, playercolor? color) => throw new MissingNativeException("SetPlayerColor");
-
-    [Native(Level.Missing)]
-    public void SetPlayerController(player? whichPlayer, mapcontrol? controlType) => throw new MissingNativeException("SetPlayerController");
-
-    [Native(Level.Missing)]
-    public void SetPlayerHandicap(player? whichPlayer, float handicap) => throw new MissingNativeException("SetPlayerHandicap");
-
-    [Native(Level.Missing)]
-    public void SetPlayerHandicapDamage(player? whichPlayer, float handicap) => throw new MissingNativeException("SetPlayerHandicapDamage");
-
-    [Native(Level.Missing)]
-    public void SetPlayerHandicapReviveTime(player? whichPlayer, float handicap) => throw new MissingNativeException("SetPlayerHandicapReviveTime");
-
-    [Native(Level.Missing)]
-    public void SetPlayerHandicapXP(player? whichPlayer, float handicap) => throw new MissingNativeException("SetPlayerHandicapXP");
-
-    [Native(Level.Missing)]
-    public void SetPlayerName(player? whichPlayer, string? name) => throw new MissingNativeException("SetPlayerName");
-
-    [Native(Level.Missing)]
     public void SetPlayerOnScoreScreen(player? whichPlayer, bool flag) => throw new MissingNativeException("SetPlayerOnScoreScreen");
-
-    [Native(Level.Missing)]
-    public void SetPlayerRacePreference(player? whichPlayer, racepreference? whichRacePreference) => throw new MissingNativeException("SetPlayerRacePreference");
-
-    [Native(Level.Missing)]
-    public void SetPlayerRaceSelectable(player? whichPlayer, bool value) => throw new MissingNativeException("SetPlayerRaceSelectable");
-
-    [Native(Level.Missing)]
-    public void SetPlayerRaceSkin(player? whichPlayer, racepreference? whichRacePreference) => throw new MissingNativeException("SetPlayerRaceSkin");
-
-    [Native(Level.Missing)]
-    public void SetPlayerStartLocation(player? whichPlayer, int startLocIndex) => throw new MissingNativeException("SetPlayerStartLocation");
-
-    [Native(Level.Missing)]
-    public void SetPlayerState(player? whichPlayer, playerstate? whichPlayerState, int value) => throw new MissingNativeException("SetPlayerState");
 
     [Native(Level.Missing)]
     public void SetPlayerTaxRate(player? sourcePlayer, player? otherPlayer, playerstate? whichResource, int rate) => throw new MissingNativeException("SetPlayerTaxRate");
 
     [Native(Level.Missing)]
-    public void SetPlayerTeam(player? whichPlayer, int whichTeam) => throw new MissingNativeException("SetPlayerTeam");
-
-    [Native(Level.Missing)]
-    public void SetPlayerTechMaxAllowed(player? whichPlayer, int techid, int maximum) => throw new MissingNativeException("SetPlayerTechMaxAllowed");
-
-    [Native(Level.Missing)]
-    public void SetPlayerTechResearched(player? whichPlayer, int techid, int setToLevel) => throw new MissingNativeException("SetPlayerTechResearched");
-
-    [Native(Level.Missing)]
     public void SetPlayerUnitsOwner(player? whichPlayer, int newOwner) => throw new MissingNativeException("SetPlayerUnitsOwner");
-
-    [Native(Level.Missing)]
-    public void SetPlayers(int playercount) => throw new MissingNativeException("SetPlayers");
 
     [Native(Level.Missing)]
     public void SetPortraitLight(string? portraitDNCFile) => throw new MissingNativeException("SetPortraitLight");
@@ -3808,15 +3559,6 @@ public sealed partial class GameNatives
     public void SetSoundVolume(sound? soundHandle, int volume) => throw new MissingNativeException("SetSoundVolume");
 
     [Native(Level.Missing)]
-    public void SetStartLocPrio(int whichStartLoc, int prioSlotIndex, int otherStartLocIndex, startlocprio? priority) => throw new MissingNativeException("SetStartLocPrio");
-
-    [Native(Level.Missing)]
-    public void SetStartLocPrioCount(int whichStartLoc, int prioSlotCount) => throw new MissingNativeException("SetStartLocPrioCount");
-
-    [Native(Level.Missing)]
-    public void SetTeams(int teamcount) => throw new MissingNativeException("SetTeams");
-
-    [Native(Level.Missing)]
     public void SetTerrainFog(float a, float b, float c, float d, float e) => throw new MissingNativeException("SetTerrainFog");
 
     [Native(Level.Missing)]
@@ -3869,9 +3611,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SetThematicMusicVolume(int volume) => throw new MissingNativeException("SetThematicMusicVolume");
-
-    [Native(Level.Missing)]
-    public void SetTimeOfDayScale(float r) => throw new MissingNativeException("SetTimeOfDayScale");
 
     [Native(Level.Missing)]
     public void SetTutorialCleared(bool cleared) => throw new MissingNativeException("SetTutorialCleared");
@@ -4046,9 +3785,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SuspendHeroXP(unit? whichHero, bool flag) => throw new MissingNativeException("SuspendHeroXP");
-
-    [Native(Level.Missing)]
-    public void SuspendTimeOfDay(bool b) => throw new MissingNativeException("SuspendTimeOfDay");
 
     [Native(Level.Missing)]
     public void SyncSelections() => throw new MissingNativeException("SyncSelections");
@@ -4400,9 +4136,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public bool VersionCompatible(version? whichVersion) => throw new MissingNativeException("VersionCompatible");
-
-    [Native(Level.Missing)]
-    public version? VersionGet() => throw new MissingNativeException("VersionGet");
 
     [Native(Level.Missing)]
     public bool VersionSupported(version? whichVersion) => throw new MissingNativeException("VersionSupported");

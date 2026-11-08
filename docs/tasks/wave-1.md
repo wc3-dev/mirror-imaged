@@ -72,6 +72,13 @@ Needs W1-5 (the probes write through Preload) and W0-4's runner.
   fixed set of string keys, which Lua 5.2 compatibility functions exist, and whether `load` accepts bytecode. Update
   the model where the probes show it wrong, and the levels.
 - Also probe the order of timers due in the same step, and `TimerGetElapsed` at 3600 s (D45).
+- W1-3's probes found more `math.*` values the model gets wrong: see MirrorImaged's `docs/facts.md` ("Strings, numbers
+  and hashtables"), D81 and the Close rows of `MathNativesTests` (`math.rad`/`math.deg`, `math.asin(2)`,
+  `math.atan(0, 0)` = pi/2, `(-8)^(1/3)`, `0^-1`, sin/cos/tan of 0.5, 1, -1 and 1e6). When `math.asin(2)` changes, the
+  `Asin`, `Acos` and `Atan2` natives need their own domain check (their Exact rows will catch it).
+- W1-2's probes: a periodic trigger event's expiry ran before a timer started later that fell due at the same moment
+  (MirrorImaged keeps queue order, D45).
+- Every probe's raw game lines live in `probes/expected/<probe>.txt`; the comparison reads them from there.
 - This closes wave 0's "one probe matches the game".
 
 ## W1-9 Player and game events, filters, the game's end
@@ -101,3 +108,5 @@ Needs W1-1 to W1-6 and W1-9.
 - JASS behaviour the transpiled code must keep, each Close unless a probe measures it: integer overflow wrapping,
   integer division, the operation limit ending a thread, an uninitialised variable stopping the thread.
 - Tests: a small JASS map with triggers, timers and hashtables gives the same log as the same map written in Lua.
+- D80 (string parameters refuse nil) is Lua's binding: JASS passes `null` strings to natives, and transpiled JASS
+  (maps and `blizzard.j`) goes through the same binding, so decide and probe what a `null` string does in JASS.
