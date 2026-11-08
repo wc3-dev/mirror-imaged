@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MirrorImaged.Lua\MirrorImaged.Lua.csproj" />
     <ProjectReference Include="..\MirrorImaged.World\MirrorImaged.World.csproj" />
   </ItemGroup>
 

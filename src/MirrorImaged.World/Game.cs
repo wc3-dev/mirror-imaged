@@ -85,15 +85,15 @@ public sealed class Game
     /// <summary>Starts the random numbers over from <paramref name="seed"/>.</summary>
     public void Seed(int seed) => _random = (uint)seed;
 
-    /// <summary>A random integer from <paramref name="low"/> to <paramref name="high"/>, both included, in either order.</summary>
-    public int RandomInt(int low, int high)
-    {
-        if (low > high) (low, high) = (high, low);
-        return (int)(low + (long)(((Next() >> 32) * (ulong)((long)high - low + 1)) >> 32));
-    }
+    /// <summary>
+    /// A random integer from <paramref name="low"/> up to the bounds' distance above it, both ends included: from 5 to 9
+    /// for (5, 1), as the game's GetRandomInt (docs/facts.md, "Strings, numbers and hashtables").
+    /// </summary>
+    public int RandomInt(int low, int high) =>
+        unchecked((int)(low + (long)(((Next() >> 32) * (ulong)(Math.Abs((long)high - low) + 1)) >> 32)));
 
-    /// <summary>A random number between <paramref name="low"/> and <paramref name="high"/>; from 0 to 1, never 1.</summary>
-    public float RandomReal(float low, float high) => low + (high - low) * ((Next() >> 40) / 16777216f);
+    /// <summary>A random number from <paramref name="low"/> up to the bounds' distance above it, as RandomInt; from 0 to 1, never 1.</summary>
+    public float RandomReal(float low, float high) => low + Math.Abs(high - low) * ((Next() >> 40) / 16777216f);
 
     // SplitMix64: small, and the same on every platform and .NET version.
     ulong Next()

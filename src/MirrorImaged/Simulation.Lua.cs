@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using MirrorImaged.Lua;
 using MirrorImaged.Natives;
@@ -33,8 +34,17 @@ public sealed partial class Simulation
                 _ => throw BadArgument(position, function, $"number expected, got {TypeName(value)}"),
             };
         if (type == typeof(bool)) return value is not (null or false);
+        // As luaL_checklstring: a number is written as tostring writes it, nil is refused, and the native reads up to
+        // the first NUL (docs/facts.md, "Strings, numbers and hashtables").
+        if (type == typeof(string))
+            return value switch
+            {
+                string s => s.IndexOf('\0') is >= 0 and var end ? s[..end] : s,
+                int n => n.ToString(CultureInfo.InvariantCulture),
+                float f => Native.Text(f),
+                _ => throw BadArgument(position, function, $"string expected, got {TypeName(value)}"),
+            };
         if (value is null) return null;
-        if (type == typeof(string) && value is string s) return s;
         if (type == typeof(Action) && value is LuaFunction code) return (Action)new LuaCode(this, code.Keep()).Run;
         // Found by its key, whatever type Lua sees it as; one of another type is refused, as the type Lua sees is.
         if (value is LuaHandle h && typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}") is { } declared && type.IsAssignableFrom(declared)
