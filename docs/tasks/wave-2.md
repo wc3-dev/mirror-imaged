@@ -67,7 +67,9 @@ Needs W2-2.
   change its life, mana and armour (the probe's strength 30 gave the Paladin 850 life); the permanent attribute
   fields (read 1 after a set of 7 and of 0); a hero's proper name drawn at random from its type's and numbered once
   taken ("Zann the Defender XII"), for `GetHeroProperName` and `UNIT_SF_PROPER_NAMES`; and a dead hero stays as
-  W2-2 leaves it, for revival.
+  W2-2 leaves it, for revival. A hero's level set through `UNIT_IF_LEVEL` read one more than set (7 to 8, 3 to 4),
+  both from level 1, so adding the value fits too (D227): probe a hero at level 5 set to 3 (4 by the first, 8 by the
+  second).
 - From W2-2's review: a hero's most life and mana are fixed at creation from the type's strength and intelligence,
   armour uses the type's agility, and the nine attribute fields are stored apart: make one attribute state (base,
   bonus, permanent) that life, mana, armour and the fields derive from. Also `BlzResetUnitTalents` (game-facts) and
@@ -98,9 +100,9 @@ Needs W2-2.
 - Left by W2-2 (D234): the weapon field natives `BlzGetUnitWeapon*Field`/`BlzSetUnitWeapon*Field` (the facts: `ua1t`
   reads `ATTACK_TYPE_*`, `ua1g` the target flags, "air,enemies" 65540), and a killer for `GetKillingUnit`.
 - From W2-2's review: `IsUnitType`'s attack kinds and `Armed()` read the type's weapon data, not the unit's weapon
-  fields once those can be set; armour needs a unit armour state for `BlzSetUnitArmor` and the formula; `FireUnit`
-  scans every registration three times per event (fine for deaths, O(registrations) per hit for damage events, A10):
-  index registrations by event. Also `BlzGetUnitArmor`/`BlzSetUnitArmor`, `BlzGetUnitBaseDamage`, the dice natives,
+  fields once those can be set; armour needs a unit armour state for `BlzSetUnitArmor` and the formula; `FireUnit` reads
+  the unit's and its owner's registrations (kept apart since W2-2's fixes), each list once a kind: index them by event
+  too if a hit's events show in A10. Also `BlzGetUnitArmor`/`BlzSetUnitArmor`, `BlzGetUnitBaseDamage`, the dice natives,
   `BlzGetUnitAttackCooldown`, `BlzUnitHeal` (game-facts: nil source heals nothing, -30 takes 30).
 
 ## W2-6 Groups, rects, regions and locations
@@ -122,7 +124,8 @@ Needs W2-2.
   terrain without it — fix the reader; and measure the off-map edge rule of `Terrain` (a point off the map reads its
   nearest edge, inferred).
 - From W2-2's review: `SetUnitX`/`SetUnitY` write X and Y directly, so enter and leave events need a move hook;
-  `Gone` uses `List.Remove` (O(n)). Also `CreateUnitAtLoc`/`SetUnitPositionLoc`, `BlzGetUnitCollisionSize`.
+  W2-2 keeps no list of the game's units (its O(n) one was dropped), so the enumerations bring one, in the order made,
+  with a removal that isn't O(n). Also `CreateUnitAtLoc`/`SetUnitPositionLoc`, `BlzGetUnitCollisionSize`.
 
 ## W2-7 Abilities on units, without casting
 

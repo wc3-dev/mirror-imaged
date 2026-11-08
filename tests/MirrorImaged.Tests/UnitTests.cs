@@ -23,7 +23,7 @@ public sealed class UnitTests : IDisposable
         var data = new StandardData()
             .Add(ObjectKind.Unit, "hfoo", Values("unam=Footman;uhpm=420;ulev=2;umvs=270;umvr=0.6;uacq=500;uprw=60;udtm=3.04;udea=3;ufoo=2;upoi=100;urac=human;umvt=foot;udty=large;uarm=Metal;utar=ground;uaen=1;ua1w=normal;ua1g=ground,structure,debris,item,ward;usca=0.8;uhrt=always;usid=1400;usin=800;udef=2;ubdg=0;umxp=10"))
             .Add(ObjectKind.Unit, "Hpal", Values("unam=Paladin;upro=Granis Darkhammer,Jorn the Redeemer;uhpm=100;umpm=0;umpi=100;ustr=22;uagi=13;uint=17;upra=STR;ulev=5;umvs=270;umvr=0.6;uacq=500;udtm=1.5;udea=2;urac=human;umvt=foot;udty=hero;uaen=1;ua1w=normal;ua1g=ground;udef=2;uagp=1.5"))
-            .Add(ObjectKind.Unit, "hbar", Values("unam=Barracks;uhpm=1500;udtm=2.34;udea=2;urac=human;udty=fort;uarm=Stone;utar=structure;utyp=Mechanical;ubdg=1;uacq=900;uaen=0;upap=unbuildable;uhrt=none"))
+            .Add(ObjectKind.Unit, "hbar", Values("unam=Barracks;uhpm=1500;udtm=2.34;udea=2;urac=human;udty=fort;uarm=Stone;utar=structure;utyp=Mechanical;ubdg=1;usid=900;usin=600;uaen=0;upap=unbuildable;uhrt=none"))
             .Add(ObjectKind.Unit, "hgry", Values("unam=Gryphon Rider;uhpm=825;ulev=5;umvs=320;umvr=0.4;uacq=500;udtm=1.67;udea=0;umvt=fly;umvh=240;umvf=90;utar=air;uaen=1;ua1w=missile;ua1g=air,ground,structure"))
             .Add(ObjectKind.Unit, "hkni", Values("unam=Knight;uhpm=800;umvr=0.5;udtm=5.1;udea=3;uaen=1;ua1w=normal;ua1g=ground"))
             .Add(ObjectKind.Unit, "hpea", Values("unam=Peasant;uhpm=220;umvs=190;uaen=1;ua1w=normal;ua1g=ground;utyp=Peon;udea=3"))
@@ -282,8 +282,28 @@ public sealed class UnitTests : IDisposable
             "decay\tFootman\t21\t3.04",
             "own decay\tsuspended\ttrue",
             "gone\tbarracks\t32.50",
-            "gone\tfootman\t93.25",
+            "gone\tfootman\t93.25", // inferred from DecayTime and BoneDecayTime (D228; W2-10 to probe)
         ], Printed(simulation));
+    }
+
+    // D228, not measured: a body whose time came while its decay was suspended goes once the decay is let go
+    [Fact]
+    public void A_body_let_decay_late_goes_then()
+    {
+        using var simulation = Run("""
+            local u = make("hgry")
+            KillUnit(u)
+            UnitSuspendDecay(u, true)
+            TimerStart(CreateTimer(), 5, false, function()
+              print("held", GetUnitTypeId(u) == FourCC("hgry"))
+              UnitSuspendDecay(u, false)
+              print("let go", GetUnitTypeId(u) == FourCC("hgry"))
+              TimerStart(CreateTimer(), 0, false, function() print("after", GetUnitTypeId(u)) end)
+            end)
+            """);
+        simulation.Advance(TimeSpan.FromSeconds(6));
+
+        Assert.Equal(["held\ttrue", "let go\ttrue", "after\t0"], Printed(simulation));
     }
 
     // probe units: RemoveUnit leaves the unit as it was for the rest of the step, alive or dead, and gone after it; a
@@ -435,9 +455,87 @@ public sealed class UnitTests : IDisposable
             "false\ttrue\t42\tRenamed\tFootman\tFootman",
             "5096.5\t-300.25\t0.8\t255",
         ], Printed(simulation));
-        var u = simulation.Natives.Units[0];
-        Assert.Equal((2.5f, 3), (u.Scale, u.Color));
+    }
+
+    // facts, Units: SetUnitScale draws by x alone and SetUnitVertexColor keeps each part from 0 to 255; with the
+    // colour, kept on the unit for the viewer, as no native reads them back (D226)
+    [Fact]
+    public void Colour_scale_and_tint_are_kept_on_the_unit()
+    {
+        var natives = new GameNatives(new World.Game(0)) { Data = new GameData(Standard()) };
+        var u = natives.CreateUnit(natives.Player(0), Ids.Of("hfoo"), 0, 0, 0)!;
+
+        Assert.Equal((0.8f, 0), (u.Scale, u.Color));
+        natives.SetUnitScale(u, 2.5f, 1, 1);
+        natives.SetUnitVertexColor(u, 300, -50, 100, 128);
+        natives.SetUnitColor(u, natives.ConvertPlayerColor(3));
+        natives.SetUnitOwner(u, natives.Player(5), true);
+        Assert.Equal((2.5f, 5), (u.Scale, u.Color));
         Assert.Equal([255, 0, 100, 128], u.Tint);
+    }
+
+    // D226, not measured: a stop's event that gives the unit away first leaves SetUnitOwner nothing more to do
+    [Fact]
+    public void A_unit_given_away_in_its_stop_event_changes_hands_once()
+    {
+        using var simulation = Run("""
+            local u = make("hfoo")
+            local o = CreateTrigger()
+            TriggerRegisterUnitEvent(o, u, EVENT_UNIT_ISSUED_ORDER)
+            local given = false
+            TriggerAddAction(o, function() if not given then given = true SetUnitOwner(u, Player(2), false) end end)
+            local c = CreateTrigger()
+            TriggerRegisterUnitEvent(c, u, EVENT_UNIT_CHANGE_OWNER)
+            TriggerAddAction(c, function() print("change", pid(GetChangingUnitPrevOwner()), pid(GetOwningPlayer(u))) end)
+            SetUnitOwner(u, Player(1), false)
+            print("owner", pid(GetOwningPlayer(u)))
+            """);
+
+        Assert.Equal(["change\t0\t2", "owner\t2"], Printed(simulation));
+    }
+
+    // Edges no probe measured, the model's: a most mana below 0 keeps mana at 0, a least move speed above the most
+    // gives the most, a turn rate comes round by whole turns, and a field id given as another type reads the type's
+    [Fact]
+    public void Odd_values_keep_their_bounds_without_throwing()
+    {
+        var data = Standard();
+        (data.Constants["MinUnitSpeed"], data.Constants["MaxUnitSpeed"]) = ("500", "400");
+        using var simulation = Run("""
+            local u = make("hfoo")
+            BlzSetUnitMaxMana(u, -5)
+            SetUnitState(u, UNIT_STATE_MANA, 10)
+            SetUnitMoveSpeed(u, 300)
+            print(GetUnitState(u, UNIT_STATE_MANA), BlzGetUnitMaxMana(u), GetUnitMoveSpeed(u))
+            SetUnitTurnSpeed(u, 20) local up = GetUnitTurnSpeed(u)
+            SetUnitTurnSpeed(u, -20)
+            print(up, GetUnitTurnSpeed(u))
+            print(BlzSetUnitIntegerField(u, ConvertUnitIntegerField(FourCC("usca")), 7), BlzGetUnitRealField(u, UNIT_RF_SCALING_VALUE),
+              BlzSetUnitRealField(u, ConvertUnitRealField(FourCC("ulev")), 7.5), GetUnitLevel(u))
+            """, data);
+
+        Assert.Equal(["0.0\t-5\t400.0", "1.150444\t5.132742", "true\t0.8\ttrue\t2"], Printed(simulation));
+    }
+
+    // Unit events are kept by unit and by player: a death reads only its own registrations, so 4,000 deaths with a
+    // registration each cost about as much as without (the code review's measure)
+    [Fact]
+    public void A_death_reads_only_its_own_units_registrations()
+    {
+        static TimeSpan Kills(bool registered)
+        {
+            var natives = new GameNatives(new World.Game(0)) { Data = new GameData(Standard()) };
+            var units = Enumerable.Range(0, 4000).Select(_ => natives.CreateUnit(natives.Player(0), Ids.Of("hfoo"), 0, 0, 0)!).ToList();
+            if (registered)
+                foreach (var u in units) natives.TriggerRegisterUnitEvent(natives.CreateTrigger(), u, natives.ConvertUnitEvent(53));
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var u in units) natives.KillUnit(u);
+            return clock.Elapsed;
+        }
+
+        Kills(true);
+        var (without, with) = (Kills(false), Kills(true));
+        Assert.True(with < without * 4 + TimeSpan.FromMilliseconds(50), $"4,000 deaths took {with.TotalMilliseconds} ms with a registration each, {without.TotalMilliseconds} ms without");
     }
 
     // probe units: the kinds a unit reads as
@@ -484,7 +582,8 @@ public sealed class UnitTests : IDisposable
     }
 
     // probe units: integer fields read their type's words as common.j's numbers and their lists as flags; most sets
-    // take, the tint and the primary attribute don't, a hero's level reads one more than set
+    // take, the tint and the primary attribute don't, a hero's level reads one more than set (from level 1 only:
+    // adding the value fits too, D227)
     [Fact]
     public void Integer_fields_read_the_types_words_as_numbers()
     {
@@ -572,7 +671,8 @@ public sealed class UnitTests : IDisposable
     }
 
     // probes units-attribute and units-primary: a hero attribute read on a unit that isn't a hero, and its primary
-    // attribute set to one, close the game; on a hero they read and set
+    // attribute set to one, close the game; a hero attribute set there is inferred to (D227), as only the read is
+    // measured; on a hero they read and set
     [Theory]
     [InlineData("print(BlzGetUnitIntegerField(make('hfoo'), UNIT_IF_AGILITY))", "AGILITY", "uagc")]
     [InlineData("print(BlzSetUnitIntegerField(make('hbar'), UNIT_IF_STRENGTH_PERMANENT, 1))", "STRENGTH_PERMANENT", "ustm")]
@@ -592,9 +692,11 @@ public sealed class UnitTests : IDisposable
         using var simulation = Run("""
             local h = make("Hpal")
             print(BlzGetUnitIntegerField(h, UNIT_IF_AGILITY), BlzGetUnitIntegerField(h, UNIT_IF_INTELLIGENCE_WITH_BONUS), BlzGetUnitIntegerField(h, UNIT_IF_STRENGTH_PERMANENT),
-              BlzSetUnitIntegerField(h, UNIT_IF_AGILITY, 7), BlzGetUnitIntegerField(h, UNIT_IF_AGILITY))
+              BlzSetUnitIntegerField(h, UNIT_IF_AGILITY, 7), BlzGetUnitIntegerField(h, UNIT_IF_AGILITY), BlzGetUnitIntegerField(h, UNIT_IF_AGILITY_WITH_BONUS),
+              BlzGetUnitIntegerField(h, UNIT_IF_AGILITY_PERMANENT))
             """);
 
-        Assert.Equal(["13\t17\t22\ttrue\t7"], Printed(simulation));
+        // with no bonuses yet, the attribute with its bonus reads the attribute (W2-3 brings bonuses and the permanent ones)
+        Assert.Equal(["13\t17\t22\ttrue\t7\t7\t7"], Printed(simulation));
     }
 }

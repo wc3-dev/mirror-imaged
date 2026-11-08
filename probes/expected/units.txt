@@ -1,4 +1,4 @@
-# probes/units.lua on 3.0.1.24371, single player, 11-08 (W2-2): the game's lines. Two runs, the same; the turning and decay lines too.
+# probes/units.lua on 3.0.1.24371, single player, 11-08 (W2-2): the game's lines. Two runs, the same, the turning and decay lines too; two more after the rawequal of the widget was added, the same.
 create
 ids 1 1 1 1
 hfoo unit true Footman owner 0 at 1500.5 -1700.25 1500.5 -1700.25 facing 30.0 z 0.0
@@ -130,22 +130,22 @@ object zzzz [Default string]
 object 0 [Default string]
 death
 kill
-widget 89 trig true widget widget true dying false killer nil player nil life 0.0 alive false
-player 20 trig true widget nil false dying true killer nil player 0 life 0.0 alive false
-refused 20 trig true widget nil false dying true killer nil player 0 life 0.0 alive false
-unit 53 trig true widget nil false dying true killer nil player 0 life 0.0 alive false
-unit again 53 trig true widget nil false dying true killer nil player 0 life 0.0 alive false
+widget 89 trig true widget widget true false dying false killer nil player nil life 0.0 alive false
+player 20 trig true widget nil false false dying true killer nil player 0 life 0.0 alive false
+refused 20 trig true widget nil false false dying true killer nil player 0 life 0.0 alive false
+unit 53 trig true widget nil false false dying true killer nil player 0 life 0.0 alive false
+unit again 53 trig true widget nil false false dying true killer nil player 0 life 0.0 alive false
 killed 0.0 false
 again
-player 20 trig false widget nil false dying false killer nil player 0 life 0.0 alive false
-refused 20 trig false widget nil false dying false killer nil player 0 life 0.0 alive false
+player 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+refused 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
 life death 0.0 false
 after 0.0
-player 20 trig false widget nil false dying false killer nil player 0 life 0.0 alive false
-refused 20 trig false widget nil false dying false killer nil player 0 life 0.0 alive false
+player 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+refused 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
 state death 0.0
-player 20 trig false widget nil false dying false killer nil player 0 life 0.0 alive false
-refused 20 trig false widget nil false dying false killer nil player 0 life 0.0 alive false
+player 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
+refused 20 trig false widget nil false false dying false killer nil player 0 life 0.0 alive false
 max death 0.0
 max 0 0.0 false
 decay

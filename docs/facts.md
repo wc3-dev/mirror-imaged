@@ -836,10 +836,10 @@ player, 11-08 (W1-10), their lines in `probes/expected`. Floats are given by the
 
 Probes `probes/units.lua`, `units-decay.lua`, `units-attribute.lua` and `units-primary.lua`, on 3.0.1.24371, 11-08
 (W2-2): MirrorImaged's probe map (D51: info format 28, the Default data set, not melee, so `custom_v1`'s data; flat
-ground at height 0), started with `-loadfile` on a hidden desktop, single player. `units` and `units-decay` ran twice
-each in their final form with the same lines, which are in `probes/expected`; earlier forms of `units` ran five more
-times, and their lines that the final form keeps were the same. The two closing probes each closed the game once, as
-the units probe's runs did at the same call.
+ground at height 0), started with `-loadfile` on a hidden desktop, single player. `units` (in its final form, after
+the review added `rawequal` to the death lines) and `units-decay` ran twice each with the same lines, which are in
+`probes/expected`; earlier forms of `units` ran six more times, and their lines that the final form keeps were the
+same. The two closing probes each closed the game once, as the units probe's runs did at the same call.
 
 - Making: `CreateUnit` gives nil for an id that is no unit's (`zzzz`, the item `phea`, the destructable `LTlt`, the
   ability `AHhb`) and for 0. A unit takes one handle id, a Paladin too (a timer made before and after it is one id off
@@ -895,7 +895,8 @@ the units probe's runs did at the same call.
   "Iron Forged Swords", and "Default string" for the buffs `Bdef` and `BHbd`, the destructables `LTlt` and `YTlb`,
   `ZPfw`, `zzzz` and 0.
 - Death: `KillUnit` fires, inside the call, the unit's `TriggerRegisterDeathEvent` events first (event id 89,
-  `GetTriggerUnit` and `GetTriggerWidget` the unit, `GetDyingUnit` nil, `GetTriggerPlayer` nil), then its owner's
+  `GetTriggerUnit` and `GetTriggerWidget` the unit, the widget `==` the unit but not `rawequal` to it, `GetDyingUnit`
+  nil, `GetTriggerPlayer` nil), then its owner's
   `EVENT_PLAYER_UNIT_DEATH` events (20; `GetTriggerWidget` nil, `GetDyingUnit` the unit, `GetTriggerPlayer` the owner),
   then its `EVENT_UNIT_DEATH` events (53, as the player's), each kind in the order registered, though they were
   registered unit, player, widget, unit; life 0, not alive, `GetKillingUnit` nil in all. A player-unit event's filter

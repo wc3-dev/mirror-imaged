@@ -3,7 +3,7 @@
 
 # Ids: the handles made before differ from the game's (D110, D120; W1-10).
 - nil handles 1048732 1048732 1048732 conditionfunc filterfunc true true
-+ nil handles 1048648 1048648 1048648 conditionfunc filterfunc true true
++ nil handles 1048656 1048656 1048656 conditionfunc filterfunc true true
 
 # The clock's 1/1024 s steps: a timer due at 0.6 s runs in the step at 0.5996 (D45, Close).
 - waiter start 0.6000 true
@@ -25,11 +25,12 @@
 # units probe compares them (GetTriggerWidget in a death event).
 - widget widget unit true false true 1048875 true
 
-# Waits end on the clock's steps, not the game's tenths (D71, Close); PolledWait is blizzard.j's, which the
-# comparison runs without (D120).
+# Waits end on the clock's steps, not the game's tenths (D71, Close), PolledWait's in the comparison's stand-in too
+# (D150).
 + off grid 2.0332 2.2002 2.5000 2.5996 3.2002
 + quarter 2.2500 2.2998 2.7002 3.7998
 + tenths 2.0000 2.2002 2.4004 2.5996 2.7998 3.0996 3.4004 4.0000 4.5996 4.7002 4.7998 5.0000
++ polled 2.5000 3.5996 4.0996 7.0996
 - ~ timer events func after {t} true,0.01@1.5100,0.005@1.5100,0.001@1.5100,0@1.5100,0.02@1.5200,b,a,b,x2,x1,x2,callback
 - ~ off grid 2.0330 {t} {t} {t} {t}
 - ~ quarter 2.2501 {t} {t} {t}

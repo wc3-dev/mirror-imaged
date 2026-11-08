@@ -28,7 +28,7 @@
 - permanent 0 1 1
 + permanent 0 13 13
 - strength 30 850.0 850 30
-+ strength 30 650.0 650 22
++ strength 30 650.0 650 30
 
 # The footman's Defend gives it undefend (852056) after an owner change, which comes with abilities (W2-7; D226).
 - order 38 852056 true true owner 1 player 1

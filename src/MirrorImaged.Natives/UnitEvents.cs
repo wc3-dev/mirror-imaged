@@ -1,7 +1,7 @@
 namespace MirrorImaged.Natives;
 
-// What happened to a unit, for the event responses: the unit, and the killer, previous owner or order where one fits.
-sealed record Happening(unit Unit, unit? Killer = null, player? Previous = null, int Order = 0);
+// What happened to a unit, for the event responses: the unit, and the previous owner or order where one fits.
+sealed record Happening(unit Unit, player? Previous = null, int Order = 0);
 
 // The unit events of wave 2 (death, decay, owner change and SetUnitOwner's stop), fired inside the call, as the units
 // probe measures them (docs/facts.md, "Units"). The other unit events register and wait for their waves.
@@ -11,8 +11,10 @@ public sealed partial class GameNatives
     const int UnitDeath = 53, UnitDecay = 54, UnitIssuedOrder = 75, UnitChangeOwner = 287, WidgetDeath = 89; // EVENT_UNIT_*, EVENT_WIDGET_DEATH
     const int PlayerUnitDeath = 20, PlayerUnitDecay = 21, PlayerUnitIssuedOrder = 38, PlayerUnitChangeOwner = 270; // EVENT_PLAYER_UNIT_*
 
-    // Every unit, player-unit and widget death registration, in the order made
-    readonly List<(widget? Widget, player? Player, int Kind, @event Event)> _unitEvents = [];
+    // The unit and widget death registrations of each widget, and the player-unit registrations of each player, in the
+    // order made, so an event reads only its own unit's and owner's
+    readonly Dictionary<widget, List<(int Kind, @event Event)>> _widgetEvents = [];
+    readonly Dictionary<player, List<(int Kind, @event Event)>> _playerUnitEvents = [];
 
     /// <summary>
     /// Fires for the unit's death (inside KillUnit and a set of its life below 0.405), its decay, its owner changing and
@@ -39,8 +41,18 @@ public sealed partial class GameNatives
     {
         if (t is null || w is null && p is null || kind is null) return null;
         var registered = Register(t);
-        _unitEvents.Add((w, p, kind.Id, registered));
+        var list = w is not null ? Registrations(_widgetEvents, w) : Registrations(_playerUnitEvents, p!);
+        list.Add((kind.Id, registered));
         return registered;
+    }
+
+    static List<(int Kind, @event Event)> Registrations<T>(Dictionary<T, List<(int Kind, @event Event)>> lists, T key) where T : notnull =>
+        lists.TryGetValue(key, out var list) ? list : lists[key] = [];
+
+    // DestroyTrigger lets go of its unit registrations
+    void ForgetUnitEvents(trigger t)
+    {
+        foreach (var list in _widgetEvents.Values.Concat(_playerUnitEvents.Values)) list.RemoveAll(e => e.Event.Trigger == t);
     }
 
     /// <summary>The unit an event is about, in its widget death event too; nil outside a unit's event.</summary>
@@ -55,9 +67,12 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = UnitsProbe)]
     public unit? GetDyingUnit() => Response(UnitDeath, PlayerUnitDeath)?.Unit;
 
-    /// <summary>Nil for a death from KillUnit or a set of its life or most life (game-facts, Orders and events; probe units).</summary>
+    /// <summary>
+    /// Nil for a death from KillUnit or a set of its life or most life (game-facts, Orders and events; probe units), the
+    /// only deaths before damage (W2-5).
+    /// </summary>
     [Native(Level.Exact, Fact = UnitsProbe + "; game-facts.md, Orders and events: GetKillingUnit is nil for KillUnit (10-15)")]
-    public unit? GetKillingUnit() => Response(UnitDeath, PlayerUnitDeath, WidgetDeath)?.Killer;
+    public unit? GetKillingUnit() => null;
 
     [Native(Level.Exact, Fact = DecayProbe + "; " + UnitsProbe)]
     public unit? GetDecayingUnit() => Response(UnitDecay, PlayerUnitDecay)?.Unit;
@@ -83,13 +98,13 @@ public sealed partial class GameNatives
     void FireUnit(Happening happening, int unitKind, int playerKind)
     {
         var (u, owner) = (happening.Unit, happening.Unit.Owner);
-        var registrations = _unitEvents.ToArray();
+        var (own, players) = (_widgetEvents.GetValueOrDefault(u)?.ToArray() ?? [], _playerUnitEvents.GetValueOrDefault(owner)?.ToArray() ?? []);
         if (unitKind == UnitDeath)
-            foreach (var (w, _, kind, registered) in registrations)
-                if (w == u && kind == WidgetDeath) Fire(registered, Convert<widgetevent>(kind), unit: happening);
-        foreach (var (_, p, kind, registered) in registrations)
-            if (p == owner && kind == playerKind) Fire(registered, Convert<playerunitevent>(kind), player: owner, unit: happening);
-        foreach (var (w, _, kind, registered) in registrations)
-            if (w == u && kind == unitKind) Fire(registered, Convert<unitevent>(kind), player: owner, unit: happening);
+            foreach (var (kind, registered) in own)
+                if (kind == WidgetDeath) Fire(registered, Convert<widgetevent>(kind), unit: happening);
+        foreach (var (kind, registered) in players)
+            if (kind == playerKind) Fire(registered, Convert<playerunitevent>(kind), player: owner, unit: happening);
+        foreach (var (kind, registered) in own)
+            if (kind == unitKind) Fire(registered, Convert<unitevent>(kind), player: owner, unit: happening);
     }
 }

@@ -25,7 +25,7 @@ public sealed partial class GameNatives
         var max = u.MaxLife;
         u.Life = max - (max - Math.Min(life, max));
         if (u.Dead) u.Life = Math.Max(u.Life, 0);
-        else if (u.Life < Dying) Kill(u, null);
+        else if (u.Life < Dying) Kill(u);
     }
 
     [Native(Level.Exact, Fact = UnitsProbe)]
@@ -54,7 +54,7 @@ public sealed partial class GameNatives
     {
         if (whichUnit is null) return;
         if (whichUnitState?.Id == LifeState) SetLife(whichUnit, newVal);
-        else if (whichUnitState?.Id == ManaState) whichUnit.Mana = Math.Clamp(newVal, 0, whichUnit.MaxMana);
+        else if (whichUnitState?.Id == ManaState) whichUnit.Mana = Math.Max(Math.Min(newVal, whichUnit.MaxMana), 0);
     }
 
     [Native(Level.Exact, Fact = UnitsProbe)]
@@ -77,7 +77,7 @@ public sealed partial class GameNatives
     {
         if (whichUnit is null) return;
         whichUnit.MaxMana = mana;
-        whichUnit.Mana = Math.Min(whichUnit.Mana, mana);
+        whichUnit.Mana = Math.Max(Math.Min(whichUnit.Mana, mana), 0);
     }
 
     [Native(Level.Exact, Fact = UnitsProbe)]

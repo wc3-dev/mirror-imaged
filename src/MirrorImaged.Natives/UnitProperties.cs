@@ -25,7 +25,8 @@ public sealed partial class GameNatives
     public void SetUnitMoveSpeed(unit? whichUnit, float newSpeed)
     {
         if (whichUnit is null || GetUnitDefaultMoveSpeed(whichUnit) <= 0) return;
-        whichUnit.Fields[SpeedNow] = Math.Clamp(newSpeed, Data.Constant("MinUnitSpeed", 0), Data.Constant("MaxUnitSpeed", float.MaxValue));
+        // the most wins where a map gives a least above it (not measured)
+        whichUnit.Fields[SpeedNow] = Math.Min(Math.Max(newSpeed, Data.Constant("MinUnitSpeed", 0)), Data.Constant("MaxUnitSpeed", float.MaxValue));
     }
 
     const float MinimumTurn = 0.001f;
@@ -39,13 +40,17 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = UnitsProbe)]
     public float GetUnitDefaultTurnSpeed(unit? whichUnit) => whichUnit?.Type.Real(TurnRate) ?? 0;
 
-    /// <summary>Kept as an angle from 0 below 2π, at least 0.001: -1 reads 5.283185, 7 0.7168145 and 0 0.001 (probe units).</summary>
-    [Native(Level.Exact, Fact = UnitsProbe)]
+    /// <summary>
+    /// Kept as an angle from 0 below 2π, at least 0.001: -1 reads 5.283185, 7 0.7168145, 7.5 1.216815 and 0 0.001 (probe
+    /// units). Close: past a turn either way only those are measured; here any angle comes round by a float modulo.
+    /// </summary>
+    [Native(Level.Close)]
     public void SetUnitTurnSpeed(unit? whichUnit, float newTurnSpeed)
     {
         if (whichUnit is null) return;
         const float Turn = 2 * MathF.PI;
-        whichUnit.Fields[TurnRate] = Math.Max(newTurnSpeed < 0 ? newTurnSpeed + Turn : newTurnSpeed >= Turn ? newTurnSpeed - Turn : newTurnSpeed, MinimumTurn);
+        var rate = newTurnSpeed % Turn;
+        whichUnit.Fields[TurnRate] = Math.Max(rate < 0 ? rate + Turn : rate, MinimumTurn);
     }
 
     /// <summary>The type's acquisition range, or what a set left; 0 for a unit without an attack (probe units).</summary>
@@ -92,13 +97,17 @@ public sealed partial class GameNatives
     /// on a ground unit too (probe units; facts, Units).
     /// </summary>
     [Native(Level.Exact, Fact = "game-facts.md, Units: SetUnitFlyHeight on a ground unit reads the new height (10-21); " + UnitsProbe)]
-    public float GetUnitFlyHeight(unit? whichUnit) => whichUnit?.FlyHeight.To ?? 0;
+    public float GetUnitFlyHeight(unit? whichUnit) => whichUnit?.FlyHeight ?? 0;
 
     [Native(Level.Exact, Fact = UnitsProbe)]
     public float GetUnitDefaultFlyHeight(unit? whichUnit) => whichUnit is null ? 0 : whichUnit.Type.Real(Code("umvh"));
 
+    /// <summary>The rate isn't kept: the height reads the new one at once.</summary>
     [Native(Level.Exact, Fact = UnitsProbe)]
-    public void SetUnitFlyHeight(unit? whichUnit, float newHeight, float rate) => whichUnit?.FlyHeight.Go(newHeight, Seconds, rate);
+    public void SetUnitFlyHeight(unit? whichUnit, float newHeight, float rate)
+    {
+        if (whichUnit is not null) whichUnit.FlyHeight = newHeight;
+    }
 
     /// <summary>
     /// The facing at this moment, in degrees from 0 below 360. Close: a unit turning by SetUnitFacing is modelled as
@@ -158,15 +167,17 @@ public sealed partial class GameNatives
     /// Gives the unit to the player (the units probe; the facts' "Orders and events"): a living unit first gets a stop
     /// (order 851972), whose order events read the old owner, then changes hands, then its owner-change events fire on
     /// the new owner's registrations, reading the old one from GetChangingUnitPrevOwner; given to its owner, nothing
-    /// happens. A dead unit changes hands with no stop. The colour is the new owner's when asked. Not here: the
-    /// undefend order (852056) a unit with Defend gets after the change, which comes with abilities (W2-7).
+    /// happens. A dead unit changes hands with no stop. The colour is the new owner's when asked. Close: the undefend
+    /// order (852056) a unit with Defend gets after the change comes with abilities (W2-7, W2-10); and when a stop's
+    /// event gives the unit away first, this call changes nothing more (not measured).
     /// </summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Orders and events: SetUnitOwner's stop and change event inside the call (11-03); " + UnitsProbe)]
+    [Native(Level.Close)]
     public void SetUnitOwner(unit? whichUnit, player? whichPlayer, bool changeColor)
     {
         if (whichUnit is null || whichPlayer is null || whichUnit.Owner == whichPlayer) return;
         var previous = whichUnit.Owner;
         if (!whichUnit.Dead) FireUnit(new(whichUnit, Order: 851972), UnitIssuedOrder, PlayerUnitIssuedOrder);
+        if (whichUnit.Owner != previous) return;
         whichUnit.Owner = whichPlayer;
         if (changeColor) whichUnit.Color = whichPlayer.Color;
         FireUnit(new(whichUnit, Previous: previous), UnitChangeOwner, PlayerUnitChangeOwner);
@@ -237,20 +248,20 @@ public sealed partial class GameNatives
         if (whichUnit is null || whichUnitType is null) return false;
         var type = whichUnit.Type;
         bool Is(string category) => (BlzGetUnitIntegerField(whichUnit, Convert<unitintegerfield>(Classification)) & Categories[category]) != 0;
-        var weapons = Enumerable.Range(1, 2).Where(n => (type.Integer(WeaponsOn) & n) != 0)
-            .Select(n => (Kind: type.Text(Code($"ua{n}w")), Targets: Flags(type.Text(Code($"ua{n}g")), TargetFlags))).ToList();
-        var flying = BlzGetUnitIntegerField(whichUnit, Convert<unitintegerfield>(MoveType)) == 2;
+        // Its enabled weapons, of 1 and 2: their type and the flags of their targets
+        IEnumerable<(string? Kind, int Targets)> Weapons() => Enumerable.Range(1, 2).Where(n => (type.Integer(WeaponsOn) & n) != 0)
+            .Select(n => (type.Text(Code($"ua{n}w")), Flags(type.Text(Code($"ua{n}g")), TargetFlags)));
         return whichUnitType.Id switch
         {
             0 => IsHero(type.Id),
             1 => whichUnit.Dead,
             2 => IsBuildingNow(whichUnit),
-            3 => flying,
-            4 => !flying && !IsBuildingNow(whichUnit),
-            5 => weapons.Any(w => (w.Targets & TargetFlags["air"]) != 0),
-            6 => weapons.Any(w => (w.Targets & TargetFlags["ground"]) != 0),
-            7 => weapons.FirstOrDefault().Kind is "normal",
-            8 => weapons.FirstOrDefault().Kind is { } kind && kind != "normal",
+            3 => Flies(whichUnit),
+            4 => !Flies(whichUnit) && !IsBuildingNow(whichUnit),
+            5 => Weapons().Any(w => (w.Targets & TargetFlags["air"]) != 0),
+            6 => Weapons().Any(w => (w.Targets & TargetFlags["ground"]) != 0),
+            7 => Weapons().FirstOrDefault().Kind is "normal",
+            8 => Weapons().FirstOrDefault().Kind is { } kind && kind != "normal",
             9 => Is("giant"),
             10 => Is("summoned"),
             14 => Is("undead"),

@@ -8,18 +8,18 @@ public partial class unit
     internal GameObject Type = null!;
     internal player Owner = null!;
     internal float X, Y, Life, MaxLife, Mana, MaxMana;
-    internal bool Dead, Removed, Hidden, Invulnerable, Exploded, DecaySuspended, Paused;
+    internal bool Dead, Removed, Hidden, Invulnerable, Exploded, DecaySuspended, Overdue, Paused;
     internal int UserData, Skin, HeroLevel, Color, Pauses;
-    internal float Scale = 1;
+    internal float Scale = 1, FlyHeight;
     internal int[] Tint = [255, 255, 255, 255];
     internal string? Name; // BlzSetUnitName's
     internal readonly Dictionary<int, object> Fields = []; // what BlzSetUnit*Field and the setters sharing a field set
-    internal Change Facing, FlyHeight;
+    internal Change Facing;
 }
 
 /// <summary>
-/// A value moving at a rate from where it was to where it is going, as a unit turns or rises: read at a time, it is
-/// where it has got to.
+/// A value moving at a rate from where it was to where it is going, as a unit turns: read at a time, it is where it
+/// has got to.
 /// </summary>
 struct Change(float to)
 {
@@ -48,11 +48,6 @@ public sealed partial class GameNatives
     const string DecayProbe = "facts.md, Units: probe units-decay (11-08)";
     const float Dying = 0.405f; // a unit whose life is set below it dies (facts, Units)
 
-    readonly List<unit> _units = []; // every unit in the game, in the order made
-
-    /// <summary>Every unit in the game, in the order made; one removed or decayed is gone once its step ends.</summary>
-    internal IReadOnlyList<unit> Units => _units;
-
     static int Code(string id) => id.Aggregate(0, (value, letter) => value << 8 | (byte)letter);
 
     static readonly int HitPoints = Code("uhpm"), ManaMaximum = Code("umpm"), ManaInitial = Code("umpi"), Strength = Code("ustr"),
@@ -68,7 +63,7 @@ public sealed partial class GameNatives
         var u = Make(new unit
         {
             Type = type, Owner = owner, X = x, Y = y, Skin = skin, HeroLevel = hero ? 1 : 0, Color = owner.Color, Scale = type.Real(ModelScale),
-            Facing = new(Angle(face)), FlyHeight = new(Real(type, "umvh")),
+            Facing = new(Angle(face)), FlyHeight = type.Real(Code("umvh")),
         });
         // A hero's most life and mana count its strength and intelligence (facts, Units: StrHitPointBonus, IntManaBonus)
         u.MaxLife = type.Integer(HitPoints) + (hero ? Data.Constant("StrHitPointBonus", 25) * type.Integer(Strength) : 0);
@@ -76,11 +71,8 @@ public sealed partial class GameNatives
         u.Life = corpse ? 0 : u.MaxLife;
         u.Mana = Math.Min(type.Integer(ManaInitial) + (hero ? Data.Constant("IntManaBonus", 15) * type.Integer(Intelligence) : 0), u.MaxMana);
         u.Dead = corpse;
-        _units.Add(u);
         return u;
     }
-
-    static float Real(GameObject type, string field) => type.Real(Code(field));
 
     // An angle in degrees from 0 below 360 (facts: 400 reads 40, -90 reads 270, 720 reads 0)
     static float Angle(float degrees) => degrees % 360 is var a && a < 0 ? a + 360 : a;
@@ -105,9 +97,10 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// The unit reads as it was for the rest of the step, alive or dead, and is gone after it: every getter then reads
-    /// 0 or nil (facts, Units). No event fires. Killed in that step, it dies and stays as a body (probe units).
+    /// 0 or nil (facts, Units). Killed in that step, it dies and stays as a body (probe units). Close: a unit with Defend
+    /// fires its <c>undefend</c> order twice here in the game (game-facts), which comes with abilities (W2-7, W2-10).
     /// </summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Units: after RemoveUnit every getter reads the unit in the same frame (10-21, 11-06); " + UnitsProbe)]
+    [Native(Level.Close)]
     public void RemoveUnit(unit? whichUnit)
     {
         if (whichUnit is null || whichUnit.Removed) return;
@@ -120,15 +113,18 @@ public sealed partial class GameNatives
     void Gone(unit u)
     {
         if (!u.Removed) return;
-        _units.Remove(u);
         _game.Remove(u.Key);
+        _widgetEvents.Remove(u);
     }
 
-    /// <summary>The death event fires inside the call, the killer nil; on a dead unit nothing happens (facts, Units).</summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Units and Orders and events: KillUnit's death event inside the call, killer nil, none again (10-21); " + UnitsProbe)]
+    /// <summary>
+    /// The death events fire inside the call, the killer nil; on a dead unit nothing happens (facts, Units). Close: a
+    /// unit with Defend first fires its <c>undefend</c> order (game-facts), which comes with abilities (W2-7, W2-10).
+    /// </summary>
+    [Native(Level.Close)]
     public void KillUnit(unit? whichUnit)
     {
-        if (whichUnit is not null) Kill(whichUnit, null);
+        if (whichUnit is not null) Kill(whichUnit);
     }
 
     // Death, then the body (probe units-decay), its death time after the death: an exploded unit is gone after the
@@ -136,13 +132,14 @@ public sealed partial class GameNatives
     // its death time, neither with a decay event; any other unit decays then (the decay event, also with its decay
     // suspended) and is gone DecayTime plus BoneDecayTime after that unless its decay is suspended (game-facts: about
     // 90 s after the decay; inferred from the constants). A unit removed and then killed in one step stays (probe units).
-    void Kill(unit u, unit? killer)
+    // The killer comes with damage (W2-5): no death this wave makes has one.
+    void Kill(unit u)
     {
         if (u.Dead) return;
         u.Dead = true;
         u.Life = 0;
         u.Removed = false;
-        FireUnit(new(u, killer), UnitDeath, PlayerUnitDeath);
+        FireUnit(new(u), UnitDeath, PlayerUnitDeath);
         if (u.Exploded)
         {
             u.Removed = true;
@@ -162,9 +159,12 @@ public sealed partial class GameNatives
             });
     }
 
+    // A body whose time comes while its decay is suspended goes once the decay is let go (UnitSuspendDecay)
     void Rot(unit u, double at) => _game.At(Game.Steps(at), () =>
     {
-        if (!u.Dead || u.DecaySuspended || _game.Handle(u.Key) is null) return;
+        if (!u.Dead || _game.Handle(u.Key) is null) return;
+        u.Overdue = u.DecaySuspended;
+        if (u.Overdue) return;
         u.Removed = true;
         Gone(u);
     });
@@ -180,12 +180,15 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Keeps the body: its decay event still comes (probe units-decay), but it doesn't go. Close: when a body whose decay
-    /// is suspended and then let go goes isn't measured; here at the time it would have.
+    /// is suspended and then let go goes isn't measured; here at the time it would have, or after the step it is let go
+    /// in, when that time has passed.
     /// </summary>
     [Native(Level.Close)]
     public void UnitSuspendDecay(unit? whichUnit, bool suspend)
     {
-        if (whichUnit is not null) whichUnit.DecaySuspended = suspend;
+        if (whichUnit is null) return;
+        whichUnit.DecaySuspended = suspend;
+        if (!suspend && whichUnit.Overdue) Rot(whichUnit, Seconds);
     }
 
     /// <summary>The unit's type id; 0 for nil and once the unit is gone.</summary>

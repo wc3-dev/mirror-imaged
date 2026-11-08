@@ -6,7 +6,7 @@ namespace MirrorImaged.Natives;
 // gryphon rider (docs/facts.md, "Units"). A field reads the unit's type's data (as a number, a word read as the
 // constant common.j gives it, or a list of words read as flags), or the unit's own state where the field is one; a set
 // changes only that unit. The data's useUnit, useHero and useBuilding aren't read: a field applies to any unit, but for
-// the hero attributes, which only a hero has (decisions D220).
+// what only a hero has: its attributes and their gains, its proper names and its primary attribute (decisions D220).
 public sealed partial class GameNatives
 {
     static readonly int Agility = Code("uagc"), AgilityPermanent = Code("uagm"), AgilityWithBonus = Code("uagb"),
@@ -54,23 +54,26 @@ public sealed partial class GameNatives
 
     static string Name(int id) => new([(char)(id >> 24 & 255), (char)(id >> 16 & 255), (char)(id >> 8 & 255), (char)(id & 255)]);
 
-    T Own<T>(unit u, int field, T otherwise) => u.Fields.TryGetValue(field, out var value) ? (T)value : otherwise;
+    // What a set left in the field, if a set of this field's type did: a field id given as another type (a Convert of
+    // one's own) reads the type's value
+    static T Own<T>(unit u, int field, T otherwise) => u.Fields.TryGetValue(field, out var value) && value is T own ? own : otherwise;
 
     /// <summary>
     /// The unit's integer field: its type's number, or the constant for its word (armour, defence, regeneration and
     /// move types, primary attribute), or the flags of its words (targeted as, classification, placement prevented
     /// by), unless a set changed it; a hero's level for a hero. A hero attribute field on a unit that isn't a hero
-    /// closes the game (probe units-attribute).
+    /// closes the game (probe units-attribute). Close: with no bonuses and no permanent ones yet (W2-3), an attribute's
+    /// permanent and with-bonus fields read the attribute itself; the game read the permanent one 1 after its own set.
     /// </summary>
-    [Native(Level.Exact, Fact = UnitsProbe)]
+    [Native(Level.Close)]
     public int BlzGetUnitIntegerField(unit? whichUnit, unitintegerfield? whichField)
     {
         if (whichUnit is null || whichField is null) return 0;
         var (u, field, type) = (whichUnit, whichField.Id, whichUnit.Type);
         Attribute(u, field);
-        if (field == Agility || field == AgilityPermanent || field == AgilityWithBonus) return Own(u, field, type.Integer(Code("uagi")));
-        if (field == IntelligenceNow || field == IntelligencePermanent || field == IntelligenceWithBonus) return Own(u, field, type.Integer(Intelligence));
-        if (field == StrengthNow || field == StrengthPermanent || field == StrengthWithBonus) return Own(u, field, type.Integer(Strength));
+        if (field == Agility || field == AgilityPermanent || field == AgilityWithBonus) return Own(u, Agility, type.Integer(Code("uagi")));
+        if (field == IntelligenceNow || field == IntelligencePermanent || field == IntelligenceWithBonus) return Own(u, IntelligenceNow, type.Integer(Intelligence));
+        if (field == StrengthNow || field == StrengthPermanent || field == StrengthWithBonus) return Own(u, StrengthNow, type.Integer(Strength));
         if (field == UnitLevel) return IsHero(type.Id) ? u.HeroLevel : Own(u, field, type.Integer(UnitLevel));
         if (field == TintAlpha || field == TintRed || field == TintGreen || field == TintBlue) return 255;
         return Own(u, field, field == ArmorType ? ArmorTypes.GetValueOrDefault(type.Text(field) ?? "")
@@ -86,11 +89,12 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Sets the unit's integer field and answers true (probe units), but: the attributes with their bonus can't be set
-    /// (false); a hero's level becomes one more than the value (3 reads 4, 7 reads 8); the primary attribute and the
-    /// tint stay as they were, and the primary attribute of a unit that isn't a hero, set to an attribute (1 to 3),
-    /// closes the game (probe units-primary; 1 and 2 inferred). Close: a hero's attribute set changes only the field
-    /// here, not its life, mana or armour, and its permanent attribute (read 1 after a set of 7 and of 0) isn't
-    /// modelled; heroes are W2-3's.
+    /// (false); a hero's level becomes one more than the value (3 reads 4, 7 reads 8, both from level 1, so adding the
+    /// value fits as well: inferred, W2-3 to probe from level 5); the primary attribute and the tint stay as they were,
+    /// and the primary attribute of a unit that isn't a hero, set to an attribute (1 to 3), closes the game (probe
+    /// units-primary; 1 and 2 inferred), and so does setting a hero attribute there (inferred: only the read is
+    /// measured). Close: a hero's attribute set changes only the field here, not its life, mana or armour, and its
+    /// permanent attribute (read 1 after a set of 7 and of 0) isn't modelled; heroes are W2-3's.
     /// </summary>
     [Native(Level.Close)]
     public bool BlzSetUnitIntegerField(unit? whichUnit, unitintegerfield? whichField, int value)

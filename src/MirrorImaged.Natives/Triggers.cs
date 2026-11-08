@@ -134,7 +134,7 @@ public sealed partial class GameNatives
         _playerEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _allianceEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _playerStateEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
-        _unitEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
+        ForgetUnitEvents(whichTrigger);
         _game.Remove(whichTrigger.Key);
     }
 

@@ -236,7 +236,8 @@ part(0.3, "death", function()
   local function respond(label)
     return function()
       note(label .. " " .. GetHandleId(GetTriggerEventId()) .. " trig " .. tostring(GetTriggerUnit() == u) .. " widget "
-        .. kind(GetTriggerWidget()) .. " " .. tostring(GetTriggerWidget() == u) .. " dying " .. tostring(GetDyingUnit() == u)
+        .. kind(GetTriggerWidget()) .. " " .. tostring(GetTriggerWidget() == u) .. " " .. tostring(rawequal(GetTriggerWidget(), u))
+        .. " dying " .. tostring(GetDyingUnit() == u)
         .. " killer " .. show(GetKillingUnit()) .. " player " .. pid(GetTriggerPlayer()) .. " life " .. GetWidgetLife(u)
         .. " alive " .. tostring(UnitAlive(u)))
     end
