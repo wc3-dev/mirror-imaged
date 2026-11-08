@@ -31,7 +31,7 @@ public sealed class ProbeMapTests : IDisposable
     }
 
     [Fact]
-    public void A_map_has_a_minimap_image()
+    public void A_probe_map_has_a_minimap_image()
     {
         var path = Path.Combine(_folder, "hello.w3x");
         ProbeMap.Build("hello", "done()", path);
@@ -48,54 +48,38 @@ public sealed class ProbeMapTests : IDisposable
     }
 
     [Fact]
-    public void Every_map_marks_when_it_has_loaded_and_when_its_game_has_started()
-    {
-        var path = Path.Combine(_folder, "hub-1.w3x");
-        ProbeMap.BuildHub(1, path);
-
-        foreach (var script in new[] { Build("hello", "done()").Script!, Map.Open(path).Script!.ReplaceLineEndings("\n") })
-        {
-            var main = script[script.IndexOf("function main()", StringComparison.Ordinal)..];
-            Assert.Equal(@"MirrorImaged\loaded.pld", ProbeMap.Loaded);
-            Assert.Equal(@"MirrorImaged\started.pld", ProbeMap.Started);
-            Assert.Contains(
-                "    InitBlizzard()\n    mark(\"MirrorImaged\\\\loaded.pld\")\n    TimerStart(CreateTimer(), 0.0, false, function()\n" +
-                "        mark(\"MirrorImaged\\\\started.pld\")\n        start()\n",
-                main);
-        }
-    }
-
-    [Fact]
-    public void The_probe_runs_at_game_start_and_writes_its_lines_to_its_Preload_file()
+    public void The_probe_runs_once_the_game_has_started_and_writes_its_lines_to_its_Preload_file_then_ends_the_game()
     {
         var script = Build("hello", "out(1)\ndone()").Script!;
 
-        Assert.Contains("local function probe()\nout(1)\ndone()\nend", script);
-        Assert.Contains("TimerStart(CreateTimer(), 0.0, false, function()", script);
-        Assert.Contains("local ok, problem = pcall(probe)", script);
-        Assert.Contains("PreloadGenEnd(\"MirrorImaged\\\\hello.pld\")", script);
-        Assert.Contains("Preload(\"\\\")\\n\" .. line .. \"\\n//\")", script);
+        Assert.Contains("local probe = guard(function()\nout(1)\ndone()\nend)", script);
+        Assert.Contains(
+            "    InitBlizzard()\n    mark(\"MirrorImaged\\\\loaded.pld\")\n    TimerStart(CreateTimer(), 0.0, false, function()\n" +
+            "        mark(\"MirrorImaged\\\\started.pld\")\n        probe()\n",
+            script);
+        Assert.Equal(@"MirrorImaged\loaded.pld", ProbeMap.Loaded);
+        Assert.Equal(@"MirrorImaged\started.pld", ProbeMap.Started);
+        Assert.Contains("Preload(\"\\\")\\n\" .. line .. \"\\n//\")\n    end\n    PreloadGenEnd(\"MirrorImaged\\\\hello.pld\")\n    EndGame(false)", script);
     }
 
     [Fact]
-    public void A_probe_ends_the_game_or_loads_the_next_map()
+    public void A_line_is_refused_when_it_is_too_long_for_one_Preload_call_or_has_a_line_break()
     {
-        var alone = Build("hello", "done()").Script!;
-        var inHub = Build("hello", "done()", @"C:\maps\hub-2.w3x").Script!;
+        var script = Build("hello", "done()").Script!;
 
-        Assert.Contains("EndGame(false)", alone);
-        Assert.DoesNotContain("ChangeLevel", alone);
-        Assert.Contains("ChangeLevel(\"C:\\\\maps\\\\hub-2.w3x\", false)", inHub);
-        Assert.DoesNotContain("EndGame", inHub);
+        Assert.Contains("    text = tostring(text)\n    if #text > 253 or text:find(\"[\\r\\n]\") then\n        error(", script);
     }
 
     [Fact]
-    public void An_error_in_the_probe_becomes_a_line()
+    public void An_error_in_the_probe_or_a_guarded_function_becomes_its_last_line_and_ends_the_probe()
     {
         var script = Build("hello", "error('x')").Script!;
 
-        Assert.Contains("local ok, problem = pcall(probe)", script);
-        Assert.Contains("out(\"error: \" .. tostring(problem))", script);
+        Assert.Contains(
+            "        local ok, problem = pcall(f, ...)\n        if not ok then\n" +
+            "            lines[#lines + 1] = (\"error: \" .. tostring(problem)):gsub(\"[\\r\\n]\", \" \"):sub(1, 253)\n" +
+            "            done()\n",
+            script);
     }
 
     [Theory]
@@ -103,25 +87,11 @@ public sealed class ProbeMapTests : IDisposable
     [InlineData("a b")]
     [InlineData("a\\b")]
     [InlineData("a\"b")]
+    [InlineData("a\n")]
     [InlineData("Åsa")]
     public void A_probe_name_is_letters_digits_and_dashes(string name)
     {
         Assert.Throws<ArgumentException>(() => ProbeMap.Build(name, "done()", Path.Combine(_folder, "x.w3x")));
-    }
-
-    [Fact]
-    public void The_hub_polls_its_request_file_and_loads_the_map_it_names()
-    {
-        var path = Path.Combine(_folder, "hub-3.w3x");
-        ProbeMap.BuildHub(3, path);
-        var script = Map.Open(path).Script!;
-
-        Assert.Contains("Preloader(\"MirrorImaged\\\\hub\\\\3.pld\")", script);
-        Assert.Contains("BlzSetAbilityTooltip(FourCC(\"AHbz\"), \"\", 0)", script);
-        Assert.Contains("local map = BlzGetAbilityTooltip(FourCC(\"AHbz\"), 0)", script);
-        Assert.Contains("ChangeLevel(map, false)", script);
-        // The tooltip is emptied before each read: a missing file leaves it as it was.
-        Assert.True(script.IndexOf("BlzSetAbilityTooltip", StringComparison.Ordinal) < script.IndexOf("Preloader", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -137,11 +107,11 @@ public sealed class ProbeMapTests : IDisposable
         }
     }
 
-    // Line ends as \n whatever the checkout gives the raw strings the scripts are written from.
-    Map Build(string name, string lua, string? next = null)
+    // Line ends as \n whatever the checkout gives the raw string the script is written from.
+    Map Build(string name, string lua)
     {
         var path = Path.Combine(_folder, name + ".w3x");
-        ProbeMap.Build(name, lua, path, next);
+        ProbeMap.Build(name, lua, path);
         var map = Map.Open(path);
         map.Script = map.Script!.ReplaceLineEndings("\n");
         return map;

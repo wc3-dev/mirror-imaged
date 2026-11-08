@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text;
 using MirrorImaged.Data;
 using MirrorImaged.Probes;
@@ -13,7 +12,7 @@ public enum ProbeState
     /// <summary>The probe ran and its lines were read.</summary>
     Done,
 
-    /// <summary>No map loaded: the game didn't get that far, or no hub game is open. It waits for Sven.</summary>
+    /// <summary>The map never loaded: the game didn't get that far. It waits for Sven.</summary>
     Queued,
 
     /// <summary>The map loaded, but the probe's Preload file didn't come in time.</summary>
@@ -25,19 +24,25 @@ public sealed record ProbeRun(ProbeState State, IReadOnlyList<string> Lines, str
 
 /// <summary>
 /// Runs probe maps in the installed game, on a Windows desktop of its own that is never shown: builds the map, launches
-/// the game on it, presses space for the game while a map waits on its loading screen, waits for the probe's Preload
-/// file, stops the game and returns the lines (docs/facts.md, "The game runner").
+/// the game on it, presses space for the game while the map waits on its loading screen, waits for the probe's Preload
+/// file, ends the game and what it started, and returns the lines (docs/facts.md, "The game runner").
 /// </summary>
 /// <param name="game">The game's executable.</param>
 /// <param name="documents">The game's documents folder (<c>Documents\Warcraft III</c>).</param>
 /// <param name="maps">Where the built maps go.</param>
 public sealed class GameRunner(string game, string documents, string maps)
 {
-    /// <summary>The installed game (<see cref="GameInstall.Place"/>), its documents, and maps built beside the tests.</summary>
+    /// <summary>
+    /// The installed game (<see cref="GameInstall.Place"/>), its documents, and maps built in a short folder of the local
+    /// application data, as the game loads no map whose path is longer than <see cref="LongestMapPath"/>.
+    /// </summary>
     public static GameRunner Default { get; } = new(
         Path.Combine(GameInstall.Place(), "_retail_", "x86_64", "Warcraft III.exe"),
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Warcraft III"),
-        Path.Combine(AppContext.BaseDirectory, "maps"));
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MirrorImaged", "maps"));
+
+    /// <summary>The longest map path the game loads from <c>-loadfile</c>; with a longer one it stalls (docs/facts.md).</summary>
+    public const int LongestMapPath = 173;
 
     static readonly TimeSpan Patience = TimeSpan.FromSeconds(3);
 
@@ -46,164 +51,168 @@ public sealed class GameRunner(string game, string documents, string maps)
 
     string Data => Path.Combine(documents, "CustomMapData", ProbeMap.Folder);
 
-    string Requests => Path.Combine(Data, "hub");
-
-    string Loaded => Path.Combine(documents, "CustomMapData", ProbeMap.Loaded);
-
-    string Started => Path.Combine(documents, "CustomMapData", ProbeMap.Started);
-
-    /// <summary>Runs a probe in a game started on its map with <c>-loadfile</c>, and stops that game.</summary>
-    /// <exception cref="InvalidOperationException">Warcraft III is already running.</exception>
+    /// <summary>
+    /// Runs a probe in a game started on its map with <c>-loadfile</c>, and ends that game. One run at a time on this
+    /// computer: a second waits for the first.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A Warcraft III that this runner didn't start is running.</exception>
+    /// <exception cref="ArgumentException">The name is not a probe's, or makes the map's path too long for the game.</exception>
     public ProbeRun Run(string name, string lua, TimeSpan timeout)
     {
-        RefuseWhenRunning();
-
-        // A new path each run, so an older War3Log.txt never shows this run's map opening.
-        var map = Path.Combine(maps, $"{name}-{DateTime.Now:yyyyMMdd-HHmmss}.w3x");
-        ProbeMap.Build(name, lua, map);
-        var output = Path.Combine(Data, name + ".pld");
-        Directory.CreateDirectory(Data);
-        File.Delete(output);
-        File.Delete(Loaded);
-        File.Delete(Started);
-
-        var events = new List<string>();
-        IReadOnlyList<string>? lines;
-        using var watch = new Watch();
-        using var process = Launch(map, watch.Desktop);
+        using var one = new Mutex(false, "MirrorImaged.GameRunner");
         try
         {
-            lines = Wait(output, timeout, watch, events, () => process.HasExited);
+            one.WaitOne();
+        }
+        catch (AbandonedMutexException)
+        {
+            // A runner ended without letting go; the mutex is this one's now, and its game ended with its job.
+        }
+
+        try
+        {
+            if (Process.GetProcessesByName("Warcraft III").Length > 0)
+                throw new InvalidOperationException("Warcraft III is already running; the runner uses only a game it starts itself");
+            return RunAlone(name, lua, timeout);
         }
         finally
         {
-            events.Add(Stop(process));
-            File.Delete(map);
+            one.ReleaseMutex();
+        }
+    }
+
+    ProbeRun RunAlone(string name, string lua, TimeSpan timeout)
+    {
+        var map = MapPath(maps, name);
+        var output = Path.Combine(Data, name + ".pld");
+        var loaded = Path.Combine(documents, "CustomMapData", ProbeMap.Loaded);
+        var started = Path.Combine(documents, "CustomMapData", ProbeMap.Started);
+        var events = new List<string>();
+        IReadOnlyList<string>? lines = null;
+        var kept = Keep(Kept());
+        using var watch = new Watch();
+        GameProcess? running = null;
+        try
+        {
+            ProbeMap.Build(name, lua, map);
+            Directory.CreateDirectory(Data);
+            File.Delete(output);
+            File.Delete(loaded);
+            File.Delete(started);
+            running = GameProcess.Start(game, $"-launch -windowmode windowed -loadfile \"{map}\"", Path.GetDirectoryName(Path.GetDirectoryName(game))!, watch.Desktop);
+            lines = Wait(output, loaded, started, timeout, watch, running, events);
+            events.Add($"in the game's job: {string.Join(", ", running.Ids().Select(Name))}");
+        }
+        finally
+        {
+            if (running is not null)
+            {
+                events.Add(running.Stop());
+                running.Dispose();
+            }
+
+            events.AddRange(Restore(kept));
+            if (File.Exists(map))
+                File.Delete(map);
         }
 
-        // The game holds War3Log.txt back while it runs and loses what it held when it is stopped, so the log seldom
-        // shows the opening; the map's own loaded file is what says it loaded.
-        var log = ReadShared(Path.Combine(documents, "Logs", "War3Log.txt")) ?? "";
-        var state = lines is not null ? ProbeState.Done : File.Exists(Loaded) ? ProbeState.NoOutput : ProbeState.Queued;
+        var state = lines is not null ? ProbeState.Done : File.Exists(loaded) ? ProbeState.NoOutput : ProbeState.Queued;
         return new ProbeRun(state, lines ?? [], $"""
-            War3Log.txt shows the map opened: {Opened(log, map)}
             {string.Join('\n', events)}
             windows on the desktop: {string.Join("; ", watch.Windows)}
             """);
     }
 
-    /// <summary>
-    /// Starts the game on a new hub, on the hidden desktop, and leaves it running for <see cref="RunInHub"/>; the caller
-    /// stops the process. On 3.0.1.24371 the hub reads its request but <c>ChangeLevel</c> doesn't load the probe from a
-    /// <c>-loadfile</c> game (docs/facts.md, "The game runner"), so the hub doesn't work yet.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">Warcraft III is already running.</exception>
-    public Process StartHub()
+    // Files of Sven's that the game rewrites: his preferences, and for each account the replays and campaign profiles.
+    // Only LastReplay.w3g changed in a run (docs/facts.md), but all are put back as they were.
+    List<string> Kept()
     {
-        RefuseWhenRunning();
-        Directory.CreateDirectory(Data);
-        File.Delete(Loaded);
-        File.Delete(Started);
-        using var watch = new Watch();
-        var process = Launch(ResetHub(), watch.Desktop);
-
-        // The desktop goes when its last handle closes; once the game's window is on it, the game holds it.
-        var time = Stopwatch.StartNew();
-        while (watch.Main == 0 && !process.HasExited && time.Elapsed < TimeSpan.FromMinutes(1))
+        var files = new List<string> { Path.Combine(documents, "War3Preferences.txt") };
+        var accounts = Path.Combine(documents, "BattleNet");
+        if (Directory.Exists(accounts))
         {
-            Thread.Sleep(250);
-            watch.Look();
+            foreach (var account in Directory.GetDirectories(accounts))
+            {
+                files.Add(Path.Combine(account, "Replays", "LastReplay.w3g"));
+                files.Add(Path.Combine(account, "Replays", "TempReplay.w3g"));
+                files.Add(Path.Combine(account, "Campaigns", "Classic", "Classic.w3p"));
+                files.Add(Path.Combine(account, "Campaigns", "Reforged", "Reforged.w3p"));
+            }
         }
 
-        return process;
+        return files;
     }
+
+    /// <summary>The content of each file as it is, or null for one that doesn't exist.</summary>
+    internal static List<(string File, byte[]? Content)> Keep(IEnumerable<string> files) =>
+        files.Select(file => (file, File.Exists(file) ? File.ReadAllBytes(file) : null)).ToList();
 
     /// <summary>
-    /// Runs a probe through the hub: the probe is the next request, and it returns to a hub that waits for the one after.
-    /// When no hub picks it up in time the request stays queued, and a hub that opens later runs it.
+    /// Puts each kept file back as it was, removing one that didn't exist, and says which it changed or couldn't. Never
+    /// throws for a file, so it can run when a run fails.
     /// </summary>
-    public ProbeRun RunInHub(string name, string lua, TimeSpan timeout)
+    internal static List<string> Restore(List<(string File, byte[]? Content)> kept)
     {
-        Directory.CreateDirectory(Requests);
-        var request = Directory.GetFiles(Requests, "*.pld").Length + 1;
-        var hub = Path.Combine(maps, $"hub-{request + 1}.w3x");
-        var map = Path.Combine(maps, $"{request}-{name}.w3x");
-        ProbeMap.BuildHub(request + 1, hub);
-        ProbeMap.Build(name, lua, map, hub);
-        var output = Path.Combine(Data, name + ".pld");
-        File.Delete(output);
-
-        // Written whole before the hub can see it: the game keeps a file's first content (facts, "Files and Preload").
-        var written = Path.Combine(Requests, $"{request}.tmp");
-        File.WriteAllText(written, Preload.Request(map));
-        File.Move(written, Path.ChangeExtension(written, ".pld"));
-
-        var events = new List<string> { $"request {request}" };
-        using var watch = new Watch();
-        var lines = Wait(output, timeout, watch, events, () => Process.GetProcessesByName("Warcraft III").Length == 0);
-        return lines is null
-            ? new ProbeRun(ProbeState.Queued, [], $"{string.Join('\n', events)}\nthe request waits in {Requests}: is the hub's game open?")
-            : new ProbeRun(ProbeState.Done, lines, string.Join('\n', events));
-    }
-
-    /// <summary>Empties the hub's requests and builds the hub that waits for request 1.</summary>
-    internal string ResetHub()
-    {
-        if (Directory.Exists(Requests))
-            Directory.Delete(Requests, true);
-        var hub = Path.Combine(maps, "hub-1.w3x");
-        ProbeMap.BuildHub(1, hub);
-        return hub;
-    }
-
-    /// <summary>Whether <c>War3Log.txt</c> shows the game opening the map after it activated the WebUI.</summary>
-    /// <remarks>At start the game opens every map under <c>Documents\Warcraft III\Maps</c>, before the WebUI.</remarks>
-    internal static bool Opened(string log, string map)
-    {
-        const string Opening = "Opening map - ";
-        var webUi = false;
-        foreach (var line in log.Split('\n'))
+        var changed = new List<string>();
+        foreach (var (file, content) in kept)
         {
-            if (line.Contains("Activating WebUI", StringComparison.Ordinal))
-                webUi = true;
-            else if (webUi && line.IndexOf(Opening, StringComparison.Ordinal) is var at and >= 0
-                && line[(at + Opening.Length)..].TrimEnd().Replace('\\', '/').Equals(map.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase))
-                return true;
+            try
+            {
+                if (content is null && File.Exists(file))
+                    File.Delete(file);
+                else if (content is not null && (!File.Exists(file) || !File.ReadAllBytes(file).AsSpan().SequenceEqual(content)))
+                    File.WriteAllBytes(file, content);
+                else
+                    continue;
+                changed.Add($"put back {file}");
+            }
+            catch (Exception problem) when (problem is IOException or UnauthorizedAccessException)
+            {
+                changed.Add($"could not put back {file}: {problem.Message}");
+            }
         }
 
-        return false;
+        return changed;
     }
 
-    /// <summary>Whether a map has loaded (its <c>main</c> wrote the loaded file) and its game hasn't started since.</summary>
-    internal static bool OnLoadingScreen(string loaded, string started) =>
-        File.Exists(loaded) && (!File.Exists(started) || File.GetLastWriteTimeUtc(started) < File.GetLastWriteTimeUtc(loaded));
+    /// <summary>A new path for this run's map: the probe's name and a random suffix, so two runs never share one.</summary>
+    /// <exception cref="ArgumentException">The path is longer than <see cref="LongestMapPath"/>.</exception>
+    internal static string MapPath(string maps, string name)
+    {
+        var map = Path.Combine(Path.GetFullPath(maps), $"{name}-{Guid.NewGuid().ToString("N")[..8]}.w3x");
+        if (map.Length > LongestMapPath)
+            throw new ArgumentException($"The game loads no map whose path is longer than {LongestMapPath} characters: {map}", nameof(name));
+        return map;
+    }
 
-    // Waits for the probe's lines. A loaded map waits on its loading screen for a key (Sven, 11-08), so while one does,
-    // a space key is posted to the game's window every few seconds.
-    IReadOnlyList<string>? Wait(string output, TimeSpan timeout, Watch watch, List<string> events, Func<bool> gone)
+    /// <summary>Whether the map has loaded (its <c>main</c> wrote the loaded file) and its game hasn't started.</summary>
+    internal static bool OnLoadingScreen(string loaded, string started) => File.Exists(loaded) && !File.Exists(started);
+
+    // Waits for the probe's lines. A loaded map waits on its loading screen for a key (Sven, 11-08), so while it does, a
+    // space key is posted to the game's window every few seconds.
+    static IReadOnlyList<string>? Wait(string output, string loaded, string started, TimeSpan timeout, Watch watch, GameProcess running, List<string> events)
     {
         var time = Stopwatch.StartNew();
         var posted = TimeSpan.Zero;
         var posts = 0;
         var waiting = false;
-        while (time.Elapsed < timeout && !gone())
+        while (time.Elapsed < timeout && !running.Process.HasExited)
         {
             Thread.Sleep(250);
-            watch.Look();
+            watch.Look(running.Ids());
             if (Preload.Lines(ReadShared(output) ?? "") is { } lines)
             {
                 events.Add($"the probe's lines came at {time.Elapsed.TotalSeconds:0.0} s");
                 return lines;
             }
 
-            if (OnLoadingScreen(Loaded, Started) != waiting)
+            if (OnLoadingScreen(loaded, started) != waiting)
             {
                 waiting = !waiting;
                 events.Add(waiting
-                    ? $"a map loaded at {time.Elapsed.TotalSeconds:0.0} s"
+                    ? $"the map loaded at {time.Elapsed.TotalSeconds:0.0} s"
                     : $"its game started at {time.Elapsed.TotalSeconds:0.0} s, after {posts} space keys");
                 posted = time.Elapsed;
-                posts = 0;
             }
 
             if (waiting && time.Elapsed - posted >= Patience && watch.Main != 0)
@@ -215,61 +224,25 @@ public sealed class GameRunner(string game, string documents, string maps)
             }
         }
 
-        events.Add($"no lines after {time.Elapsed.TotalSeconds:0.0} s{(gone() ? "; no game was running" : "")}");
-        return null;
+        // The file may have come as the wait ended.
+        var last = Preload.Lines(ReadShared(output) ?? "");
+        events.Add(last is null
+            ? $"no lines after {time.Elapsed.TotalSeconds:0.0} s{(running.Process.HasExited ? "; the game had exited" : "")}"
+            : $"the probe's lines came as the wait ended, at {time.Elapsed.TotalSeconds:0.0} s");
+        return last;
     }
 
-    static void RefuseWhenRunning()
+    static string Name(int id)
     {
-        if (Process.GetProcessesByName("Warcraft III").Length > 0)
-            throw new InvalidOperationException("Warcraft III is already running; the runner uses only a game it starts itself");
-    }
-
-    Process Launch(string map, string desktop)
-    {
-        var startup = new Win32.StartupInfo { Size = Marshal.SizeOf<Win32.StartupInfo>(), Desktop = desktop };
-        var command = new StringBuilder($"\"{game}\" -launch -windowmode windowed -loadfile \"{map}\"");
-        if (!Win32.CreateProcess(game, command, 0, 0, false, 0, 0, Path.GetDirectoryName(Path.GetDirectoryName(game)), ref startup, out var started))
-            throw new Win32Exception();
-
         try
         {
-            var process = Process.GetProcessById(started.ProcessId);
-            _ = process.Handle; // held from now on, so the exit code can be read after the game exits
-            return process;
+            using var process = Process.GetProcessById(id);
+            return process.ProcessName;
         }
-        finally
+        catch (ArgumentException)
         {
-            Win32.CloseHandle(started.Thread);
-            Win32.CloseHandle(started.Process);
+            return $"{id} (exited)";
         }
-    }
-
-    // Killed with the BlizzardBrowser processes it started: closing its window opens the game's quit dialog, which waits
-    // for a person (docs/facts.md).
-    static string Stop(Process process)
-    {
-        var exited = process.HasExited;
-        if (!exited)
-            process.Kill(entireProcessTree: true);
-
-        // A game that exits by itself leaves its WebUI browsers running, and one that crashes leaves its error reporter
-        // showing; only a game starts them, and only this one runs.
-        foreach (var helper in Process.GetProcessesByName("BlizzardBrowser").Concat(Process.GetProcessesByName("BlizzardError")))
-        {
-            try
-            {
-                if (helper.StartTime >= process.StartTime)
-                    helper.Kill();
-            }
-            catch (InvalidOperationException)
-            {
-                // It had exited.
-            }
-        }
-
-        process.WaitForExit(10_000);
-        return exited ? $"the game had exited by itself with 0x{process.ExitCode:X8}" : "the game was stopped";
     }
 
     static string? ReadShared(string path)
@@ -285,8 +258,8 @@ public sealed class GameRunner(string game, string documents, string maps)
         }
     }
 
-    // The hidden desktop, opened on first use (it is made when it doesn't exist), and what was on it: each look adds its
-    // windows as they were and finds the game's own.
+    // The hidden desktop, made on first use (or opened, when it exists), and what was on it: each look adds every window
+    // on it as it was, with the process that owns it, and finds the game's own window.
     sealed class Watch : IDisposable
     {
         nint _desktop;
@@ -295,7 +268,7 @@ public sealed class GameRunner(string game, string documents, string maps)
         {
             get
             {
-                if (_desktop == 0 && (_desktop = Win32.CreateDesktop(ProbeMap.Folder, 0, 0, 0, Win32.GenericAll, 0)) == 0)
+                if (_desktop == 0 && (_desktop = Win32.CreateDesktop(ProbeMap.Folder, 0, 0, 0, Win32.DesktopRights, 0)) == 0)
                     throw new Win32Exception();
                 return ProbeMap.Folder;
             }
@@ -305,14 +278,15 @@ public sealed class GameRunner(string game, string documents, string maps)
 
         public nint Main { get; private set; }
 
-        public void Look()
+        public void Look(IReadOnlyList<int> ours)
         {
             _ = Desktop;
             bool See(nint window, nint parameter)
             {
                 var (name, title) = (Text(window, Win32.GetClassName), Text(window, Win32.GetWindowText));
-                var shown = $"{name} \"{title}\"{(Win32.IsWindowVisible(window) ? "" : " hidden")}";
-                // A message box (#32770) is the game reporting an error: what it says is in its child windows.
+                Win32.GetWindowThreadProcessId(window, out var owner);
+                var shown = $"{name} \"{title}\"{(Win32.IsWindowVisible(window) ? "" : " hidden")} of {(ours.Contains(owner) ? GameRunner.Name(owner) : $"{owner}, not in the game's job")}";
+                // A dialog (#32770) is the game, or its error reporter, asking something: what it says is in its child windows.
                 if (name == "#32770")
                 {
                     var said = new List<string>();

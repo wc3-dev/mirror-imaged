@@ -26,15 +26,4 @@ public sealed class PreloadTests
         Assert.Null(Preload.Lines(Written[..Written.IndexOf("\tcall PreloadEnd", StringComparison.Ordinal)]));
         Assert.Null(Preload.Lines(""));
     }
-
-    [Fact]
-    public void A_request_sets_the_tooltip_the_hub_reads_to_the_maps_path()
-    {
-        Assert.Equal(
-            "function PreloadFiles takes nothing returns nothing\n\r\n" +
-            "\tcall PreloadStart()\r\n" +
-            "\tcall Preload( \"\")\ncall BlzSetAbilityTooltip('AHbz', \"C:\\\\maps\\\\1-hello.w3x\", 0)\n//\" )\r\n" +
-            "\tcall PreloadEnd( 0.0 )\r\n\nendfunction\n\n\r\n",
-            Preload.Request(@"C:\maps\1-hello.w3x"));
-    }
 }

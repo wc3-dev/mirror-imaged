@@ -5,7 +5,11 @@ namespace MirrorImaged.GameTests;
 
 static class Win32
 {
-    public const uint GenericAll = 0x10000000;
+    // DESKTOP_READOBJECTS to list its windows, and DESKTOP_CREATEWINDOW, without which CreateDesktop fails with error 8.
+    public const uint DesktopRights = 0x1 | 0x2;
+    public const int CreateSuspended = 0x4;
+    public const int JobObjectBasicProcessIdList = 3, JobObjectExtendedLimitInformation = 9;
+    public const uint KillOnJobClose = 0x2000;
     public const uint KeyDown = 0x100, KeyUp = 0x101;
     public const int Space = 0x20;
 
@@ -30,6 +34,20 @@ static class Win32
         public int ProcessId, ThreadId;
     }
 
+    // JOBOBJECT_EXTENDED_LIMIT_INFORMATION, with its basic limits and I/O counters laid out in place.
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ExtendedLimitInformation
+    {
+        public long PerProcessUserTimeLimit, PerJobUserTimeLimit;
+        public uint LimitFlags;
+        public nuint MinimumWorkingSetSize, MaximumWorkingSetSize;
+        public uint ActiveProcessLimit;
+        public nuint Affinity;
+        public uint PriorityClass, SchedulingClass;
+        public ulong ReadOperationCount, WriteOperationCount, OtherOperationCount, ReadTransferCount, WriteTransferCount, OtherTransferCount;
+        public nuint ProcessMemoryLimit, JobMemoryLimit, PeakProcessMemoryUsed, PeakJobMemoryUsed;
+    }
+
     [DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern nint CreateDesktop(string name, nint device, nint mode, int flags, uint access, nint attributes);
 
@@ -41,8 +59,29 @@ static class Win32
         string application, StringBuilder commandLine, nint processAttributes, nint threadAttributes, bool inheritHandles,
         int flags, nint environment, string? directory, ref StartupInfo startup, out ProcessInformation information);
 
+    [DllImport("kernel32", SetLastError = true)]
+    public static extern uint ResumeThread(nint thread);
+
+    [DllImport("kernel32", SetLastError = true)]
+    public static extern bool TerminateProcess(nint process, uint exitCode);
+
     [DllImport("kernel32")]
     public static extern bool CloseHandle(nint handle);
+
+    [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern nint CreateJobObject(nint attributes, string? name);
+
+    [DllImport("kernel32", SetLastError = true)]
+    public static extern bool SetInformationJobObject(nint job, int infoClass, ref ExtendedLimitInformation information, int length);
+
+    [DllImport("kernel32", SetLastError = true)]
+    public static extern bool AssignProcessToJobObject(nint job, nint process);
+
+    [DllImport("kernel32", SetLastError = true)]
+    public static extern bool QueryInformationJobObject(nint job, int infoClass, long[] information, int length, out int returned);
+
+    [DllImport("kernel32", SetLastError = true)]
+    public static extern bool TerminateJobObject(nint job, uint exitCode);
 
     [DllImport("user32")]
     public static extern bool EnumDesktopWindows(nint desktop, EnumWindowsProc callback, nint parameter);
@@ -55,6 +94,9 @@ static class Win32
 
     [DllImport("user32", CharSet = CharSet.Unicode)]
     public static extern int GetClassName(nint window, StringBuilder name, int capacity);
+
+    [DllImport("user32")]
+    public static extern int GetWindowThreadProcessId(nint window, out int processId);
 
     [DllImport("user32")]
     public static extern bool IsWindowVisible(nint window);

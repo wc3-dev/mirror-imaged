@@ -35,4 +35,16 @@ public sealed class GameProbeTests
         Assert.Equal("20", last[0]);
         Assert.InRange(int.Parse(last[2]), 19, 21);
     }
+
+    [GameFact]
+    public void A_line_too_long_for_Preload_ends_the_probe_with_its_error()
+    {
+        var run = GameRunner.Default.Run("refused", "out('kept')\nout(string.rep('a', 254))\nout('never')\ndone()", TimeSpan.FromMinutes(2));
+
+        Assert.True(run.State == ProbeState.Done, $"{run.State}: {run.Detail}");
+        Assert.Equal("kept", run.Lines[0]);
+        Assert.StartsWith("error: ", run.Lines[1]);
+        Assert.Contains("a line is at most 253 bytes, with no line break", run.Lines[1]);
+        Assert.Equal(2, run.Lines.Count);
+    }
 }
