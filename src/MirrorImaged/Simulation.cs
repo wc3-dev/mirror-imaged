@@ -21,38 +21,43 @@ public sealed class SimulationOptions
 
     /// <summary>The slots computers play; null for the map's computer slots that aren't among <see cref="Users"/>.</summary>
     public IReadOnlyList<int>? Computers { get; init; }
+
+    /// <summary>
+    /// The simulated <c>Documents\Warcraft III</c> the run reads and writes: its <c>CustomMapData</c> files and saved
+    /// game caches. Give the same one to the next run to keep them.
+    /// </summary>
+    public Documents Documents { get; init; } = new();
 }
 
 /// <summary>
 /// A map's script running on a simulated game, with no game open. <see cref="Load"/> sets <c>common.j</c>'s globals,
 /// runs the installed game's <c>blizzard.j</c>, then the script, its <c>config</c> and <c>main</c>;
 /// <see cref="Advance"/> moves the clock on and runs the timers that fall due. A Lua error goes in the log and the run
-/// carries on, as the game drops it. A Missing native stops the run:
+/// carries on, as the game drops it. A Missing native stops the run, and so does a call the game closes on:
 /// <see cref="Stopped"/> is then a <see cref="LuaException"/> that starts with the calling line
-/// (<c>war3map.lua:3: The native ...</c>), whose inner exception is the <see cref="MissingNativeException"/>, and
-/// <see cref="Advance"/> throws it. The log keeps what came before.
+/// (<c>war3map.lua:3: The native ...</c>), whose inner exception is the <see cref="MissingNativeException"/> or the
+/// <see cref="GameClosedException"/>, and <see cref="Advance"/> throws it. The log keeps what came before.
 /// </summary>
 public sealed partial class Simulation : IDisposable
 {
     readonly Game _game;
     readonly GameNatives _natives;
-    readonly LuaState _lua = new() { Halts = e => e is MissingNativeException };
+    readonly LuaState _lua = new() { Halts = e => e is MissingNativeException or GameClosedException };
     TimeSpan _time;
 
     Simulation(byte[] script, MapInfo? info, string blizzard, SimulationOptions options)
     {
         _game = new Game(options.Seed);
-        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this) };
+        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this), Documents = options.Documents, RunPreloadFile = RunPreloadFile };
         try
         {
             var (users, computers, others) = Lineup(info, options);
-            foreach (var native in typeof(GameNatives).GetMethods()
-                         .Where(method => method.GetCustomAttribute<NativeAttribute>() is not null)
-                         .OrderBy(method => method.Name, StringComparer.Ordinal))
+            foreach (var native in NativeMethods.OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())
                 _lua[name] = value is handle h ? ToLua(h, h.GetType()) : value;
             AddLuaExtras();
+            AddPreloader();
             _lua.Run(blizzard, "blizzard.lua");
             Protect(() => _lua.Run(script, "war3map.lua"));
             Protect(() => _lua.Call("config"));
@@ -123,6 +128,9 @@ public sealed partial class Simulation : IDisposable
     /// the game; until dialogs and input exist (waves 5 and 6), only what was due in the step it paused in still runs.
     /// </summary>
     public bool Paused => _game.Paused;
+
+    /// <summary>The documents the run reads and writes, <see cref="SimulationOptions.Documents"/>.</summary>
+    public Documents Documents => _natives.Documents;
 
     /// <summary>The natives the run's script calls.</summary>
     internal GameNatives Natives => _natives;
