@@ -115,6 +115,9 @@ public sealed partial class StandardData
 
     internal Dictionary<(ObjectKind Kind, int Id), StandardObject> Objects { get; } = [];
 
+    /// <summary>The objects the balance set leaves out, which don't exist but have their text.</summary>
+    internal Dictionary<(ObjectKind Kind, int Id), StandardObject> Absent { get; } = [];
+
     internal Dictionary<ObjectKind, Dictionary<int, Field>> Fields { get; } = [];
 
     /// <summary>The gameplay constants, the <c>[Misc]</c> keys of <c>units/miscdata.txt</c> and <c>units/miscgame.txt</c>.</summary>
@@ -176,12 +179,14 @@ public sealed partial class StandardData
                     foreach (var (column, value) in cells) merged[column] = value;
                 }
 
+            // An object the set leaves out doesn't exist, but its text is still read: GetObjectName names it (probe data-sets-melee).
+            var absent = new HashSet<string>(StringComparer.Ordinal);
             if (objects is not null)
                 foreach (var table in tables)
                     if (File($"_balance/{objects}.w3mod/{table}") is { } bytes)
                     {
                         var listed = Tables.Slk(bytes).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-                        foreach (var id in rows.Keys.Where(id => !listed.Contains(id)).ToList()) rows.Remove(id);
+                        absent.UnionWith(rows.Keys.Where(id => !listed.Contains(id)));
                     }
 
             // A text section is the object's whatever its case (the Command Aura buff BOac's is [Boac]), its exact id first.
@@ -193,7 +198,7 @@ public sealed partial class StandardData
                         foreach (var (key, value) in keys) merged[key] = value;
 
             foreach (var (id, merged) in rows)
-                if (id.Length == 4) data.Objects[(kind, Ids.Of(id))] = new StandardObject(merged);
+                if (id.Length == 4) (absent.Contains(id) ? data.Absent : data.Objects)[(kind, Ids.Of(id))] = new StandardObject(merged);
         }
 
         foreach (var path in new[] { "units/miscdata.txt", "units/miscgame.txt" })
