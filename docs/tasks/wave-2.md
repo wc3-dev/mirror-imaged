@@ -45,6 +45,10 @@ Needs W2-2.
   skill points and learning, revival, hero events.
 - Items: creating, removing, owners, charges, `UnitAddItem` and `UnitAddItemById` with their events and slots, the
   inventory natives, dropping, powerups, the bag (facts, "Orders and events" items).
+- Left by W1-5: the unit game-cache natives `StoreUnit`, `RestoreUnit`, `HaveStoredUnit`, `FlushStoredUnit`,
+  `SyncStoredUnit`, with the measured case (game-facts, about line 709) that a Paladin's Gloves of Haste survived a
+  store and restore though `StoreUnit` returned false (its attack-speed half needs wave 3). A probe of these never
+  calls `SaveGameCache`.
 
 ## W2-4 Destructables, trees and doodads
 
@@ -83,3 +87,8 @@ Needs W2-2.
   `BlzGetAbility*`/`BlzSetAbility*` and the unit's ability fields, tech and upgrades applied as data (facts, "Spells
   and abilities" for what needs no cast). The cast flow and effects are wave 4.
 - `SetPlayerAbilityAvailable` (facts, "Version and launching": false takes the ability off the command card).
+- Left by W1-5 (with W2-1's data): the ability-tooltip carrier, `BlzSetAbilityTooltip`, `BlzGetAbilityTooltip`,
+  `BlzSetAbilityExtendedTooltip` and its getter, with the "Files and Preload" cases: a tooltip is kept only for the
+  ability's levels (3 on Blizzard; on a 100-level copy, levels above 2 read level 2's; with `Tooltip = "-"` levels
+  0-99 hold and 100 up read 99's), pieces of 200-213 characters come back whole, tooltips make no handles. Then give
+  `probes/files.lua` its tooltip read back.
