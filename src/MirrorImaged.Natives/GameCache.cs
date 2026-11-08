@@ -15,39 +15,46 @@ public sealed partial class GameNatives
 {
     const string CacheFact = "docs/facts.md, Files and game cache (the files probe, 11-08)";
 
-    Dictionary<string, Dictionary<(char, string, string), object>>? _caches;
+    // The game's caches, taken from the documents' saved ones as the game starts (Documents).
+    Dictionary<string, Dictionary<(char, string, string), object>> _caches = new(StringComparer.OrdinalIgnoreCase);
 
-    Dictionary<string, Dictionary<(char, string, string), object>> Caches =>
-        _caches ??= new(Documents.GameCaches.Select(saved => KeyValuePair.Create(saved.Key, new Dictionary<(char, string, string), object>(saved.Value))),
-            StringComparer.OrdinalIgnoreCase);
+    static Dictionary<string, Dictionary<(char, string, string), object>> CopyCaches(Dictionary<string, Dictionary<(char Type, string Mission, string Key), object>> caches) =>
+        new(caches.Select(cache => KeyValuePair.Create(cache.Key, new Dictionary<(char, string, string), object>(cache.Value))), StringComparer.OrdinalIgnoreCase);
 
     [Native(Level.Exact, Fact = "game-facts.md, Handles and identity: InitGameCache makes a new handle every call (10-01); " + CacheFact)]
     public gamecache? InitGameCache(string? campaignFile)
     {
         var name = campaignFile ?? "";
-        if (!Caches.TryGetValue(name, out var values)) Caches[name] = values = [];
+        if (!_caches.TryGetValue(name, out var values)) _caches[name] = values = [];
         return Make(new gamecache { Name = name, Values = values });
     }
 
-    /// <summary>Writes every cache, not only <paramref name="whichCache"/>, to the documents, for the next game; false for null (not measured).</summary>
-    [Native(Level.Exact, Fact = CacheFact)]
+    /// <summary>
+    /// Writes every cache, not only <paramref name="whichCache"/>, to the documents, for the next game, and gives true;
+    /// false for null (not measured). Close: measured in one run, which a probe can't repeat (it rewrites the account's
+    /// saved caches).
+    /// </summary>
+    [Native(Level.Close)]
     public bool SaveGameCache(gamecache? whichCache)
     {
         if (whichCache is null) return false;
         Documents.GameCaches.Clear();
-        foreach (var (name, values) in Caches) Documents.GameCaches[name] = new(values);
+        foreach (var (name, values) in _caches) Documents.GameCaches[name] = new(values);
         return true;
     }
 
-    /// <summary>The caches as last saved, each in place, so its handles read it; a cache never saved is gone. True, as in a live game.</summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Files and Preload: true in both live runs (11-03); " + CacheFact)]
+    /// <summary>
+    /// The caches as last saved, each in place, so its handles read it; a cache never saved is gone. True, as in a live
+    /// game. Close, as <see cref="SaveGameCache"/>.
+    /// </summary>
+    [Native(Level.Close)]
     public bool ReloadGameCachesFromDisk()
     {
-        foreach (var name in Caches.Keys.Where(name => !Documents.GameCaches.ContainsKey(name)).ToList()) Caches.Remove(name);
+        foreach (var name in _caches.Keys.Where(name => !Documents.GameCaches.ContainsKey(name)).ToList()) _caches.Remove(name);
         foreach (var (name, saved) in Documents.GameCaches)
         {
-            if (Caches.TryGetValue(name, out var values)) values.Clear();
-            else Caches[name] = values = [];
+            if (_caches.TryGetValue(name, out var values)) values.Clear();
+            else _caches[name] = values = [];
             foreach (var (key, value) in saved) values[key] = value;
         }
         return true;
@@ -56,7 +63,7 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = CacheFact)]
     public void FlushGameCache(gamecache? cache)
     {
-        if (CacheLive(cache)) Caches.Remove(cache!.Name);
+        if (CacheLive(cache)) _caches.Remove(cache!.Name);
     }
 
     [Native(Level.Exact, Fact = CacheFact)]
@@ -132,7 +139,7 @@ public sealed partial class GameNatives
     [Native(Level.Close)]
     public void SyncStoredString(gamecache? cache, string? missionKey, string? key) { }
 
-    bool CacheLive(gamecache? cache) => cache is not null && Caches.TryGetValue(cache.Name, out var values) && values == cache.Values;
+    bool CacheLive(gamecache? cache) => cache is not null && _caches.TryGetValue(cache.Name, out var values) && values == cache.Values;
 
     // The game finds missions and keys in any case (measured with ASCII letters).
     static string CacheKey(string? key) => (key ?? "").ToUpperInvariant();

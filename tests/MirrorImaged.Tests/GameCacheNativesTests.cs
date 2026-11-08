@@ -179,6 +179,33 @@ public sealed class GameCacheNativesTests
     }
 
     [Fact]
+    public void A_cache_without_w3v_in_its_name_is_saved()
+    {
+        var cache = _natives.InitGameCache("files-probe-noext");
+        _natives.StoreInteger(cache, "m", "k", 4);
+
+        Assert.True(_natives.SaveGameCache(cache));
+
+        var next = NewGame();
+        Assert.Equal(4, next.GetStoredInteger(next.InitGameCache("files-probe-noext"), "m", "k"));
+    }
+
+    // A game takes the saved caches as it starts: a save in another game afterwards doesn't reach it.
+    [Fact]
+    public void A_game_takes_the_saved_caches_as_it_starts()
+    {
+        var saved = _natives.InitGameCache("c.w3v");
+        _natives.StoreInteger(saved, "m", "k", 1);
+        _natives.SaveGameCache(saved);
+        var next = NewGame();
+
+        _natives.StoreInteger(saved, "m", "k", 2);
+        _natives.SaveGameCache(saved);
+
+        Assert.Equal(1, next.GetStoredInteger(next.InitGameCache("c.w3v"), "m", "k"));
+    }
+
+    [Fact]
     public void A_null_cache_reads_nothing_and_saves_nothing()
     {
         _natives.StoreInteger(null, "m", "k", 1);

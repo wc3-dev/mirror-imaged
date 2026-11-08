@@ -1,6 +1,6 @@
 own write, read: first
 own write again, read: first
-the path in capitals, read: -
+the folders in capitals, read: first
 buffer files written
 ext.txt: p1
 ext.pld: p2

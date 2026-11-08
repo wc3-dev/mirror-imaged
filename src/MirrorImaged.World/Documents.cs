@@ -3,7 +3,7 @@ namespace MirrorImaged.World;
 /// <summary>
 /// A simulated <c>Documents\Warcraft III</c>: the files in <c>CustomMapData</c>, which maps write with Preload and read
 /// with <c>Preloader</c>, and the game caches they save. A run reads it and writes to it; give the same one to the next
-/// run to keep them, as the game keeps them on disk.
+/// run to keep them, as the game keeps them on disk. It isn't thread-safe: give it to one run at a time.
 /// </summary>
 public sealed class Documents
 {

@@ -41,11 +41,12 @@ public sealed partial class Simulation
         : typeof(Delegate).IsAssignableFrom(type) ? "code"
         : type.Name;
 
-    // Keeps a Lua function that runs a file's Lua with common.j's natives and globals and FourCC, which War3Net writes
-    // a rawcode as, taken now, before blizzard.j and the map can change them; any other name it reads is an error.
+    // Keeps a Lua function that runs a file's Lua, as the chunk named by its path, with common.j's natives and globals
+    // and __jarray, which War3Net makes a JASS array with, taken now, before blizzard.j and the map can change them; any
+    // other name it reads is an error.
     void AddPreloader()
     {
-        _lua["preloaderNames"] = string.Join(' ', _natives.Globals().Select(global => global.Name).Concat(NativeMethods.Select(native => native.Name)).Append("FourCC"));
+        _lua["preloaderNames"] = string.Join(' ', _natives.Globals().Select(global => global.Name).Concat(NativeMethods.Select(native => native.Name)).Append("__jarray"));
         _lua.Register("preloader", args =>
         {
             _preloadFile = ((LuaFunction)args[0]!).Keep();
@@ -55,9 +56,9 @@ public sealed partial class Simulation
             local load, assert, error, setmetatable, jass = load, assert, error, setmetatable, {}
             for name in preloaderNames:gmatch('%S+') do jass[name] = _G[name] end
             setmetatable(jass, {__index = function(_, name) error(name .. " is not a native or a global of common.j", 2) end})
-            preloader(function(lua)
+            preloader(function(lua, path)
               local file = setmetatable({}, {__index = jass})
-              assert(load(lua, '=preload', 't', file))()
+              assert(load(lua, '@' .. path, 't', file))()
               file.PreloadFiles()
             end)
             preloaderNames, preloader = nil, nil
@@ -68,7 +69,7 @@ public sealed partial class Simulation
     {
         try
         {
-            _preloadFile!.Call(Blizzard.ToLua(_commonJ ??= JassSyntaxFactory.ParseCompilationUnit(Declarations(_natives)), jass));
+            _preloadFile!.Call(Blizzard.ToLua(_commonJ ??= JassSyntaxFactory.ParseCompilationUnit(Declarations(_natives)), jass), path);
         }
         catch (Exception e) when (_lua.Halted is null)
         {

@@ -564,7 +564,7 @@ say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6
 
 ### Files and game caches (W1-5)
 
-The files probe (`probes/files.lua`, its lines in `probes/expected/files.txt`) and two one-off runs measured what the
+The files probe (`probes/files.lua`, its lines in `probes/expected/files.txt`) and its one-off runs measured what the
 workspace's facts left open (`docs/facts.md`, "Files and game cache"); the choices below follow them where they
 measured and say so where not.
 
@@ -578,32 +578,51 @@ measured and say so where not.
   lower case: `.PLD`, `.dat`, `.json`, `.ini`, `.log`, `.w3v` and none were written nowhere, and an outside program's
   `.dat`, `.json` and extensionless files weren't read. `/` is `\`, and `.` and empty folders are left out. `..` makes a
   write go nowhere, while a read goes through it (an outside file read through `sub\..`), never above `CustomMapData`
-  (not measured). An absolute path (`C:\...`, measured) and one starting with a slash (not measured) are neither
-  written nor read. At most 201 characters: 201 was written and 202 not, on a PC whose `CustomMapData` path has 58, so
-  the game's limit is likely the whole path's 259 and moves with the player's folder; reads have it too (not measured:
-  the longer files weren't there to read). Windows's other refused characters (`<>"|?*`) aren't modelled.
-- **D102. Preload and Preloader.** Every `Preload` text is kept, its first 259 bytes of UTF-8 (whether a cut can split
-  a letter isn't measured), until `PreloadGenClear`, whether or not `PreloadGenStart` came first and also after
-  `PreloadGenEnd`, which writes them all and keeps them (probe). A backslash is doubled as the file is written, after
-  the cut: whether the game's cut counts it once or twice isn't measured, and D52's lines take the safe side.
-  `PreloadEnd`'s number is written 0.0: 304 of the 311 Preload files on this PC have it, those known to be written in
-  one call among them; 7 have 0.1, and a file ended 2.5 game seconds after its `PreloadGenStart` had 1.9 and 2.0 in two
-  runs, so it counts something other than game time, perhaps real time, and `PreloadGenStart` and `PreloadGenEnd` are
-  Close. `Preloader` reads a path once a game and keeps that content, also after the map writes the path again (probe);
-  a path that was missing is read again (not measured). It runs the file at once: the JASS goes through War3Net's
+  (not measured). An absolute path (`C:\...`, measured) is neither written nor read, and neither is one starting with
+  a slash (`\x.pld`, `/x.pld`, `\\srv\x.pld`, `//srv/x.pld`) or holding a colon (`C:x.pld`) (not measured). At most
+  201 characters: 201 was written and read and 202 not, on a PC whose `CustomMapData` path has 58, so the game's limit
+  is likely the whole path's 259 and moves with the player's folder; reads have it too (not measured: the longer files
+  weren't there to read). Folders and names are found in any case, and so is a path `Preloader` has read (probe:
+  `MIRRORIMAGED\FILES-PROBE\own.pld` gave `own.pld`'s first content). Windows's other refused characters (`<>"|?*`)
+  aren't modelled.
+- **D102. Preload and Preloader.** Every `Preload` text is kept, its first 259 bytes of UTF-8, until `PreloadGenClear`,
+  whether or not `PreloadGenStart` came first and also after `PreloadGenEnd`, which writes them all and keeps them
+  (probe). A cut can split a letter (not measured); `Preloader` reads the file as UTF-8, so the split letter comes back
+  as U+FFFD, and a Lua string that isn't UTF-8 is already U+FFFD where it isn't when C# reads it (D38). A backslash is
+  doubled as the file is written, after the cut: whether the game's cut counts it once or twice isn't measured, and
+  D52's lines take the safe side. `PreloadEnd`'s number is written 0.0: 304 of the 311 Preload files on this PC have
+  it, those known to be written in one call among them; 7 have 0.1, and a file ended 2.5 game seconds after its
+  `PreloadGenStart` had 1.9, 2.0, 2.0 and 1.9 in four runs, so it counts something other than game time, perhaps real
+  time, and `PreloadGenStart` and `PreloadGenEnd` are Close.
+  `Preloader` reads a path once a game and keeps that content, also after the map writes the path again (probe); a
+  path that was missing is read again (not measured). It runs the file at once: the JASS goes through War3Net's
   transpiler and D65's rewriter as blizzard.j does, against declarations of common.j's natives and globals made from
   `GameNatives` by reflection (the transpiler needs a function's declaration to call it inside an expression, and no
-  game file is needed), and runs with those natives and globals as they were before blizzard.j and the map ran, and
-  `FourCC`, which War3Net writes a rawcode as. So a native the map replaced isn't what a file calls, and a file's
-  `PreloadFiles` isn't the map's (inferred: the game runs a Preload file as JASS, without blizzard.j or Lua, facts). A
-  file that doesn't parse, names anything else or raises an error closes the game, as a cut piece and a blizzard.j
-  global did (facts) and a line that isn't JASS did (probe): the run stops with a `GameClosedException`, as for a
-  Missing native (D43), at the line of the map's `Preloader` call. JASS's own type checks aren't made: a call with an
-  argument too many runs. The game's own Preload files (`scripts\HumanMelee.pld`, which the melee BJ functions read)
-  aren't in `CustomMapData` and read as missing; they only name files to load. `PreloadStart`, `PreloadEnd`,
-  `PreloadEndEx` and `PreloadRefresh` are Recorded and not in the log (D98). The ability-tooltip carrier needs
-  `BlzSetAbilityTooltip` and `BlzGetAbilityTooltip` (wave 2): until then a file calling them stops the run as Missing.
-  The game-cache carrier works now (probe: 42 came back), and so does `SetPlayerName`.
+  game file is needed). The rewriter now also writes a rawcode as its value: War3Net writes it as `FourCC("...")` with
+  its text as it is, so `'ab"c'` breaks out of the string and `'\abc'` reads `\a` as one byte; the value is War3Net's
+  reading of the four characters (the game's reading of a backslash in one isn't measured). This reaches blizzard.j's
+  rawcodes too, with the same values. The Lua is loaded as the chunk named by the file's path, so an error in it reads
+  `MyMap\save.pld:N:` (N the transpiled Lua's line, as D65's are), and runs with those natives and globals as they were
+  before blizzard.j and the map ran, and `__jarray`, which War3Net makes a JASS array with. So a native the map
+  replaced isn't what a file calls, and a file's `PreloadFiles` isn't the map's (inferred: the game runs a Preload file
+  as JASS, without blizzard.j or Lua, facts). A `Preload` call the file makes isn't kept for the map's next file, while
+  what the map kept before and after the `Preloader` call is (probe).
+  The game closed on a file with a cut piece and on one naming a blizzard.j global (facts), on a line that isn't JASS,
+  and on a file that ends `PreloadFiles` and goes on in Lua, as some maps' save files do (probe); so a file that
+  doesn't parse or names anything but those natives and globals stops the run with a `GameClosedException`, as for a
+  Missing native (D43), at the line of the map's `Preloader` call, the file's error in the message. An error as the
+  file runs (a missing argument) does the same; that one is not measured. The facts' "Lua cannot be run from a
+  Preload file (`//!beginusercode` does nothing)" (10-01) didn't record the file: a `//!beginusercode` block of JASS
+  comments runs nothing here, and Lua after `endfunction` closes the game as measured. A Missing native the file calls
+  stops the run as D43 does, at the file's line (`MyMap\save.pld:N: The native ... is Missing`). JASS's own type
+  checks aren't made (a call with an argument too many runs), and neither is its operation limit, so a file that loops
+  forever hangs the run; the limit is W1-7's, for transpiled JASS. The game's own Preload files
+  (`scripts\HumanMelee.pld`, which the melee BJ functions read) aren't in `CustomMapData` and read as missing; they
+  only name files to load. `PreloadStart`, `PreloadEnd`, `PreloadEndEx` and `PreloadRefresh` are Recorded and not in
+  the log (D98). The ability-tooltip carrier waits for W2-7 (`BlzSetAbilityTooltip` and its kin, with the facts'
+  tooltip cases): until then a file calling it stops the run as Missing. The game-cache and `SetPlayerName` carriers
+  work now (probe: the probe reads its files back through a game cache). Comparing the game closing with
+  `GameClosedException` is W1-8's.
 - **D103. Game caches, as the probe measured them:** one cache a name, every `InitGameCache` of it a new handle to it;
   each type's values apart; missions and keys found in any case (measured with ASCII letters; `ToUpperInvariant`
   here); a missing value reads 0, 0.0, false and an empty string; an empty string, false and 0 are stored values, and
@@ -611,15 +630,18 @@ measured and say so where not.
   `InitGameCache` makes the name again, which gives a new, empty cache. `FlushStoredInteger` takes the integer only;
   the real, boolean and string ones take theirs (Close, not measured). A name is found in any case, as a file is (not
   measured).
-- **D104. Saved caches.** A game starts with the caches saved in its documents (a value saved in one game read 1 in the
-  next, one stored after the save 0); `SaveGameCache` writes every cache, not only the one given (the game's file then
-  held caches the probe never saved by name), and gives true; `ReloadGameCachesFromDisk` gives true, as in a live game
-  (facts: false in a replay, not simulated), puts the saved caches back in place, so their handles read them, and drops
-  the caches never saved, whose handles then read nothing. The game keeps them in the account's
-  `BattleNet\<id>\Campaigns\Classic\Campaigns.w3v`; here in `Documents`. So caches go from one map of a test to the
-  next through `SaveGameCache`, as from one game to the next; a level change in one game (`ChangeLevel`), which may
-  keep caches never saved, isn't simulated. `SaveGameCache(null)` gives false (not measured). The sync natives do
-  nothing: a run is one machine, whose caches are every player's. The unit natives (`StoreUnit`, `RestoreUnit`,
-  `HaveStoredUnit`, `FlushStoredUnit`, `SyncStoredUnit`) wait for the units (wave 2); the 255-cache limit (a claim)
-  isn't modelled.
-- **D105. After W1-5,** on top of W1-4: 46 Exact, 178 Close, 11 Recorded, 1,600 Missing.
+- **D104. Saved caches.** A game starts with the caches saved in its documents, taken as the documents are given to
+  it, so a save another game makes later doesn't reach it (a value saved in one game read 1 in the next, one stored
+  after the save 0); `SaveGameCache` writes every cache, not only the one given (the game's file then held caches the
+  probe never saved by name), and gives true, also for a name without `.w3v`; `ReloadGameCachesFromDisk` gives true,
+  as in a live game, puts the saved caches back in place, so their handles read them, and drops the caches never
+  saved, whose handles then read nothing. These two are Close: they were measured in one run, which no probe may
+  repeat, since `SaveGameCache` rewrites the account's `BattleNet\<id>\Campaigns\Classic\Campaigns.w3v` (here
+  `Documents` holds them). So caches go from one map of a test to the next through `SaveGameCache`, as from one game
+  to the next. Left for later (`docs/tasks/later.md`): a level change in one game (`ChangeLevel`), which may keep
+  caches never saved; replays, where `ReloadGameCachesFromDisk` gives false (facts) and Preload files are written
+  again; and keeping `Documents` between processes or seeding its saved caches from outside. `SaveGameCache(null)`
+  gives false (not measured). The sync natives do nothing: a run is one machine, whose caches are every player's. The
+  unit natives (`StoreUnit`, `RestoreUnit`, `HaveStoredUnit`, `FlushStoredUnit`, `SyncStoredUnit`) wait for W2-3;
+  the 255-cache limit (a claim) isn't modelled. `Documents` isn't thread-safe: one run at a time uses it.
+- **D105. After W1-5,** with W1-3 and W1-4 merged first: 84 Exact, 266 Close, 11 Recorded, 1,474 Missing.

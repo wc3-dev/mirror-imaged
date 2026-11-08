@@ -1,9 +1,9 @@
 -- What Preload, Preloader and the game cache natives do, for MirrorImaged's model of them (W1-5). It writes under
--- CustomMapData\MirrorImaged\files-probe, where the files it wrote are to be looked at, and reads files back through
--- an ability's tooltip: each piece is a Preload text that sets it when Preloader runs the file. Its lines as the game
--- gave them are in expected/files.txt.
+-- CustomMapData\MirrorImaged\files-probe, where the files it wrote are to be looked at, and reads files back through a
+-- game cache: each piece is a Preload text that stores it there when Preloader runs the file. Its lines as the game
+-- gave them are in expected/files.txt. It never saves a game cache, which would rewrite the account's Campaigns.w3v.
 local dir = "MirrorImaged\\files-probe\\"
-local carrier = FourCC("AHbz")
+local carrier = "files-probe-read.w3v"
 
 local function write(path, ...)
     PreloadGenClear()
@@ -13,25 +13,27 @@ local function write(path, ...)
 end
 
 local function piece(text)
-    return "\")\ncall BlzSetAbilityTooltip('AHbz', \"" .. text .. "\", 0)\n//"
+    return "\")\ncall StoreString(InitGameCache(\"" .. carrier .. "\"), \"read\", \"piece\", \"" .. text .. "\")\n//"
 end
 
 local function read(path)
-    BlzSetAbilityTooltip(carrier, "-", 0)
+    StoreString(InitGameCache(carrier), "read", "piece", "-")
     Preloader(path)
-    return BlzGetAbilityTooltip(carrier, 0)
+    return GetStoredString(InitGameCache(carrier), "read", "piece")
 end
 
 local function yes(b) return b and "y" or "n" end
 
--- A path read once keeps its first content (facts); is the map's own write an exception?
+-- A path read once keeps its first content (facts); is the map's own write an exception, and is the path found in
+-- any case?
 write(dir .. "own.pld", piece("first"))
 out("own write, read: " .. read(dir .. "own.pld"))
 write(dir .. "own.pld", piece("second"))
 out("own write again, read: " .. read(dir .. "own.pld"))
-out("the path in capitals, read: " .. read(string.upper(dir) .. "OWN.PLD"))
+out("the folders in capitals, read: " .. read(string.upper(dir) .. "own.pld"))
 
--- What a file holds: Preload before PreloadGenStart, without PreloadGenClear, after PreloadGenEnd.
+-- What a file holds: Preload before PreloadGenStart, without PreloadGenClear, after PreloadGenEnd, and the Preload
+-- calls of a file Preloader runs (joined.pld).
 PreloadGenClear()
 Preload("before start")
 PreloadGenStart()
@@ -45,6 +47,12 @@ Preload("after end")
 PreloadGenEnd(dir .. "afterend.pld")
 PreloadGenClear()
 PreloadGenEnd(dir .. "cleared.pld")
+write(dir .. "joining.pld", piece("joining"))
+PreloadGenClear()
+Preload("kept before")
+Preloader(dir .. "joining.pld")
+Preload("kept after")
+PreloadGenEnd(dir .. "joined.pld")
 out("buffer files written")
 
 -- Extensions and paths, read back.
@@ -59,6 +67,9 @@ for _, n in ipairs({150, 200, 201, 202, 230}) do
     write(path, piece("len" .. n))
     out("relative path of " .. #path .. ": " .. read(path))
 end
+
+-- A file that ends PreloadFiles early and goes on in Lua, as some maps' save files do, closed the game (one run, 11-08;
+-- docs/facts.md), so it isn't read here.
 
 -- Game caches.
 local c1 = InitGameCache("files-probe.w3v")
@@ -93,7 +104,7 @@ out("stored after the flush: " .. GetStoredInteger(c1, "m", "after") .. ", by na
 SyncStoredInteger(c1, "m", "after")
 out("synced: " .. GetStoredInteger(c1, "m", "after"))
 
--- SaveGameCache and ReloadGameCachesFromDisk were measured once and left out here (docs/facts.md, "Files and game
+-- SaveGameCache and ReloadGameCachesFromDisk were measured once and are left out here (docs/facts.md, "Files and game
 -- cache"): SaveGameCache rewrites the account's Campaigns.w3v, which a probe mustn't touch.
 
 -- A game cache as the carrier.

@@ -13,9 +13,21 @@ public sealed partial class GameNatives
 
     readonly List<byte[]> _preloaded = [];
     readonly Dictionary<string, byte[]> _preloaderRead = new(StringComparer.OrdinalIgnoreCase);
+    int _preloaderRuns;
 
-    /// <summary>The simulated <c>Documents\Warcraft III</c> the game writes its files and saved game caches to.</summary>
-    public Documents Documents { get; init; } = new();
+    /// <summary>
+    /// The simulated <c>Documents\Warcraft III</c> the game writes its files and saved game caches to; the game's caches
+    /// start as the saved ones it holds when it is given (D104).
+    /// </summary>
+    public Documents Documents
+    {
+        get;
+        init
+        {
+            field = value;
+            _caches = CopyCaches(value.GameCaches);
+        }
+    } = new();
 
     /// <summary>
     /// Runs a Preload file's JASS, given its path and its text, as the game does in <c>Preloader</c>; the simulation
@@ -27,6 +39,8 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = "game-facts.md, Files and Preload: one Preload call keeps the first 259 bytes of its text (11-02, 11-03); docs/facts.md, Files and game cache: kept until PreloadGenClear")]
     public void Preload(string? filename)
     {
+        // A file's own Preload calls, as Preloader runs it, aren't kept (the files probe).
+        if (_preloaderRuns > 0) return;
         var text = Encoding.UTF8.GetBytes(filename ?? "");
         _preloaded.Add(text.Length > 259 ? text[..259] : text);
     }
@@ -73,7 +87,10 @@ public sealed partial class GameNatives
     {
         if (PreloadPath(filename, reading: true) is not { } path) return;
         if (!_preloaderRead.TryGetValue(path, out var file) && Documents.CustomMapData.TryGetValue(path, out file)) _preloaderRead[path] = file;
-        if (file is not null) RunPreloadFile?.Invoke(path, Encoding.UTF8.GetString(file));
+        if (file is null) return;
+        _preloaderRuns++;
+        try { RunPreloadFile?.Invoke(path, Encoding.UTF8.GetString(file)); }
+        finally { _preloaderRuns--; }
     }
 
     // The natives a Preload file calls around its Preload calls: they show the game loading the files named.

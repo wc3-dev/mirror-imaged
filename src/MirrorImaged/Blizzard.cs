@@ -130,6 +130,15 @@ static class Blizzard
             return true;
         }
 
+        // War3Net writes a rawcode as FourCC("...") with its text as it is, so a quote in it breaks out of the string and
+        // a backslash starts a Lua escape; its value is written instead (decisions D102).
+        protected override bool RewriteLiteralExpression(JassLiteralExpressionSyntax literal, out JassExpressionSyntax result)
+        {
+            if (literal.SyntaxKind != JassSyntaxKind.FourCCLiteralExpression) return base.RewriteLiteralExpression(literal, out result);
+            result = JassSyntaxFactory.LiteralExpression(JassSyntaxFactory.Literal(JassLiteral.ParseFourCC(literal.Token.Text)));
+            return true;
+        }
+
         // War3Net transpiles a debug statement as if it had no debug; the game never runs one (claim: the JASS manual).
         protected override bool RewriteStatementList(ImmutableArray<JassStatementSyntax> statements, out ImmutableArray<JassStatementSyntax> result)
         {

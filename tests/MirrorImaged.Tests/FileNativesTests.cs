@@ -135,6 +135,10 @@ public sealed class FileNativesTests
     [InlineData(@"..\escape.pld", null)]
     [InlineData(@"C:\Users\someone\abs.pld", null)]
     [InlineData(@"\rooted.pld", null)]
+    [InlineData("/rooted.pld", null)]
+    [InlineData(@"\\srv\x.pld", null)]
+    [InlineData("//srv/x.pld", null)]
+    [InlineData("C:x.pld", null)]
     [InlineData(null, null)]
     public void PreloadGenEnd_writes_where_the_game_does(string? name, string? path)
     {
@@ -190,9 +194,31 @@ public sealed class FileNativesTests
         Assert.Equal(["content"], _ran);
     }
 
+    // The files probe: 201 characters were read back; 202 and 230 weren't written, so not read (inferred: a read has
+    // the same limit).
+    [Theory]
+    [InlineData(201, true)]
+    [InlineData(202, false)]
+    [InlineData(230, false)]
+    public void A_path_of_more_than_201_characters_is_read_from_nowhere(int length, bool read)
+    {
+        var path = @"MirrorImaged\files-probe\" + new string('a', length - 29) + ".pld";
+        _documents.CustomMapData[path] = "content"u8.ToArray();
+
+        _natives.Preloader(path);
+
+        Assert.Equal(read ? ["content"] : [], _ran);
+    }
+
     [Theory]
     [InlineData(@"..\x.pld")]
+    [InlineData(@"a\..\..\x.pld")]
     [InlineData(@"C:\x.pld")]
+    [InlineData("C:x.pld")]
+    [InlineData(@"\x.pld")]
+    [InlineData("/x.pld")]
+    [InlineData(@"\\srv\x.pld")]
+    [InlineData("//srv/x.pld")]
     [InlineData(null)]
     public void Preloader_reads_nothing_outside_CustomMapData(string? name)
     {
@@ -212,8 +238,9 @@ public sealed class FileNativesTests
         Assert.Empty(_ran);
     }
 
-    // facts: a path keeps the content it had when the game first read it, also when the map writes it again (the files
-    // probe); a new path is read as it is on disk; files a game wrote are read in the next game
+    // facts: a path keeps the content it had when the game first read it, also when the map writes it again and when it
+    // is read with its folders in capitals (the files probe); a new path is read as it is on disk; files a game wrote are
+    // read in the next game
     [Fact]
     public void A_path_keeps_the_content_the_game_first_read()
     {
@@ -228,6 +255,23 @@ public sealed class FileNativesTests
         NewGame().Preloader("own.pld");
 
         Assert.Equal([Start + Line("first") + End, Start + Line("first") + End, "outside", "outside", Start + Line("second") + End], _ran);
+    }
+
+    // The files probe: what Preload kept before and after a Preloader run is written, the file's own Preload call isn't.
+    [Fact]
+    public void A_files_own_Preload_calls_arent_kept()
+    {
+        GameNatives? natives = null;
+        natives = new GameNatives(new Game(0)) { Documents = _documents, RunPreloadFile = (_, _) => natives!.Preload("") };
+        _documents.CustomMapData["joining.pld"] = "file"u8.ToArray();
+
+        natives.PreloadGenClear();
+        natives.Preload("kept before");
+        natives.Preloader("joining.pld");
+        natives.Preload("kept after");
+        natives.PreloadGenEnd("joined.pld");
+
+        Assert.Equal(Start + Line("kept before") + Line("kept after") + End, Written("joined.pld"));
     }
 
     // Not measured: whether a path that was missing when read is read again once it is there.

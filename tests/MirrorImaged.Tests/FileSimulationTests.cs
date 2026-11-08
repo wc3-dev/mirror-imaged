@@ -77,10 +77,29 @@ public sealed class FileSimulationTests : IDisposable
         Assert.Equal(Enumerable.Repeat("0.000 print: true", 4), simulation.Log);
     }
 
+    // facts: pieces of 200 to 213 characters (text of 259 with the wrapping) came back whole. With SetPlayerName the
+    // wrapping is 38 bytes, so 221 still fits.
+    [Theory]
+    [InlineData(213)]
+    [InlineData(221)]
+    public void A_piece_comes_back_whole_while_its_text_fits_in_259_bytes(int length)
+    {
+        using var simulation = Load($$"""
+            write("name.pld", "\")\ncall SetPlayerName(Player(0),\"" .. string.rep("a", {{length}}) .. "\")\n//")
+            Preloader("name.pld")
+            print(#GetPlayerName(Player(0)))
+            """);
+
+        Assert.Equal([$"0.000 print: {length}"], simulation.Log);
+    }
+
     // facts: reading a file whose 214-character piece Preload had cut closed the game; so did a line that isn't JASS
-    // (the files probe), and a file naming a blizzard.j global
+    // and a file that ends PreloadFiles and goes on in Lua, as some maps' save files do (the files probe), and a file
+    // naming a blizzard.j global. A piece of 222 cut through SetPlayerName, a JASS error, is taken to close it too.
     [Theory]
     [InlineData("""write("bad.pld", "\")\nnot jass\n//")""")]
+    [InlineData("""write("bad.pld", "\")\nendfunction\n//!beginusercode\nFilesProbeLua={}--[[", "]]FilesProbeLua[1]=1--[[")""")]
+    [InlineData("""write("bad.pld", "\")\ncall SetPlayerName(Player(0),\"" .. string.rep("a", 222) .. "\")\n//")""")]
     [InlineData("""write("bad.pld", "\")\ncall BlzSetAbilityTooltip('A0P1', \"" .. string.rep("a", 214) .. "\", 0)\n//")""")]
     [InlineData("""write("bad.pld", "\")\ncall DisplayTextToForce(GetPlayersAll(), \"x\")\n//")""")]
     [InlineData("""write("bad.pld", "\")\ncall StoreInteger(InitGameCache(\"c\"), \"m\", \"k\", bj_MAX_INVENTORY)\n//")""")]
@@ -92,6 +111,70 @@ public sealed class FileSimulationTests : IDisposable
         Assert.StartsWith("war3map.lua:11: The game closes: Preloader ran bad.pld", stop.Message);
         Assert.IsType<GameClosedException>(stop.InnerException);
         Assert.Equal(["0.000 print: before"], simulation.Log);
+    }
+
+    // Not measured: an error as the file runs (here a missing argument) is taken to close the game too. The stop names
+    // the map's line and the file's.
+    [Fact]
+    public void An_error_as_a_file_runs_stops_the_run_naming_the_file()
+    {
+        using var simulation = Load("""
+            write("bad.pld", "\")\ncall StoreInteger(InitGameCache(\"c\"), \"m\", \"k\")\n//")
+            Preloader("bad.pld")
+            """);
+
+        Assert.StartsWith("war3map.lua:10: The game closes: Preloader ran bad.pld, which it can't run (bad.pld:", simulation.Stopped!.Message);
+        Assert.Contains("bad argument #4 to 'StoreInteger'", simulation.Stopped.Message);
+    }
+
+    // facts: Lua can't be run from a Preload file and //!beginusercode does nothing (10-01; the file isn't recorded): a
+    // block of it whose lines are JASS comments runs nothing and the game goes on.
+    [Fact]
+    public void A_usercode_block_in_a_file_runs_nothing()
+    {
+        using var simulation = Load("""
+            write("usercode.pld", "\")\n//!beginusercode\n//FilesProbeLua = 1\n//!endusercode\n//")
+            Preloader("usercode.pld")
+            print(FilesProbeLua)
+            """);
+
+        Assert.Null(simulation.Stopped);
+        Assert.Equal(["0.000 print: nil"], simulation.Log);
+    }
+
+    // War3Net's transpiler makes a JASS array with __jarray.
+    [Fact]
+    public void A_file_can_use_a_JASS_array()
+    {
+        using var simulation = Load("""
+            write("array.pld", "\")\nlocal integer array a\nset a[1] = 5\ncall StoreInteger(InitGameCache(\"c\"), \"m\", \"k\", a[1] + a[2])\n//")
+            Preloader("array.pld")
+            print(GetStoredInteger(InitGameCache("c"), "m", "k"))
+            """);
+
+        Assert.Null(simulation.Stopped);
+        Assert.Equal(["0.000 print: 5"], simulation.Log);
+    }
+
+    // A rawcode is its four bytes as War3Net reads them, a quote and a backslash among them (the game's reading of a
+    // backslash isn't measured). Written by an outside program, as Preload would double the backslash.
+    [Fact]
+    public void A_rawcode_with_a_quote_or_a_backslash_is_its_four_bytes()
+    {
+        _documents.CustomMapData["raw.pld"] = Encoding.UTF8.GetBytes("""
+            function PreloadFiles takes nothing returns nothing
+            call StoreInteger(InitGameCache("c"), "m", "quote", 'ab"c')
+            call StoreInteger(InitGameCache("c"), "m", "backslash", '\abc')
+            endfunction
+            """);
+
+        using var simulation = Load("""
+            Preloader("raw.pld")
+            print(GetStoredInteger(InitGameCache("c"), "m", "quote"), GetStoredInteger(InitGameCache("c"), "m", "backslash"))
+            """);
+
+        Assert.Null(simulation.Stopped);
+        Assert.Equal(["0.000 print: 1633821283\t1549886051"], simulation.Log);
     }
 
     [Fact]
@@ -116,6 +199,7 @@ public sealed class FileSimulationTests : IDisposable
             """);
 
         Assert.Equal("BlzSetAbilityTooltip", Assert.IsType<MissingNativeException>(simulation.Stopped!.InnerException).Native);
+        Assert.StartsWith("tooltip.pld:", simulation.Stopped.Message);
     }
 
     // Inferred from the facts (a Preload file runs as JASS, without blizzard.j or Lua): it calls the natives themselves,

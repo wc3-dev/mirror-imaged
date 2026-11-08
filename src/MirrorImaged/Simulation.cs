@@ -52,9 +52,7 @@ public sealed partial class Simulation : IDisposable
         try
         {
             var (users, computers, others) = Lineup(info, options);
-            foreach (var native in typeof(GameNatives).GetMethods()
-                         .Where(method => method.GetCustomAttribute<NativeAttribute>() is not null)
-                         .OrderBy(method => method.Name, StringComparer.Ordinal))
+            foreach (var native in NativeMethods.OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())
                 _lua[name] = value is handle h ? new LuaHandle(h.GetType().Name, h.Key) : value;
