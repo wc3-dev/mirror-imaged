@@ -151,10 +151,16 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   Anything that can raise a Lua error runs in C under `lua_pcall` (`sandbox.c`): getting and setting globals, calling
   one, registering a function, and pushing a C# function's results, which a C trampoline does after C# returns them in
   a buffer. So Lua's `longjmp` never crosses a managed frame, even when a `__gc` fails or `_G` has a strict metatable.
-  The values C# writes are pushed with the collector stopped, before anything else runs: a finalizer calling C# would
-  otherwise write over them mid-push. Errors carry Lua's traceback, and a chunk's name is given with `@`, so messages
+  The values C# writes are pushed with the collector held, before anything else runs: a finalizer calling C# would
+  otherwise write over them mid-push. To keep the collector's pace, the hold is Lua's own flag (`gcrunning`), not
+  `lua_gc`'s stop and restart, which forget the collector's debt; what the push allocated is added to the debt, and the
+  collector takes its step once the values are in. A loop that only calls a C# function returning a 100 KB string
+  commits 1 MB, as the same loop in Lua does, and a C# call per step gives 717 collection cycles where Lua's own
+  function gives 647. The other choice, a fresh buffer for each nested call, was left: it needs C to tell C# when a
+  push is over. Errors carry Lua's traceback, and a chunk's name is given with `@`, so messages
   read `war3map.lua:3:`. The state is a `SafeHandle`, counted in use for the whole of every call, so neither `Dispose`
-  (even from inside a callback) nor the finalizer frees it under a running call.
+  (even from inside a callback) nor the finalizer frees it under a running call. A function is added to the state's list
+  before its global is set, since a `__newindex` on `_G` can call it then; it is taken out if the setting fails.
 - **D39. Addresses are the same every run.** Each state allocates from its own arena of 64 GB of address space,
   aligned to its size and filled the same way every run (size classes, freed blocks reused last in first out), so an
   object's offset in it is the same every run and, as CI checks with a pinned workload, on every platform. Lua hashes

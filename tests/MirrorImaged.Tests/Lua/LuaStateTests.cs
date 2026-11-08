@@ -128,6 +128,51 @@ public sealed class LuaStateTests : IDisposable
         Assert.Equal([0], _lua.Call("check", values));
     }
 
+    // C#'s values are pushed with the collector held, which must not cost it its pace (decisions D38).
+    [Fact]
+    public void LargeStringsFromCSharpAreCollectedAsLuasOwnAre()
+    {
+        var big = new string('x', 100_000);
+        _lua.Register("big", _ => [big]);
+        _lua.Run("for i = 1, 20000 do local s = big() end");
+        using var lua = new LuaState();
+        lua.Run("local base = string.rep('x', 99995) for i = 1, 20000 do local s = base .. i end");
+        Assert.InRange(_lua.CommittedBytes, 0, lua.CommittedBytes + (4 << 20));
+    }
+
+    [Fact]
+    public void ACSharpCallPerStepKeepsTheCollectorsPace()
+    {
+        const string loop = """
+            local cycles = 0
+            local function arm() setmetatable({}, {__gc = function() cycles = cycles + 1 arm() end}) end
+            arm()
+            for i = 1, 200000 do local t = {i, small()} end
+            return cycles
+            """;
+        _lua.Register("small", _ => ["x"]);
+        var fromCSharp = (int)_lua.Run(loop)[0]!;
+        using var lua = new LuaState();
+        var fromLua = (int)lua.Run("local function small() return 'x' end\n" + loop)[0]!;
+        Assert.InRange(fromLua, 1, int.MaxValue);
+        Assert.InRange(fromCSharp, 1, 2 * fromLua + 2);
+    }
+
+    [Fact]
+    public void AFunctionCanBeCalledWhileItIsRegistered()
+    {
+        var calls = new List<string>();
+        _lua.Run("setmetatable(_G, {__newindex = function(t, k, v) rawset(t, k, v) v() end})");
+        _lua.Register("hello", _ => { calls.Add("hello"); return []; });
+        _lua.Run("setmetatable(_G, {__newindex = function(t, k, v) v() error('refused') end})");
+        Assert.Contains("refused", Assert.Throws<LuaException>(() => _lua.Register("bye", _ => { calls.Add("bye"); return []; })).Message);
+        _lua.Run("setmetatable(_G, nil)");
+        _lua.Register("again", _ => { calls.Add("again"); return []; });
+        _lua.Run("hello() again()");
+        Assert.Null(_lua["bye"]);
+        Assert.Equal(["hello", "bye", "hello", "again"], calls);
+    }
+
     [Fact]
     public void ADisposeDuringACallFreesTheStateOnlyAfterIt()
     {

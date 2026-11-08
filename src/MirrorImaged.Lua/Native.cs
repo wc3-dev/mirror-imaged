@@ -38,6 +38,7 @@ internal static unsafe partial class Native
 
     [LibraryImport(Lib)] public static partial nint mirror_newstate();
     [LibraryImport(Lib)] public static partial void mirror_close(nint l);
+    [LibraryImport(Lib)] public static partial nuint mirror_committed(nint l);
     [LibraryImport(Lib)] public static partial void mirror_setcallback(delegate* unmanaged<nint, Value**, int> f);
     [LibraryImport(Lib)] public static partial int mirror_pcall(nint l, int args, int results);
 

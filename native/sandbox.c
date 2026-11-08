@@ -8,19 +8,22 @@
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
+#include "lgc.h"
+#include "lstate.h"
 
 void *mirror_arena_new (void);
 void mirror_arena_free (void *arena);
 void *mirror_arena_alloc (void *ud, void *ptr, size_t osize, size_t nsize);
+size_t mirror_arena_committed (void *arena);
 
 /* A value crossing to or from C#; strings are not owned */
-typedef struct Value {
+typedef struct ManagedValue {
   int type;  /* VNIL, VBOOLEAN, VINTEGER, VFLOAT or VSTRING */
   int integer;
   float number;
   const char *string;
   size_t length;
-} Value;
+} ManagedValue;
 
 enum { VNIL, VBOOLEAN, VINTEGER, VFLOAT, VSTRING };
 
@@ -84,6 +87,13 @@ LUALIB_API lua_State *mirror_newstate (void) {
   return L;
 }
 
+/* the memory the state's arena has committed: its most at any time, since the arena gives none back */
+LUALIB_API size_t mirror_committed (lua_State *L) {
+  void *arena;
+  lua_getallocf(L, &arena);
+  return mirror_arena_committed(arena);
+}
+
 LUALIB_API void mirror_close (lua_State *L) {
   void *arena;
   lua_getallocf(L, &arena);
@@ -91,7 +101,7 @@ LUALIB_API void mirror_close (lua_State *L) {
   mirror_arena_free(arena);
 }
 
-static void pushvalues (lua_State *L, const Value *v, int n) {
+static void pushvalues (lua_State *L, const ManagedValue *v, int n) {
   luaL_checkstack(L, n, "too many values");
   for (; n > 0; v++, n--) {
     switch (v->type) {
@@ -105,35 +115,43 @@ static void pushvalues (lua_State *L, const Value *v, int n) {
 }
 
 static int pushall (lua_State *L) {
-  const Value *v = (const Value *)lua_touserdata(L, 1);
+  const ManagedValue *v = (const ManagedValue *)lua_touserdata(L, 1);
   int n = (int)lua_tointeger(L, 2);
   lua_settop(L, 0);
   pushvalues(L, v, n);
   return n;
 }
 
-/* Pushes values C# wrote, with the collector stopped: a __gc calling back into C# would write over them midway */
-static void pushcsharp (lua_State *L, const Value *v, int n) {
-  int running = lua_gc(L, LUA_GCISRUNNING, 0), status;
-  lua_gc(L, LUA_GCSTOP, 0);
+/* Pushes values C# wrote with the collector held, since a __gc calling back into C# would write over them midway.
+   What the push allocated is then owed to the collector, which takes its step once the values are in, so it keeps
+   its pace; lua_gc's stop and restart would forget the debt. */
+static void pushcsharp (lua_State *L, const ManagedValue *v, int n) {
+  global_State *g = G(L);
+  lu_byte running = g->gcrunning;
+  l_mem debt = g->GCdebt;
+  lu_mem total = gettotalbytes(g);
+  int status;
+  g->gcrunning = 0;
   lua_pushcfunction(L, pushall);
   lua_pushlightuserdata(L, (void *)v);
   lua_pushinteger(L, n);
   status = lua_pcall(L, 2, LUA_MULTRET, 0);
-  if (running) lua_gc(L, LUA_GCRESTART, 0);
+  g->gcrunning = running;
+  luaE_setdebt(g, debt + (l_mem)(gettotalbytes(g) - total));
   if (status != LUA_OK) lua_error(L);
+  luaC_checkGC(L);
 }
 
-static int (*callback) (lua_State *L, const Value **results);
+static int (*callback) (lua_State *L, const ManagedValue **results);
 
-LUALIB_API void mirror_setcallback (int (*f) (lua_State *L, const Value **results)) {
+LUALIB_API void mirror_setcallback (int (*f) (lua_State *L, const ManagedValue **results)) {
   callback = f;
 }
 
 /* Calls back into C#, which only reads the arguments and returns its results (or its error message, as a
    negative count) for this to push, before anything else can call C#. */
 static int trampoline (lua_State *L) {
-  const Value *results;
+  const ManagedValue *results;
   int n = callback(L, &results);
   if (n >= 0) {
     pushcsharp(L, results, n);
@@ -165,7 +183,7 @@ LUALIB_API int mirror_pcall (lua_State *L, int nargs, int nresults) {
 
 typedef struct Request {
   const char *name;
-  const Value *values;
+  const ManagedValue *values;
   int n;
   void *state;
 } Request;
@@ -209,7 +227,7 @@ static int protect (lua_State *L, lua_CFunction f, const Request *r, int nresult
 }
 
 /* name(args...), leaving its results */
-LUALIB_API int mirror_call (lua_State *L, const char *name, const Value *args, int n) {
+LUALIB_API int mirror_call (lua_State *L, const char *name, const ManagedValue *args, int n) {
   Request r = {name, args, n, NULL};
   return protect(L, docall, &r, LUA_MULTRET);
 }
@@ -220,7 +238,7 @@ LUALIB_API int mirror_getglobal (lua_State *L, const char *name) {
   return protect(L, doget, &r, 1);
 }
 
-LUALIB_API int mirror_setglobal (lua_State *L, const char *name, const Value *value) {
+LUALIB_API int mirror_setglobal (lua_State *L, const char *name, const ManagedValue *value) {
   Request r = {name, value, 1, NULL};
   return protect(L, doset, &r, 0);
 }

@@ -4,6 +4,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="MirrorImaged.Tests" />
+  </ItemGroup>
+
   <!-- Built by native/build.ps1 and committed, so a plain dotnet build needs no zig. -->
   <ItemGroup>
     <None Include="runtimes\**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes" />

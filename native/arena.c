@@ -130,6 +130,10 @@ void *mirror_arena_new (void) {
 }
 
 
+size_t mirror_arena_committed (void *arena) {
+  return ((Arena *)arena)->committed;
+}
+
 /* Written as Windows writes %p, 16 hex digits */
 int mirror_pointer2str (char *buff, size_t sz, const void *p) {
   return snprintf(buff, sz, "%016llX", (unsigned long long)((uintptr_t)p & (ARENA_SIZE - 1)));
