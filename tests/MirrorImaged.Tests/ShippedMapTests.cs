@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace MirrorImaged.Tests;
 
-/// <summary>The install's maps, and the two kinds of file in them War3Net 6.1.2 refuses (decisions D300 to D302).</summary>
+/// <summary>The install's maps, and two kinds of file in them War3Net 6.1.2 refuses (decisions D300 to D302).</summary>
 public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
 {
     readonly string _folder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())).FullName;
@@ -22,7 +22,8 @@ public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
 
     const PlayerRaceHud Marker = (PlayerRaceHud)0x1F2E3D4C;
 
-    // D300: World Editor 6117 and 6127 (2.0.4's campaign maps) wrote format 39 without the race HUD each player has from 6140
+    // D300: World Editor 6117 and 6127 (2.0.4's campaign maps) wrote format 39 without the race HUD each player has
+    // from 6140
     [Theory]
     [InlineData(6127, false)]
     [InlineData(6140, true)]
@@ -45,9 +46,9 @@ public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
         Assert.All(read.Players, player => Assert.Equal(huds ? Marker : 0, player.RaceHud));
     }
 
-    // D301: Human09's war3map.w3s names a sound g_snd_H09Arthas16 and repeats it as gg_snd_H09Arthas16
+    // D301: Human09's war3map.w3s names a sound g_snd_H09Arthas16 and repeats it gg_snd_H09Arthas16, its script's name
     [Fact]
-    public void A_sound_whose_repeated_name_differs_keeps_its_first_name()
+    public void A_sound_whose_repeated_name_differs_takes_the_name_as_repeated()
     {
         var sounds = new MapSounds(MapSoundsFormatVersion.v3) { Sounds = { Sound("gg_snd_Horn", "Horn", 1), Sound("gg_snd_Bell", "Bell", 0) } };
         var bytes = Written(writer => writer.Write(sounds));
@@ -57,7 +58,7 @@ public sealed class ShippedMapTests(ITestOutputHelper output) : IDisposable
 
         var read = MapArchive.Read(Map(("war3map.w3s", bytes))).Files.Sounds!;
 
-        Assert.Equal([("g_snd_Horn", "Sound\\Horn.flac", "Horn", "x", 7), ("gg_snd_Bell", "Sound\\Bell.flac", "Bell", null, 7)],
+        Assert.Equal([("gg_snd_Horn", "Sound\\Horn.flac", "Horn", "x", 7), ("gg_snd_Bell", "Sound\\Bell.flac", "Bell", null, 7)],
             read.Sounds.Select(s => (s.Name, s.FilePath, s.SoundName, (string?)s.Unk5, s.Unk11)));
     }
 
