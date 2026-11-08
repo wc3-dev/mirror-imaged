@@ -45,6 +45,9 @@ Needs W2-1.
 - From W2-1's review: `GetObjectName` (with the facts' "Default string" for a new buff's or destructable's name in the
   skin files), and which unit fields apply to which units (D205: `useUnit`, `useHero`, `useBuilding`) for the
   `BlzGetUnit*Field` natives.
+- Small items from W2-1's last review: the exponent-free real writer loses digits from about 1e-21, not 1e-28
+  (fix `GameData.cs`'s comment and D214, or write exact digits); test the two inferred `ReadsTrigstr` entries
+  (`DisplayTextToPlayer`, `DisplayTimedTextToPlayer`); list `InvalidDataException` in `Simulation.Load`'s doc.
 
 ## W2-3 Heroes and items
 
