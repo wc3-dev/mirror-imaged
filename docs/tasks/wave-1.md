@@ -101,6 +101,8 @@ Needs W1-5 (the probes write through Preload) and W0-4's runner.
 - From W1-6: probe lines that differ from MirrorImaged by decision, not bug: `handles`' "first" and "blizzard" lines
   and `handles-3`'s two "players" lines (D110, starting ids), the id-reuse lines in `handles-2` and `handles-3` (D111),
   `handles-3`'s "predicted" and `handles`' "after a pass" lines (D114). Mark them in the expected files.
+  Also: `triggers.txt:16` and `triggers-2.txt:23` (raw ids, D110), `triggers-3.txt:24` (raw ids and `And(t, cn)`,
+  D110 and D114), and `handles-3.txt:32`, the "ran" line after "predicted" (`And(Not(cn), t7)`, D114).
 - Every probe's raw game lines live in `probes/expected/<probe>.txt`; the comparison reads them from there. Lines that
   vary from run to run (W1-2's wait lengths, D71) get a tolerance or are skipped, said in the expected file.
 - W1-2's two measured cases on `TriggerRegisterTimerEvent` (probe `triggers`: the tie at 3.0, the periodic event ran

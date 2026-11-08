@@ -24,3 +24,13 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 6: the lobby's placement of players on start locations isn't simulated (D98, D141: teams-together placement
   moved slots 0 and 1 at random), so `GetPlayerStartLocation` is Close; place them from the run's seed and let a test
   choose (W1-9).
+- Wave 6 (players, first ids): the game makes one handle before `blizzard.j`'s globals (0x100001 on) and each player
+  when first asked for (`Player(0)` in `config` at 0x100008, `Player(25)` next, 1-24, then 26 and 27 later; probes
+  `handles`, `handles-3`). Make players when first asked for and find that first handle, so the raw-id lines in
+  `handles`, `handles-3` and `triggers` 1-3 compare (D110, D47).
+- Wave 10 (id reuse): an id comes back once its handle is destroyed and every userdata of it is collected, 0.1 to
+  0.2 s later, last freed first, plus one unexplained extra id (`handles-2` lines 8 and 13, `handles-3` lines 10 and
+  18). Model it from MirrorImaged's own deterministic collector (D39's arena keeps A7), or take A2's exception for
+  `GetHandleId` to Sven. Until then, maps that forget to flush data keyed by `GetHandleId` behave differently (D111).
+- Wave 10 (the nil condition): probe further for `Condition(nil)`'s value inside `And`/`Or`/`Not` (the 6 mismatched
+  cases in D114); `Condition`, `Filter`, `And`, `Or` and `Not` stay Close until it fits every measured case.
