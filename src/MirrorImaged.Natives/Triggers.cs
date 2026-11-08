@@ -505,8 +505,8 @@ public sealed partial class GameNatives
     {
         if (e is null) return;
         // shortcut: a destroyed Condition or Filter stays in the game for good, as Lua may still give it to a native (a
-        // filter destroyed per call by blizzard.j's matching functions keeps about 80 bytes each); let it go once Lua has
-        // collected its userdata, with wave 10's collector-driven id reuse (docs/tasks/later.md).
+        // filter destroyed per call by blizzard.j's matching functions keeps about 80 bytes each); let it go once Lua
+        // has collected its userdata, with wave 10's collector-driven id reuse (docs/tasks/later.md).
         if (e.Place is { } place)
         {
             if (place.Code is null) return;
