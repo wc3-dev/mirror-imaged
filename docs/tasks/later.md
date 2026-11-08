@@ -41,8 +41,7 @@ Each item names the wave whose file it goes into when that file is written.
   D86). And binary `load`: MirrorImaged refuses binary chunks on purpose (D36, D126: bytecode isn't verified, so a
   map could corrupt the test process), which keeps `lua-config` different for good; that A6 exception is the
   coordinator's call, listed for Sven's review at the end.
-- Wave 5 (presentation): sound file lengths (`GetSoundDuration`, from the install's sound files), and a map's own
-  FDF/TOC string lists (D211, `BlzLoadTOCFile`) for `GetLocalizedString` (W2-1).
+- Wave 5 (presentation): a map's own FDF/TOC string lists (D211, `BlzLoadTOCFile`) for `GetLocalizedString` (W2-1).
 - Wave 7 (AI): the balance sets hold their own AI scripts (`_Balance/Custom_V0.w3mod`, `Melee_V0.w3mod`:
   `Scripts/human.ai` etc. and `*Melee.pld`); take them from the set `StandardData.Sets` picks (W2-1).
 - Wave 3 (orders and movement): the game moves a unit made where others stand off them (D223); `SetUnitPosition`;

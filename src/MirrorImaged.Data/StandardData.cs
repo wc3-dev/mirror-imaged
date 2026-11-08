@@ -110,7 +110,16 @@ public sealed partial class StandardData
     static readonly string[] StringFiles =
         ["ui/framedef/globalstrings.fdf", "ui/framedef/infopanelstrings.fdf", "ui/framedef/networkstrings.fdf", "ui/framedef/datestrings.fdf"];
 
+    // The sound tables whose rows are labels with files (SoundName, FileNames), which CreateSoundFromLabel reads
+    static readonly string[] SoundTables =
+        [.. new[] { "ability", "ambience", "anim", "cinematic", "dialog", "ui", "unitack", "unitcombat" }.Select(kind => $"ui/soundinfo/{kind}sounds.slk"),
+            "ui/soundinfo/ambientmusic.slk", "ui/soundinfo/music.slk"];
+
     static readonly Dictionary<(GameBuild Build, string Folder, string? Values, string? Objects), StandardData> Cache = [];
+
+    // The storage of each install folder, kept open for the process for the sound files runs read (its tables hold about
+    // 58 MB); a new build of the install closes the old build's (decisions D520)
+    static readonly Dictionary<string, CascStorage> Storages = [];
 
     internal Dictionary<(ObjectKind Kind, int Id), StandardObject> Objects { get; } = [];
 
@@ -127,6 +136,18 @@ public sealed partial class StandardData
 
     /// <summary>The hotkeys of <c>ui/miscui.txt</c>'s <c>[Hotkeys]</c> by key (any case), in the installed language.</summary>
     internal Dictionary<string, string> Hotkeys { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Each sound label's files (<c>FileNames</c>, a comma list, as written) by label, any case, the first table's first.</summary>
+    internal Dictionary<string, string> Sounds { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The installed language (<c>enUS</c>), whose folder holds the speech.</summary>
+    internal string Locale { get; set; } = "enUS";
+
+    /// <summary>
+    /// A file of the install's storage by its path in the root (<c>War3.w3mod:Sound/Interface/QuestNew.ogg</c>, any
+    /// case), null when there is none: the sound files a run reads. None for data made with <c>new</c>, unless a test gives one.
+    /// </summary>
+    internal Func<string, byte[]?>? Storage { get; set; }
 
     /// <summary>
     /// The World Editor strings the game keeps (the locale's <c>ui/worldeditgamestrings.txt</c>) by key, any case: a
@@ -147,7 +168,7 @@ public sealed partial class StandardData
     /// </summary>
     public static StandardData Read(Func<string, byte[]?> file, string? values, string? objects, string locale)
     {
-        var data = new StandardData();
+        var data = new StandardData { Locale = locale };
         // Abilities and buffs share their text files: each file is read and parsed once.
         var read = new Dictionary<string, byte[]?>();
         var parsed = new Dictionary<string, List<(string Name, Dictionary<string, string> Keys)>>();
@@ -234,25 +255,43 @@ public sealed partial class StandardData
                     if (parts.Length == 1 || parts[1].Split(',').Contains(locale, StringComparer.OrdinalIgnoreCase))
                         data.Hotkeys.TryAdd(parts[0], value.Trim('\''));
                 }
+
+        foreach (var path in SoundTables)
+            foreach (var (label, cells) in File(path) is { } bytes ? Tables.Slk(bytes) : [])
+                if (cells.GetValueOrDefault("FileNames") is { Length: > 0 } files)
+                    data.Sounds.TryAdd(label, files);
         return data;
     }
 
     /// <summary>
     /// The standard data of the install in <paramref name="folder"/> for a map with <paramref name="info"/>, read from its
-    /// storage once a process for each folder, build (its locale too) and pair of balance sets (<see cref="Sets"/>).
+    /// storage once a process for each folder, build (its locale too) and pair of balance sets (<see cref="Sets"/>). The
+    /// storage stays open for the process, one a folder, for the sound files a run reads (about 58 MB).
     /// </summary>
     /// <exception cref="IOException">There is no install there, or its storage can't be read.</exception>
     public static StandardData Installed(string folder, MapInfo? info)
     {
         var build = GameInstall.Build(folder);
         var (values, objects) = Sets(info);
-        var key = (build, Path.GetFullPath(folder), values, objects);
+        var place = Path.GetFullPath(folder);
+        var key = (build, place, values, objects);
         lock (Cache)
         {
             if (!Cache.TryGetValue(key, out var data))
             {
-                using var storage = CascStorage.Open(folder);
-                Cache[key] = data = Read(path => storage.Read("War3.w3mod:" + path.Replace(".w3mod/", ".w3mod:")), values, objects, build.Locale);
+                if (!Storages.TryGetValue(place, out var storage) || storage.Build != build)
+                {
+                    // The old build's data goes with its storage; a run still holding it reads no more sound files
+                    if (storage is not null)
+                    {
+                        lock (storage) storage.Dispose();
+                        foreach (var old in Cache.Keys.Where(cached => cached.Folder == place).ToList()) Cache.Remove(old);
+                    }
+                    Storages[place] = storage = CascStorage.Open(folder);
+                }
+                byte[]? Stored(string path) { lock (storage) return storage.Read(path); }
+                Cache[key] = data = Read(path => Stored("War3.w3mod:" + path.Replace(".w3mod/", ".w3mod:")), values, objects, build.Locale);
+                data.Storage = Stored;
             }
             return data;
         }

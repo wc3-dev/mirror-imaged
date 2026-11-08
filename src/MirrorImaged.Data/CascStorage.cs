@@ -52,7 +52,7 @@ public sealed class CascStorage : IDisposable
 
     /// <summary>
     /// The file's bytes by its path in the root (<c>War3.w3mod:scripts/common.j</c>, any case); null when the root
-    /// does not name it or it is not stored locally.
+    /// does not name it, it is not stored locally, or the storage is disposed.
     /// </summary>
     public byte[]? Read(string path) =>
         _root.TryGetValue(path, out var contentKey) && _encodingKeys.TryGetValue(contentKey, out var encodingKey)
@@ -67,6 +67,7 @@ public sealed class CascStorage : IDisposable
         foreach (var archive in _archives.Values)
             archive.Dispose();
         _archives.Clear();
+        _root.Clear(); // so a read after it finds nothing rather than opening the archives again
     }
 
     // The active build's config: key = values, from Data\config\ab\cd\abcd....
