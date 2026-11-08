@@ -759,6 +759,13 @@ lines they kept the same each time.
   base tables (Forsaken Kingdom's data) and 2 `custom_v1`. Read 11-08.
 - The install's text files have sections with words after the bracket (`[Hleo] leonid`, `[Scth] Scarlet Crusade
   Captain Hero`, `[AHw2] - T2 - Spell Blade`). Read 11-08.
+- The install's 193 campaign maps (`Campaign/Classic` and `Campaign/Reforged`, 97 and 96, no `.w3n`; read 11-08): 130
+  have a format-39 `war3map.w3i` of World Editor 6117 or 6127 (2.0.4.23839) with no race HUD in its players, where
+  6140 and later put one after each player's race (both have the map's own after the loading screen number). 15
+  sounds in 4 of Reforged's maps (Human03 1, Human09 1, Undead05 12, OrcX01_02 1) are named `g_snd_X` in their
+  `war3map.w3s` and repeated `gg_snd_X` (`g_snd_H09Arthas16`, `gg_snd_H09Arthas16`), the repeated name the one their
+  scripts make the sound in; the paths repeat as they are. That the game loads all of them is assumed, as they ship
+  with it; not measured here. With decisions D300 and D301 every file of every one reads to its end.
 
 ## The number model's probes
 
