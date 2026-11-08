@@ -760,10 +760,11 @@ lines they kept the same each time.
 
 ## JASS maps
 
-Eleven JASS probes and one Lua probe on 3.0.1.24371, 11-08 (W1-7), single player, `-loadfile`, one run each: the
-`probes/jass-*.j` maps, whose `war3map.j` the game runs in its JASS machine (`ProbeMap.BuildJass`, decisions D130), and
-`probes/blizzard-numbers.lua`. Their lines are in `probes/expected`. A real is written as its IEEE bits, worked out in
-JASS with exact steps (halving, doubling, subtracting 1 in [1, 2), `R2I` of a whole number).
+Ten JASS probes and one Lua probe on 3.0.1.24371, 11-08 (W1-7), single player, `-loadfile`, two runs each, the same:
+the `probes/jass-*.j` maps, whose `war3map.j` the game runs in its JASS machine (`ProbeMap.BuildJass`, decisions D130),
+and `probes/blizzard-numbers.lua`; and a JASS map with a backslash in a rawcode, which never loaded. Their lines are
+in `probes/expected`. A real is written as its IEEE bits, worked out in JASS with exact steps (halving, doubling,
+subtracting 1 in [1, 2), `R2I` of a whole number).
 
 - Integers wrap at 32 bits: 2147483647 + 1 is -2147483648, -2147483648 - 1 is 2147483647, 2147483647 × 2 is -2,
   65536 × 65536 is 0, 46341 × 46341 is -2147479015, 2147483647 × 2147483647 is 1, -(-2147483648) is -2147483648.

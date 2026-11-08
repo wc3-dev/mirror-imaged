@@ -226,7 +226,7 @@ public sealed class JassMapTests : IDisposable
         Assert.Matches(@"^war3map\.lua:\d+: The game closes: -2147483648 was divided by -1", simulation.Stopped.Message);
     }
 
-    // The game doesn't load a map whose JASS doesn't compile (probe jass-rawcode-backslash: the loaded mark never came)
+    // The game doesn't load a map whose JASS doesn't compile (a rawcode 'a\bc': the loaded mark never came, D130)
     [Theory]
     [InlineData("    call Unknown()", "Unknown is not declared")]
     [InlineData("    call TimerStart(null, 0, false, function Unknown)", "Unknown is not declared")]

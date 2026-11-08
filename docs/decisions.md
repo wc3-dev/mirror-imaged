@@ -1153,7 +1153,7 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
 
 ### JASS maps (W1-7)
 
-The measurements are eleven JASS probes, `probes/jass-*.j`, run in the game's JASS machine (D130), and
+The measurements are ten JASS probes, `probes/jass-*.j`, run in the game's JASS machine (D130), and
 `probes/blizzard-numbers.lua`, in `docs/facts.md`, "JASS maps", with their lines in `probes/expected`. W1-8's
 comparison (D120) runs them as it runs the Lua probes: `ProbeComparison` takes `probes/*.j` too, and builds and runs
 each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions below, `probes/differences` says so.
@@ -1163,12 +1163,12 @@ each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions belo
   globals (declarations made from `GameNatives`, as the Preloader's, D102) and the installed blizzard.j, with JASS's
   rules (D132 to D137), and runs as the chunk `war3map.lua`, its `config` and `main` as a Lua map's, so an error names
   the Lua's line. JASS that doesn't parse, or names a function or variable no file declares, stops the load with an
-  `InvalidDataException` ("The game wouldn't load ..."): the game didn't load a map whose JASS it refused (probe
-  jass-rawcode-backslash, and a first jass-numbers with exponent literals); that an undeclared name does the same is
+  `InvalidDataException` ("The game wouldn't load ..."): the game didn't load a map whose JASS it refused (a rawcode
+  `'a\bc'`, and a first jass-numbers with exponent literals); that an undeclared name does the same is
   inferred; Lua would call nil. A probe can be JASS: `ProbeMap.BuildJass` puts it in a `war3map.j` beside `out` and
   `done` written in JASS, and calls no blizzard.j function, so the tests' seam (`Load(path, "")`, which transpiles
   against common.j only) runs the JASS probes' maps on every platform; JASS has no `pcall`, so a probe runs what may
-  stop a thread in one of its own (`ExecuteFunc`), and a timer ends the probe 30 s in. The map with `'ac'`, which
+  stop a thread in one of its own (`ExecuteFunc`), and a timer ends the probe 30 s in. The map with `'a\bc'`, which
   gives no lines, is a game test's inline probe instead. The rewriting is `Jass.cs`'s, the JASS map's run
   `Simulation.Jass.cs`'s.
 - **D131. blizzard.j two ways.** A Lua map's blizzard.j is the game's own Lua: there `ModuloInteger(7, -3)` is -5,
