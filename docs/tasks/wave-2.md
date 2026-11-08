@@ -6,6 +6,10 @@ of the tests, and every native a fact measures is Exact.
 
 Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time.
 
+Parallel lanes: decision numbers by range: W2-1 D200-D219, W2-2 D220-D239, W2-3 D240-D249, W2-4 D250-D259,
+W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289. Generated-file conflicts are resolved by re-running the generator.
+W2-1 started before wave 1 finished (11-08): it touches the data loading, which wave 1's open lanes don't.
+
 ## W2-1 Map files and the game's standard data
 
 - Every map file: `war3map.w3i` (players, forces, settings), `war3map.wts` strings (`TRIGSTR_n`), object data
