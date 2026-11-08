@@ -58,17 +58,11 @@ public sealed unsafe class LuaState : IDisposable
     /// </summary>
     public void Register(string name, Func<object?[], object?[]> function)
     {
+        // Added first, since a __newindex on _G can call it while it is registered, and kept if that fails, since the
+        // __newindex may have stored it: an id is never given out twice.
         int id = _functions.Count;
-        _functions.Add(function);  // first: a __newindex on _G can call it while it is registered
-        try
-        {
-            Use(l => Results(l, lua_gettop(l), mirror_register(l, name, GCHandle.ToIntPtr(_handle.Self), id)));
-        }
-        catch when (_functions.Count == id + 1)
-        {
-            _functions.RemoveAt(id);
-            throw;
-        }
+        _functions.Add(function);
+        Use(l => Results(l, lua_gettop(l), mirror_register(l, name, GCHandle.ToIntPtr(_handle.Self), id)));
     }
 
     /// <summary>The memory the state has committed, its most so far: its arena gives none back.</summary>

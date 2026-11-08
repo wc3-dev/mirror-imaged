@@ -174,6 +174,16 @@ public sealed class LuaStateTests : IDisposable
     }
 
     [Fact]
+    public void AFailedRegisterLeavesNoGlobalCallingAnotherFunction()
+    {
+        _lua.Run("setmetatable(_G, {__newindex = function(t, k, v) rawset(t, k, v) error('refused') end})");
+        Assert.Contains("refused", Assert.Throws<LuaException>(() => _lua.Register("a", _ => ["a"])).Message);
+        _lua.Run("setmetatable(_G, nil)");
+        _lua.Register("b", _ => ["b"]);
+        Assert.Equal(["a", "b"], _lua.Run("return a(), b()"));
+    }
+
+    [Fact]
     public void ADisposeDuringACallFreesTheStateOnlyAfterIt()
     {
         var lua = new LuaState();

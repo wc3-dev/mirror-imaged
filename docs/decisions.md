@@ -160,7 +160,8 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   push is over. Errors carry Lua's traceback, and a chunk's name is given with `@`, so messages
   read `war3map.lua:3:`. The state is a `SafeHandle`, counted in use for the whole of every call, so neither `Dispose`
   (even from inside a callback) nor the finalizer frees it under a running call. A function is added to the state's list
-  before its global is set, since a `__newindex` on `_G` can call it then; it is taken out if the setting fails.
+  before its global is set, since a `__newindex` on `_G` can call it then, and stays there if the setting fails, since
+  the `__newindex` may have kept it: an id is never given to two functions.
 - **D39. Addresses are the same every run.** Each state allocates from its own arena of 64 GB of address space,
   aligned to its size and filled the same way every run (size classes, freed blocks reused last in first out), so an
   object's offset in it is the same every run and, as CI checks with a pinned workload, on every platform. Lua hashes
