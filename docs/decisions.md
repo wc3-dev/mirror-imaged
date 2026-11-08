@@ -443,7 +443,7 @@ The measurements are three probes, `probes/triggers*.lua`, in `docs/facts.md`, "
   the game ran a periodic event's expiry before a timer started later that fell due at the same moment: for W1-8's probe
   of timer order. Variable events never fire, as in the game for a Lua global. Integer game states (divine intervention,
   disconnected) are kept by `SetIntegerGameState`, which fires their events as measured, with the event id the
-  comparison's value less 255 (`ConvertGameEvent(-253)` for `EQUAL`). The time of day's events need its clock (W1-4):
-  their registrations are kept in `_stateEvents`, for the clock to fire with `Fire` and the id 3, by the rules in the
-  facts; until then `TriggerRegisterGameStateEvent` is Close. After W1-2: 32 Exact, 116 Close, 2 Recorded, 1,685
-  Missing.
+  comparison's value less 255 (`ConvertGameEvent(-253)` for `EQUAL`). The time of day's events are W1-9's, with
+  W1-4's clock: their registrations are kept in `_stateEvents`, for the clock to fire with `Fire` and the id 3, by the
+  rules in the facts; until then `TriggerRegisterGameStateEvent` is Close. After W1-2: 32 Exact, 116 Close, 2
+  Recorded, 1,685 Missing.
