@@ -1,2 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The handle types keep common.j's lower-case names (decisions D19), in every file that adds to them. -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CS8981</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MirrorImaged.World\MirrorImaged.World.csproj" />
+  </ItemGroup>
+
 </Project>

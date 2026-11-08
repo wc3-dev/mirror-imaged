@@ -68,7 +68,7 @@ public sealed class CoverageTests
         Assert.Contains("mirror coverage", error);
     }
 
-    static (int Exit, string Output, string Error) Mirror(params string[] arguments)
+    internal static (int Exit, string Output, string Error) Mirror(params string[] arguments)
     {
         var start = new ProcessStartInfo("dotnet", [Path.Combine(AppContext.BaseDirectory, "MirrorImaged.Cli.dll"), .. arguments])
         {

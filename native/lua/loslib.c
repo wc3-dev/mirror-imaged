@@ -21,6 +21,9 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+/* MirrorImaged: the time functions read the state's simulated clock, in UTC (native/mitime.c) */
+#include "mitime.h"
+
 
 /*
 ** {==================================================================
@@ -181,7 +184,7 @@ static int os_getenv (lua_State *L) {
 
 
 static int os_clock (lua_State *L) {
-  lua_pushnumber(L, ((lua_Number)clock())/(lua_Number)CLOCKS_PER_SEC);
+  lua_pushnumber(L, mirror_clock(L));
   return 1;
 }
 
@@ -283,7 +286,7 @@ static const char *checkoption (lua_State *L, const char *conv,
 static int os_date (lua_State *L) {
   size_t slen;
   const char *s = luaL_optlstring(L, 1, "%c", &slen);
-  time_t t = luaL_opt(L, l_checktime, 2, time(NULL));
+  time_t t = luaL_opt(L, l_checktime, 2, mirror_time(L));
   const char *se = s + slen;  /* 's' end */
   struct tm tmr, *stm;
   if (*s == '!') {  /* UTC? */
@@ -312,7 +315,7 @@ static int os_date (lua_State *L) {
         char *buff = luaL_prepbuffsize(&b, SIZETIMEFMT);
         s++;  /* skip '%' */
         s = checkoption(L, s, se - s, cc + 1);  /* copy specifier to 'cc' */
-        reslen = strftime(buff, SIZETIMEFMT, cc, stm);
+        reslen = mirror_strftime(buff, SIZETIMEFMT, cc, stm);
         luaL_addsize(&b, reslen);
       }
     }
@@ -325,7 +328,7 @@ static int os_date (lua_State *L) {
 static int os_time (lua_State *L) {
   time_t t;
   if (lua_isnoneornil(L, 1))  /* called without args? */
-    t = time(NULL);  /* get current time */
+    t = mirror_time(L);  /* get current time */
   else {
     struct tm ts;
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -337,7 +340,7 @@ static int os_time (lua_State *L) {
     ts.tm_mon = getfield(L, "month", -1, 1);
     ts.tm_year = getfield(L, "year", -1, 1900);
     ts.tm_isdst = getboolfield(L, "isdst");
-    t = mktime(&ts);
+    t = mirror_mktime(&ts);
     setallfields(L, &ts);  /* update fields with normalized values */
   }
   if (t != (time_t)(l_timet)t || t == (time_t)(-1))
@@ -351,7 +354,7 @@ static int os_time (lua_State *L) {
 static int os_difftime (lua_State *L) {
   time_t t1 = l_checktime(L, 1);
   time_t t2 = l_checktime(L, 2);
-  lua_pushnumber(L, (lua_Number)difftime(t1, t2));
+  lua_pushnumber(L, (lua_Number)((double)t1 - (double)t2));
   return 1;
 }
 

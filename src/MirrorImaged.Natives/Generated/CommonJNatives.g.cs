@@ -1840,9 +1840,6 @@ public sealed partial class GameNatives
     public texttag? CreateTextTag() => throw new MissingNativeException("CreateTextTag");
 
     [Native(Level.Missing)]
-    public timer? CreateTimer() => throw new MissingNativeException("CreateTimer");
-
-    [Native(Level.Missing)]
     public timerdialog? CreateTimerDialog(timer? t) => throw new MissingNativeException("CreateTimerDialog");
 
     [Native(Level.Missing)]
@@ -1942,9 +1939,6 @@ public sealed partial class GameNatives
     public void DestroyTextTag(texttag? t) => throw new MissingNativeException("DestroyTextTag");
 
     [Native(Level.Missing)]
-    public void DestroyTimer(timer? whichTimer) => throw new MissingNativeException("DestroyTimer");
-
-    [Native(Level.Missing)]
     public void DestroyTimerDialog(timerdialog? whichDialog) => throw new MissingNativeException("DestroyTimerDialog");
 
     [Native(Level.Missing)]
@@ -1996,13 +1990,7 @@ public sealed partial class GameNatives
     public void DisplayLoadDialog() => throw new MissingNativeException("DisplayLoadDialog");
 
     [Native(Level.Missing)]
-    public void DisplayTextToPlayer(player? toPlayer, float x, float y, string? message) => throw new MissingNativeException("DisplayTextToPlayer");
-
-    [Native(Level.Missing)]
     public void DisplayTimedTextFromPlayer(player? toPlayer, float x, float y, float duration, string? message) => throw new MissingNativeException("DisplayTimedTextFromPlayer");
-
-    [Native(Level.Missing)]
-    public void DisplayTimedTextToPlayer(player? toPlayer, float x, float y, float duration, string? message) => throw new MissingNativeException("DisplayTimedTextToPlayer");
 
     [Native(Level.Missing)]
     public void DoNotSaveReplay() => throw new MissingNativeException("DoNotSaveReplay");
@@ -2350,9 +2338,6 @@ public sealed partial class GameNatives
     public unitstate? GetEventUnitState() => throw new MissingNativeException("GetEventUnitState");
 
     [Native(Level.Missing)]
-    public timer? GetExpiredTimer() => throw new MissingNativeException("GetExpiredTimer");
-
-    [Native(Level.Missing)]
     public destructable? GetFilterDestructable() => throw new MissingNativeException("GetFilterDestructable");
 
     [Native(Level.Missing)]
@@ -2482,9 +2467,6 @@ public sealed partial class GameNatives
     public unit? GetLoadedUnit() => throw new MissingNativeException("GetLoadedUnit");
 
     [Native(Level.Missing)]
-    public player? GetLocalPlayer() => throw new MissingNativeException("GetLocalPlayer");
-
-    [Native(Level.Missing)]
     public int GetLocalizedHotkey(string? source) => throw new MissingNativeException("GetLocalizedHotkey");
 
     [Native(Level.Missing)]
@@ -2557,9 +2539,6 @@ public sealed partial class GameNatives
     public float GetPlayerHandicapXP(player? whichPlayer) => throw new MissingNativeException("GetPlayerHandicapXP");
 
     [Native(Level.Missing)]
-    public int GetPlayerId(player? whichPlayer) => throw new MissingNativeException("GetPlayerId");
-
-    [Native(Level.Missing)]
     public string? GetPlayerName(player? whichPlayer) => throw new MissingNativeException("GetPlayerName");
 
     [Native(Level.Missing)]
@@ -2612,12 +2591,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public int GetPlayers() => throw new MissingNativeException("GetPlayers");
-
-    [Native(Level.Missing)]
-    public int GetRandomInt(int lowBound, int highBound) => throw new MissingNativeException("GetRandomInt");
-
-    [Native(Level.Missing)]
-    public float GetRandomReal(float lowBound, float highBound) => throw new MissingNativeException("GetRandomReal");
 
     [Native(Level.Missing)]
     public float GetRectCenterX(rect? whichRect) => throw new MissingNativeException("GetRectCenterX");
@@ -3640,9 +3613,6 @@ public sealed partial class GameNatives
     public void PauseGame(bool flag) => throw new MissingNativeException("PauseGame");
 
     [Native(Level.Missing)]
-    public void PauseTimer(timer? whichTimer) => throw new MissingNativeException("PauseTimer");
-
-    [Native(Level.Missing)]
     public void PauseUnit(unit? whichUnit, bool flag) => throw new MissingNativeException("PauseUnit");
 
     [Native(Level.Missing)]
@@ -3674,9 +3644,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void PlayThematicMusicEx(string? musicFileName, int frommsecs) => throw new MissingNativeException("PlayThematicMusicEx");
-
-    [Native(Level.Missing)]
-    public player? Player(int number) => throw new MissingNativeException("Player");
 
     [Native(Level.Missing)]
     public leaderboard? PlayerGetLeaderboard(player? toPlayer) => throw new MissingNativeException("PlayerGetLeaderboard");
@@ -3887,9 +3854,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void ResumeMusic() => throw new MissingNativeException("ResumeMusic");
-
-    [Native(Level.Missing)]
-    public void ResumeTimer(timer? whichTimer) => throw new MissingNativeException("ResumeTimer");
 
     [Native(Level.Missing)]
     public bool ReviveHero(unit? whichHero, float x, float y, bool doEyecandy) => throw new MissingNativeException("ReviveHero");
@@ -4423,9 +4387,6 @@ public sealed partial class GameNatives
     public void SetPortraitLight(string? portraitDNCFile) => throw new MissingNativeException("SetPortraitLight");
 
     [Native(Level.Missing)]
-    public void SetRandomSeed(int seed) => throw new MissingNativeException("SetRandomSeed");
-
-    [Native(Level.Missing)]
     public void SetRect(rect? whichRect, float minx, float miny, float maxx, float maxy) => throw new MissingNativeException("SetRect");
 
     [Native(Level.Missing)]
@@ -4805,18 +4766,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void TimerDialogSetTitleColor(timerdialog? whichDialog, int red, int green, int blue, int alpha) => throw new MissingNativeException("TimerDialogSetTitleColor");
-
-    [Native(Level.Missing)]
-    public float TimerGetElapsed(timer? whichTimer) => throw new MissingNativeException("TimerGetElapsed");
-
-    [Native(Level.Missing)]
-    public float TimerGetRemaining(timer? whichTimer) => throw new MissingNativeException("TimerGetRemaining");
-
-    [Native(Level.Missing)]
-    public float TimerGetTimeout(timer? whichTimer) => throw new MissingNativeException("TimerGetTimeout");
-
-    [Native(Level.Missing)]
-    public void TimerStart(timer? whichTimer, float timeout, bool periodic, Action? handlerFunc) => throw new MissingNativeException("TimerStart");
 
     [Native(Level.Missing)]
     public triggeraction? TriggerAddAction(trigger? whichTrigger, Action? actionFunc) => throw new MissingNativeException("TriggerAddAction");

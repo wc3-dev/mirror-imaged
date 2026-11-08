@@ -4,4 +4,8 @@
     <InternalsVisibleTo Include="MirrorImaged.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="War3Net.IO.Mpq" />
+  </ItemGroup>
+
 </Project>
