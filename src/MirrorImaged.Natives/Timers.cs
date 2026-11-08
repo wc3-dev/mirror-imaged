@@ -36,7 +36,7 @@ public sealed partial class GameNatives
         PauseTimer(whichTimer);
         Release(whichTimer.Callback);
         whichTimer.Callback = null;
-        _game.Remove(whichTimer.Id);
+        _game.Remove(whichTimer.Key);
     }
 
     /// <summary>

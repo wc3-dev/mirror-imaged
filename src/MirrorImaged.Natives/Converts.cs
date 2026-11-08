@@ -1,23 +1,23 @@
 namespace MirrorImaged.Natives;
 
 // A Convert native gives the handle standing for a value of its type: made once per type and value, so the same value
-// gives the same handle and Lua's == holds, as the facts measure for player colours, races and the damage natives'
-// types. Its id is the value, and it takes none of the game's ids (decisions D63). Not measured: the others, and a
-// value common.j doesn't name.
+// gives the same handle and Lua's == holds. Its id is the value; it takes none of the game's ids, and a key of its own
+// (decisions D64). Exact once their getters are written, which the facts compare them with: ConvertPlayerColor and
+// ConvertRace (game-facts.md, Version and launching: GetPlayerColor compares equal to ConvertPlayerColor(n), and
+// GetPlayerRace to RACE_*, with Lua's ==), and ConvertAttackType, ConvertDamageType and ConvertWeaponType (C# through
+// CSharp.lua: every attack, damage and weapon type dealt from code reads back the same, through Convert*Type handles
+// made once and compared with ==). Not measured: a value common.j doesn't name.
 public sealed partial class GameNatives
 {
-    const string ColorAndRace = "game-facts.md, Version and launching: GetPlayerColor compares equal to ConvertPlayerColor(n), and GetPlayerRace to RACE_*, with Lua's == (10-20)";
-    const string DamageTypes = "game-facts.md, C# through CSharp.lua: every attack, damage and weapon type dealt from code reads back the same through Convert*Type handles made once and compared with == (Moonwell.Damage gate)";
-
     readonly Dictionary<(Type, int), handle> _converted = [];
-
-    /// <summary>The handle of <paramref name="type"/> with <paramref name="id"/>: a converted one, else the game's; null once it is removed.</summary>
-    public handle? Handle(Type type, int id) => _converted.GetValueOrDefault((type, id)) ?? _game.Handle(id) as handle;
 
     T Convert<T>(int value) where T : handle, new()
     {
         if (!_converted.TryGetValue((typeof(T), value), out var made))
+        {
             _converted.Add((typeof(T), value), made = new T { Id = value });
+            made.Key = _game.Add(made);
+        }
         return (T)made;
     }
 
@@ -37,10 +37,10 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public alliancetype? ConvertAllianceType(int i) => Convert<alliancetype>(i);
     [Native(Level.Close)] public animtype? ConvertAnimType(int i) => Convert<animtype>(i);
     [Native(Level.Close)] public armortype? ConvertArmorType(int i) => Convert<armortype>(i);
-    [Native(Level.Exact, Fact = DamageTypes)] public attacktype? ConvertAttackType(int i) => Convert<attacktype>(i);
+    [Native(Level.Close)] public attacktype? ConvertAttackType(int i) => Convert<attacktype>(i);
     [Native(Level.Close)] public blendmode? ConvertBlendMode(int i) => Convert<blendmode>(i);
     [Native(Level.Close)] public camerafield? ConvertCameraField(int i) => Convert<camerafield>(i);
-    [Native(Level.Exact, Fact = DamageTypes)] public damagetype? ConvertDamageType(int i) => Convert<damagetype>(i);
+    [Native(Level.Close)] public damagetype? ConvertDamageType(int i) => Convert<damagetype>(i);
     [Native(Level.Close)] public defensetype? ConvertDefenseType(int i) => Convert<defensetype>(i);
     [Native(Level.Close)] public dialogevent? ConvertDialogEvent(int i) => Convert<dialogevent>(i);
     [Native(Level.Close)] public effecttype? ConvertEffectType(int i) => Convert<effecttype>(i);
@@ -76,14 +76,14 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public pathingflag? ConvertPathingFlag(int i) => Convert<pathingflag>(i);
     [Native(Level.Close)] public pathingtype? ConvertPathingType(int i) => Convert<pathingtype>(i);
     [Native(Level.Close)] public placement? ConvertPlacement(int i) => Convert<placement>(i);
-    [Native(Level.Exact, Fact = ColorAndRace)] public playercolor? ConvertPlayerColor(int i) => Convert<playercolor>(i);
+    [Native(Level.Close)] public playercolor? ConvertPlayerColor(int i) => Convert<playercolor>(i);
     [Native(Level.Close)] public playerevent? ConvertPlayerEvent(int i) => Convert<playerevent>(i);
     [Native(Level.Close)] public playergameresult? ConvertPlayerGameResult(int i) => Convert<playergameresult>(i);
     [Native(Level.Close)] public playerscore? ConvertPlayerScore(int i) => Convert<playerscore>(i);
     [Native(Level.Close)] public playerslotstate? ConvertPlayerSlotState(int i) => Convert<playerslotstate>(i);
     [Native(Level.Close)] public playerstate? ConvertPlayerState(int i) => Convert<playerstate>(i);
     [Native(Level.Close)] public playerunitevent? ConvertPlayerUnitEvent(int i) => Convert<playerunitevent>(i);
-    [Native(Level.Exact, Fact = ColorAndRace)] public race? ConvertRace(int i) => Convert<race>(i);
+    [Native(Level.Close)] public race? ConvertRace(int i) => Convert<race>(i);
     [Native(Level.Close)] public racepreference? ConvertRacePref(int i) => Convert<racepreference>(i);
     [Native(Level.Close)] public raritycontrol? ConvertRarityControl(int i) => Convert<raritycontrol>(i);
     [Native(Level.Close)] public regentype? ConvertRegenType(int i) => Convert<regentype>(i);
@@ -107,6 +107,6 @@ public sealed partial class GameNatives
     [Native(Level.Close)] public unitweaponstringfield? ConvertUnitWeaponStringField(int i) => Convert<unitweaponstringfield>(i);
     [Native(Level.Close)] public version? ConvertVersion(int i) => Convert<version>(i);
     [Native(Level.Close)] public volumegroup? ConvertVolumeGroup(int i) => Convert<volumegroup>(i);
-    [Native(Level.Exact, Fact = DamageTypes)] public weapontype? ConvertWeaponType(int i) => Convert<weapontype>(i);
+    [Native(Level.Close)] public weapontype? ConvertWeaponType(int i) => Convert<weapontype>(i);
     [Native(Level.Close)] public widgetevent? ConvertWidgetEvent(int i) => Convert<widgetevent>(i);
 }

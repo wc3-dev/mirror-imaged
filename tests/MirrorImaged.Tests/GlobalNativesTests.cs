@@ -59,16 +59,18 @@ public sealed class GlobalNativesTests
     }
 
     [Fact]
-    public void A_converted_handle_is_found_by_its_type_and_value_and_takes_no_id_from_the_game()
+    public void A_converted_handle_has_a_key_of_its_own_and_takes_no_id_from_the_game()
     {
         var color = _natives.ConvertPlayerColor(0x100000)!;
+        var race = _natives.ConvertRace(0x100000)!;
         var timer = _natives.CreateTimer()!;
 
-        Assert.Same(color, _natives.Handle(typeof(playercolor), 0x100000));
-        Assert.Same(_natives.Player(0), _natives.Handle(typeof(player), 0x100000));
-        Assert.Same(_natives.ConvertRace(0x100000), _natives.Handle(typeof(race), 0x100000));
+        Assert.Equal(0x100000, _natives.Player(0)!.Id);
         Assert.Equal(0x10001C, timer.Id);
-        Assert.Same(timer, _natives.Handle(typeof(timer), timer.Id));
+        Assert.Equal(4, new[] { color.Key, race.Key, timer.Key, _natives.Player(0)!.Key }.Distinct().Count());
+        Assert.Same(color, _game.Handle(color.Key));
+        Assert.Same(race, _game.Handle(race.Key));
+        Assert.Same(timer, _game.Handle(timer.Key));
     }
 
     // facts: neutral passive is slot 27; the other slots as common.j and blizzard.j name them, not measured
@@ -90,6 +92,6 @@ public sealed class GlobalNativesTests
         var second = _natives.CreateGroup()!;
 
         Assert.Equal(first.Id + 1, second.Id);
-        Assert.Same(first, _game.Handle(first.Id));
+        Assert.Same(first, _game.Handle(first.Key));
     }
 }

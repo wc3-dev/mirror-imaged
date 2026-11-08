@@ -40,9 +40,9 @@ public sealed partial class Simulation : IDisposable
                          .OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())
-                _lua[name] = value is handle h ? new LuaHandle(h.GetType().Name, h.Id) : value;
+                _lua[name] = value is handle h ? new LuaHandle(h.GetType().Name, h.Key) : value;
             AddLuaExtras();
-            Protect(() => _lua.Run(blizzard, "blizzard.lua"));
+            _lua.Run(blizzard, "blizzard.lua");
             Protect(() => _lua.Run(script, "war3map.lua"));
             Protect(() => _lua.Call("config"));
             Protect(() => _lua.Call("main"));
@@ -64,8 +64,22 @@ public sealed partial class Simulation : IDisposable
     /// </summary>
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>.</exception>
     /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> every run needs.</exception>
-    public static Simulation Load(string path, SimulationOptions? options = null) =>
-        new(MapArchive.ReadLua(path), Blizzard.Lua(), options ?? new SimulationOptions());
+    /// <exception cref="LuaException"><c>blizzard.j</c>'s Lua doesn't load or run (<c>blizzard.lua:N: ...</c>), so no map can.</exception>
+    public static Simulation Load(string path, SimulationOptions? options = null)
+    {
+        var script = MapArchive.ReadLua(path); // first, so a missing map says so whether or not the game is installed
+        return new(script, Blizzard.Lua(), options ?? new SimulationOptions());
+    }
+
+    /// <summary>
+    /// As <see cref="Load(string, SimulationOptions?)"/>, with <paramref name="blizzard"/> run in place of the
+    /// installed game's <c>blizzard.j</c>: <c>""</c> for the tests of the runtime itself, which run without the game.
+    /// </summary>
+    internal static Simulation Load(string path, string blizzard, SimulationOptions? options = null) =>
+        new(MapArchive.ReadLua(path), blizzard, options ?? new SimulationOptions());
+
+    /// <summary>The natives the run's script calls.</summary>
+    internal GameNatives Natives => _natives;
 
     /// <summary>
     /// What the run showed, an entry each: the time in seconds, where it came from (<c>print</c>, <c>player 0</c> for

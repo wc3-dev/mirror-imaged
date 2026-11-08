@@ -18,11 +18,11 @@ public sealed partial class Simulation
             for (int i = 0; i < values.Length; i++)
                 values[i] = ToCSharp(i < args.Length ? args[i] : null, parameters[i].ParameterType, i + 1, native.Name);
             var result = native.Invoke(_natives, BindingFlags.DoNotWrapExceptions, null, values, null);
-            return native.ReturnType == typeof(void) ? [] : [result is handle h ? new LuaHandle(native.ReturnType.Name, h.Id) : result];
+            return native.ReturnType == typeof(void) ? [] : [result is handle h ? new LuaHandle(native.ReturnType.Name, h.Key) : result];
         };
     }
 
-    object? ToCSharp(object? value, Type type, int position, string function)
+    internal object? ToCSharp(object? value, Type type, int position, string function)
     {
         if (type == typeof(int)) return Integer(value, position, function);
         if (type == typeof(float))
@@ -36,8 +36,10 @@ public sealed partial class Simulation
         if (value is null) return null;
         if (type == typeof(string) && value is string s) return s;
         if (type == typeof(Action) && value is LuaFunction code) return (Action)new LuaCode(this, code.Keep()).Run;
-        if (value is LuaHandle h && typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}") is { } declared && type.IsAssignableFrom(declared))
-            return _natives.Handle(declared, h.Id);
+        // Found by its key, whatever type Lua sees it as; one of another type is refused, as the type Lua sees is.
+        if (value is LuaHandle h && typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}") is { } declared && type.IsAssignableFrom(declared)
+            && _game.Handle(h.Key) is var found && (found is null || type.IsInstanceOfType(found)))
+            return found;
         throw BadArgument(position, function, $"{(type == typeof(Action) ? "function" : type.Name.ToLowerInvariant())} expected, got {TypeName(value)}");
     }
 

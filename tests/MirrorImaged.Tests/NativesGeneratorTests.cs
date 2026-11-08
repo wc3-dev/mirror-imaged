@@ -167,6 +167,8 @@ public sealed class NativesGeneratorTests : IDisposable
     [InlineData("integer array NAME")]
     [InlineData("integer NAME")]
     [InlineData("constant integer NAME = 2 + 3")]
+    [InlineData("constant integer NAME = 2147483648")]
+    [InlineData("constant integer NAME = $100000000")]
     [InlineData("constant playercolor NAME = ConvertPlayerColor(1.5)")]
     public void A_global_the_generator_cant_write_is_an_error_that_names_it(string global)
     {

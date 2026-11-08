@@ -6,6 +6,9 @@ public partial class handle
 {
     /// <summary>The handle's id in its game.</summary>
     public int Id { get; internal set; }
+
+    /// <summary>Which handle this is in its game, unique whatever the type, by which Lua's handles find it (decisions D63).</summary>
+    public int Key { get; internal set; }
 }
 
 public sealed partial class GameNatives
@@ -22,7 +25,8 @@ public sealed partial class GameNatives
 
     T Make<T>(T handle) where T : handle
     {
-        handle.Id = _game.Add(handle);
+        handle.Id = _game.NewId();
+        handle.Key = _game.Add(handle);
         return handle;
     }
 }
