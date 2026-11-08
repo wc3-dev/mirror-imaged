@@ -156,6 +156,90 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
 - Not tried: the Wine and Xvfb route under WSL2 (the plan's second way to hide the game), as WSL has no distribution on
   this PC.
 
+## Triggers and threads
+
+Four probes, `probes/triggers.lua` to `triggers-4.lua`, run by the runner above on 3.0.1.24371, single player, 11-08;
+`triggers` and `triggers-2` twice, with the same lines both times but `triggers-2`'s wait lengths. Their lines are in
+`probes/expected`, the lines that vary from run to run marked there. Each part of a probe runs in its own timer
+callback; handle ids are read with `GetHandleId`, times with a 1000 s timer's elapsed time, to 4 places.
+
+- Threads: in a timer's callback, a trigger's condition (from an event or `TriggerEvaluate`), its actions and
+  `ExecuteFunc`'s function, `coroutine.isyieldable()` is false and `coroutine.running()` is not the main thread.
+- A wait (`TriggerSleepAction`) in a timer's callback never ends: nothing after it runs, and a `pcall` around it never
+  returns. In a condition the same, and the condition counts as false: `TriggerEvaluate` returns false at once. In an
+  action, inside a `coroutine.wrap` the script made, it never ends either, and the action never goes on.
+- A wait in a trigger's action ends: the caller of `TriggerExecute` goes on at once, the trigger's next action runs only
+  after the first has ended, waits and all, and `GetTriggeringTrigger` is the same after it. A `pcall` around a wait
+  returns after it, with an error raised after the wait.
+- Wait lengths, as the call's time, the timeout and the time it ended: in `triggers` (both runs) 0.6 + 1 at 1.7, 1.7 + 0
+  at 1.8, 1.8 + 0.05 at 2.0, 2.0 + 0.33 at 2.4, 2.4 + (-1) at 2.5, 2.5 + 0.5 at 3.1, and 0.8 + 0.5 and 0.9 + 0.25 at
+  1.3. In `triggers-2`, a thread from 2.0 sleeping 0.1, 0.1, 0.1, 0.15, 0.2, 0.25, 0.5, 0.55, 0.01, 0.09 and 0.11 ended
+  at 2.2, 2.4, 2.5, 2.8, 3.1, 3.4, 4.0, 4.6, 4.7, 4.9 and 5.125, and in the second run at 2.2, 2.4, 2.6, 2.8, 3.0, 3.4,
+  4.0, 4.625, 4.725, 4.925 and 5.125; from 2.033, 0.1, 0.2, 0 and 0.5 ended at 2.2, 2.5, 2.6 and 3.2 (second run 2.2,
+  2.4, 2.5, 3.0); from 2.25, 0, 0.3 and 1 at 2.4, 2.8 and 3.9 (3.8). So a wait ends mostly on a tenth of a second of
+  game time, at or one tenth after its timeout, and one of 0 or less took 0.1 s 5 times of 6, but not the same way every
+  run: inferred to follow the real clock or the game's turns.
+- `PolledWait(1)` took 1.2 s in `triggers` and 1.1 s in both runs of `triggers-2`; `PolledWait(0.5)` 0.6 s and
+  `PolledWait(3)` 3.025 and 3.125 s.
+- `TriggerExecuteWait`, from a trigger's action, doesn't wait for the trigger's waits, also after
+  `TriggerWaitOnSleeps(t, true)`, which `IsTriggerWaitOnSleeps` reads back.
+- A new trigger is enabled, `IsTriggerWaitOnSleeps` is false and both counts are 0. `TriggerEvaluate` counts nothing,
+  with no, passing or failing conditions. `TriggerExecute` counts an evaluation and a run, before the actions run
+  (`GetTriggerExecCount` reads 1 in the first). An event counts an evaluation, also while the trigger is disabled, then
+  a run when its conditions pass. `ResetTrigger` sets both to 0.
+- A disabled trigger's events run no condition and no action; `TriggerExecute` and `TriggerEvaluate` run it as usual.
+- `TriggerEvaluate` with no condition is true. Every condition runs, in order, also after one has failed (w3ts's claim
+  in the workspace's facts); one that raises fails, and the next runs. A condition passes on `true` and on a number
+  other than 0 (1, 0.5, -1), and fails on nothing, nil, false, 0, `""`, `"x"`, `"1"` and a table; only the first result
+  counts (`return false, true` fails).
+- Actions run in the order added; an error ends only its own action. A run takes the actions the trigger has as it
+  starts: one removed or cleared during it, by itself or an earlier action, still runs in it, and one added during it,
+  by an action or while the run waits, doesn't run in it (the next run wasn't looked at). `TriggerRemoveCondition` and
+  `TriggerClearConditions` take a condition out. An action that removes itself runs that time; so does a condition
+  (the workspace's facts, "Errors and callbacks", 09-29, for both; the action also in `triggers`).
+- `Condition(f)` gives a new handle every call, as the workspace's facts say of `Condition` and `Filter` (10-12; only
+  `Condition` here). `Condition(nil)` and `Filter(nil)` give one handle, the same for both and every call, typed as
+  each declares (`conditionfunc: `, `filterfunc: `, `==` between them true).
+- `And` runs its second operand only when the first passes, `Or` only when the first fails. A nil operand is false:
+  `And(nil, x)` doesn't run x, `Or(nil, x)` does. `Not(nil)`, `And(nil, nil)` and `TriggerAddCondition(t, nil)` fail.
+  `Condition(nil)` alone passes, `Not(Condition(nil))` passes and `Not(Not(Condition(nil)))` fails; `And(Condition(nil),
+  x)` fails whatever x, `Or(Condition(nil), false)` fails, and `And(true, Condition(nil))` passes.
+- A destroyed `Condition` or `Filter` no longer runs and fails where it was added; as `Not`'s operand, `Not` passes. A
+  destroyed `And` still runs both operands and passes. In `triggers`, a condition destroyed while a trigger had it, then
+  a new `Condition` added to the trigger and taken out again with `TriggerRemoveCondition`: the trigger still ran the
+  new one, through the old one's place, as if the destroyed handle had been reused (inferred).
+- `GetTriggeringTrigger` is the trigger in its conditions and actions, nil in a timer's callback, and the outer trigger
+  again after a `TriggerExecute` inside an action. `GetTriggerEventId` outside an event is a handle with id 0, typed
+  `eventid`, equal (`==`) to `EVENT_GAME_VICTORY`; in a timer event or a timer's expiry event it has id 4 and equals
+  `EVENT_GAME_TIMER_EXPIRED`. `TriggerExecute` keeps its caller's event and names the trigger it runs; `ExecuteFunc`
+  keeps both, the trigger and the event, and after a wait in it the trigger (the event wasn't read there).
+- `==` between two handles holds when they have the same id, whatever their types: a unit and `GetTriggerWidget()` in
+  its death event (`widget: ` and `unit: `, not `rawequal`), and `GetTriggerEventId()` with id 4 and
+  `EVENT_GAME_TIMER_EXPIRED`, `ConvertGameEvent(4)`, `ConvertLimitOp(4)` and `ConvertPlayerColor(4)`.
+- `TriggerRegisterTimerEvent` fires after its timeout, and at least 0.01 s: 0, 0.001, 0.005 and 0.01 each fired 0.01 s
+  after; periodic with 0 it fired 10 times in 0.1 s. In it `GetExpiredTimer` is nil. Events due together fire in the
+  order registered, and a trigger registered twice fires twice. A periodic event registered at 1.0 for 0.5 s and a timer
+  started at 2.0 for 1 s, both due at 3.0: the event ran first.
+- `TriggerRegisterTimerExpireEvent` fires before the timer's callback (as the workspace's facts say), in the order
+  registered, twice for a trigger registered twice, with `GetExpiredTimer` the timer.
+- `TriggerRegisterVariableEvent(t, "MirrorProbeVar", GREATER_THAN, 5)` never fired when the script set the global from 0
+  to 10.
+- `GetIntegerGameState` of `GAME_STATE_DIVINE_INTERVENTION` and `GAME_STATE_DISCONNECTED` is 0 at the start and reads
+  back what `SetIntegerGameState` set. A set that changes the value to one that passes the comparison fires the state's
+  event inside the call; setting the same value again fires nothing; `NOT_EQUAL` fires on every change, whatever the
+  value. In it `GetTriggerEventId` has id -255 for `LESS_THAN` up to -250 for `NOT_EQUAL` (the comparison less 255), so
+  it isn't `EVENT_GAME_STATE_LIMIT`, and `GetEventGameState` is the state, typed `gamestate`.
+- The time of day (suspended, limit 12), set to 20, then 10, 11, 12, 12, 13, 12, 11, 10 and 14: the events read the
+  time inside them as `LESS_THAN` and `LESS_THAN_OR_EQUAL` 10.0 and 12.0, `EQUAL` 12.0 twice, `GREATER_THAN_OR_EQUAL`
+  and `GREATER_THAN` 12.0, 13.0 and 14.0, and `NOT_EQUAL` fired never; which sets fired them is inferred from those
+  reads (at 10 and the first 12, and so on), as the probe logged no set. The event's id is 3, `EVENT_GAME_STATE_LIMIT`.
+- `BlzTriggerIsRunning` is false for a new trigger, true in its action and while a run of it waits, also for two runs at
+  once, and false once they have ended (read 1 s later), and in its condition under `TriggerEvaluate`.
+  `BlzTriggerInterrupt` on a trigger whose run waits: that run never goes on, nor does its next action, and
+  `BlzTriggerIsRunning` still reads true right after (false 1 s later). Called in the trigger's own action: the rest of
+  that action runs, and still reads it running, but the next action doesn't run. On a trigger with no run it does
+  nothing seen.
+
 ## Strings, numbers and hashtables
 
 The probes `strings`, `hashtables`, `strings-2` to `strings-6` in `probes/`, their game lines in

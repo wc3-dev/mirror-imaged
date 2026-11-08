@@ -26,6 +26,9 @@ internal static unsafe partial class Native
     /// <summary>What a C# function returns to sandbox.c for an error that halts the state.</summary>
     public const int Halts = -2;
 
+    /// <summary>What a C# function returns to sandbox.c to make the Lua thread calling it yield.</summary>
+    public const int Yields = -3;
+
     /// <summary>
     /// A value crossing to C (sandbox.c's <c>ManagedValue</c>); the string is not owned. A handle is its id and its
     /// type's name.
@@ -56,8 +59,11 @@ internal static unsafe partial class Native
     [LibraryImport(Lib)] public static partial long* mirror_clockms(nint l);
     [LibraryImport(Lib)] public static partial void mirror_setcallback(delegate* unmanaged<nint, Value**, int> f);
     [LibraryImport(Lib)] public static partial int mirror_pcall(nint l, int args, int results);
-    [LibraryImport(Lib)] public static partial int mirror_callref(nint l, int reference, Value* args, int n);
     [LibraryImport(Lib)] public static partial int mirror_unref(nint l, int reference);
+    [LibraryImport(Lib)] public static partial int mirror_resume(nint l, int thread, int* yielded);
+
+    [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mirror_start(nint l, string? name, int reference, int* thread);
 
     [LibraryImport(Lib, StringMarshalling = StringMarshalling.Utf8)]
     public static partial int mirror_call(nint l, string name, Value* args, int n);

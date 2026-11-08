@@ -1,0 +1,15 @@
+# probes/triggers-4.lua on 3.0.1.24371, single player, 11-08: the game's lines. One run; an earlier version of the probe, the same but with these lines in its log, gave w done 0.4 twice and t after wait 0.6.
+# A line starting "~ " varies from run to run (a wait's length, decisions D71): each {t} in it stands for a
+# number, the rest must match exactly, and the run may give it anywhere. The other lines come in order, exactly.
+# Lines starting "# " are notes.
+new false
+t waiting true t in action true
+u interrupted true
+v false
+w twice true
+c false
+~ w done {t}
+~ w done {t}
+~ t after wait {t} true
+after false false false
+log t in action true,u start,v start,v after interrupt true,c condition false

@@ -46,11 +46,12 @@ public sealed partial class Simulation
             };
         if (value is null) return null;
         if (type == typeof(Action) && value is LuaFunction code) return (Action)new LuaCode(this, code.Keep()).Run;
+        if (type == typeof(Func<bool>) && value is LuaFunction condition) return (Func<bool>)new LuaCode(this, condition.Keep()).Evaluate;
         // Found by its key, whatever type Lua sees it as; one of another type is refused, as the type Lua sees is.
         if (value is LuaHandle h && typeof(handle).Assembly.GetType($"{typeof(handle).Namespace}.{h.Type}") is { } declared && type.IsAssignableFrom(declared)
             && _game.Handle(h.Key) is var found && (found is null || type.IsInstanceOfType(found)))
             return found;
-        throw BadArgument(position, function, $"{(type == typeof(Action) ? "function" : type.Name.ToLowerInvariant())} expected, got {TypeName(value)}");
+        throw BadArgument(position, function, $"{(type.IsSubclassOf(typeof(Delegate)) ? "function" : type.Name.ToLowerInvariant())} expected, got {TypeName(value)}");
     }
 
     // A whole number held as a float is taken (facts, "Lua runtime").
