@@ -85,6 +85,21 @@ public sealed class LuaThreadTests : IDisposable
         Assert.Equal(["ran on"], thread.Results);
     }
 
+    // as stock Lua's: coroutine.status, which isn't wrapped, says the same for its argument
+    [Fact]
+    public void Coroutine_resume_checks_its_argument_as_stock_lua_does()
+    {
+        Assert.Equal([
+            false, "f.lua:1: bad argument #1 to 'resume' (thread expected)",
+            false, "f.lua:2: bad argument #1 to 'resume' (thread expected)",
+            false, "f.lua:3: bad argument #1 to 'status' (thread expected)",
+        ], _lua.Run("""
+            local a, b = pcall(function() coroutine.resume(5) end)
+            local c, d = pcall(function() coroutine.resume() end)
+            return a, b, c, d, pcall(function() coroutine.status(5) end)
+            """, "f.lua"));
+    }
+
     [Fact]
     public void A_wait_in_the_main_thread_raises_luas_error()
     {

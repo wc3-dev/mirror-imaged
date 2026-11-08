@@ -433,6 +433,7 @@ public sealed class TriggerTests : IDisposable
         Assert.Equal(["0.000 start", "0.000 after", "0.600 slow done"], Printed(simulation));
     }
 
+    // a nil name is refused before the native runs, as every string parameter (D80)
     [Fact]
     public void ExecuteFunc_runs_a_global_function_in_a_new_thread_that_can_wait()
     {
@@ -446,6 +447,7 @@ public sealed class TriggerTests : IDisposable
             TriggerAddAction(t, function() ExecuteFunc("Later") print("caller") end)
             TriggerExecute(t)
             ExecuteFunc("Missing")
+            ExecuteFunc(nil)
             """);
 
         simulation.Advance(TimeSpan.FromSeconds(1));
@@ -454,6 +456,7 @@ public sealed class TriggerTests : IDisposable
             "0.000 func\ttrue\tfalse",
             "0.000 caller",
             "0.000 error: attempt to call a nil value",
+            "0.000 error: war3map.lua:12: bad argument #1 to 'ExecuteFunc' (string expected, got nil)",
             "0.300 func after\ttrue",
         ], Printed(simulation));
     }
@@ -684,12 +687,13 @@ public sealed class TriggerTests : IDisposable
         Assert.Equal(["0.700 slept\t2"], Printed(simulation));
     }
 
-    // a wait whose end is past the clock's range never ends, and nothing hangs working it out
+    // a wait of 1e15 s ends 31 million years on, just inside the clock's range, and one of 1e30 s or math.huge past it:
+    // none ends in the run, and nothing hangs working out when
     [Theory]
     [InlineData("1e15")]
     [InlineData("1e30")]
     [InlineData("math.huge")]
-    public void A_wait_past_the_clocks_range_never_ends(string timeout)
+    public void A_wait_longer_than_the_run_never_ends_and_nothing_hangs(string timeout)
     {
         using var simulation = Load($$"""
             local t = CreateTrigger()
@@ -754,6 +758,24 @@ public sealed class TriggerTests : IDisposable
             "0.600 t after wait\ttrue",
             "1.000 after\tfalse\tfalse\tu start,v start,v after interrupt true,c condition false",
         ], Printed(simulation));
+    }
+
+    // decisions D77, not measured: an action that interrupts its own trigger and then waits stops at its wait's end
+    [Fact]
+    public void An_action_that_interrupts_its_trigger_and_then_waits_stops_at_its_waits_end()
+    {
+        using var simulation = Load("""
+            local v = CreateTrigger()
+            TriggerAddAction(v, function() print("start") BlzTriggerInterrupt(v) TriggerSleepAction(0.2) print("never") end)
+            TriggerAddAction(v, function() print("never either") end)
+            TriggerExecute(v)
+            TimerStart(CreateTimer(), 0.25, false, function() print("running", BlzTriggerIsRunning(v)) end)
+            TimerStart(CreateTimer(), 0.5, false, function() print("running", BlzTriggerIsRunning(v)) end)
+            """);
+
+        simulation.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(["0.000 start", "0.250 running\ttrue", "0.500 running\tfalse"], Printed(simulation));
     }
 
     [Fact]

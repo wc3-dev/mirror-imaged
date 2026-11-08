@@ -433,8 +433,11 @@ in `probes/expected`.
   = 2.0 (1.9), 0.8 + 0.5 = 1.3 (1.4), 0.9 + 0.25 = 1.3 (1.2), 2.4 + 0.1 = 2.5 (2.6), 2.5 + 0.15 = 2.8 (2.7), 4.7 + 0.09
   = 4.9 (4.8), 4.9 + 0.11 = 5.125 (5.1), 2.25 + 0 = 2.4 (2.3), 0.6 + 0.5 = 1.1 (1.2). Rounding the timeout to tenths and
   adding one matched 20; the rule is the simplest to state. A wait never ends in the step it started in, so
-  `PolledWait`'s loop always moves the clock; `PolledWait(1)` takes 1.1 s, as twice in the game. W1-8 compares the
-  probes with the varying lines marked (`docs/tasks/wave-1.md`).
+  `PolledWait`'s loop always moves the clock; `PolledWait(1)` takes 1.1 s, as twice in the game. As wait lengths vary,
+  `probes/expected/<probe>.txt` marks the lines they reach: a line starting `# ` is a note; one starting `~ ` varies
+  from run to run, each `{t}` in it standing for a number and the rest exact, and a run gives it once, anywhere, as its
+  time decides its place; every other line comes in order, exactly; a `~ ` line without a `{t}` is refused. W1-8's
+  comparison reads the same format (`docs/tasks/wave-1.md`); `ExpectedLines` in `GameProbeTests.cs` reads it now.
 - **D72. `==` holds for the same handle seen as two types:** each handle type's metatable has an `__eq` comparing the
   handles' keys (D63), so `GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED` and a widget equal to its unit, as the game
   measures; `rawequal` stays false (D41). Called straight from the metatable with anything but two handles, it answers
@@ -470,9 +473,11 @@ in `probes/expected`.
   `Fire` and the id 3; until then `TriggerRegisterGameStateEvent` is Close. `TriggerRegisterGameEvent` is W1-9's too.
 - **D77. `BlzTriggerIsRunning` and `BlzTriggerInterrupt`** (probe `triggers-4`): a trigger is running while a run of its
   actions hasn't ended, waiting or not; `TriggerEvaluate`'s conditions are no run. An interrupt stops the runs started
-  before it: the action running goes on to its end, but no other action runs, and a run that waits stops at its wait's
-  end, so it reads running until then. A run started after the interrupt runs as usual (not measured). After W1-2, with
-  W1-3 and W1-4 merged first: 93 Exact, 265 Close, 7 Recorded, 1,470 Missing.
+  before it: the action running goes on, but no other action runs, and a run that waits stops at its wait's end, so it
+  reads running until then. When the action running interrupts its own trigger and then waits, the wait wins: the run
+  stops at that wait's end, and the rest of the action never runs (not measured; the probe's action ended without a
+  wait). A run started after the interrupt runs as usual (not measured). After W1-2, with W1-3 and W1-4 merged first: 93
+  Exact, 265 Close, 7 Recorded, 1,470 Missing.
 
 ### Hashtables, strings, maths and randomness (W1-3)
 

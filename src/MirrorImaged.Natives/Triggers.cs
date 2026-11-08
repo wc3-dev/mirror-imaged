@@ -134,8 +134,8 @@ public sealed partial class GameNatives
     public bool BlzTriggerIsRunning(trigger? whichTrigger) => whichTrigger?.Running > 0;
 
     /// <summary>
-    /// Stops its runs: the action running goes on to its end, but no other action runs, and a run that waits never goes
-    /// on after its wait.
+    /// Stops its runs: the action running goes on, but no other action runs, and a run that waits never goes on after
+    /// its wait, also one the action running starts after the interrupt (decisions D77).
     /// </summary>
     [Native(Level.Exact, Fact = Probe4)]
     public void BlzTriggerInterrupt(trigger? whichTrigger)
@@ -280,7 +280,7 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = Probe2)]
     public void ExecuteFunc(string? funcName)
     {
-        if (funcName is not null && Threads is { } threads) RunThread(Current, null, [() => threads.Start(funcName)]);
+        if (Threads is { } threads) RunThread(Current, null, [() => threads.Start(funcName!)]);
     }
 
     /// <summary>
@@ -491,7 +491,7 @@ public sealed partial class GameNatives
     }
 
     // A thread: its steps in turn, each until it ends or waits; a wait goes on at the step WaitEnd gives. Interrupted, it
-    // stops after the step it is in, or at its wait's end (probe triggers-4)
+    // stops after the step it is in, or at the end of the wait it is in or starts next (probe triggers-4; decisions D77)
     void RunThread(Firing firing, trigger? owner, Func<IScriptThread?>[] steps)
     {
         if (owner is not null) owner.Running++;

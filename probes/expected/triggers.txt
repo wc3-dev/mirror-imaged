@@ -1,6 +1,7 @@
 # probes/triggers.lua on 3.0.1.24371, single player, 11-08: the game's lines. Two runs.
-# A line "~ label | line" varies from run to run (a wait's length, decisions D71): a run is compared without the
-# lines that start with a label, and must give one such line for each. Lines starting "# " are notes.
+# A line starting "~ " varies from run to run (a wait's length, decisions D71): each {t} in it stands for a
+# number, the rest must match exactly, and the run may give it anywhere. The other lines come in order, exactly.
+# Lines starting "# " are notes.
 timer thread false false trig nil event 0
 basics
 new true false 0 0
@@ -46,22 +47,22 @@ game state
 state 1.2000 0 -253
 state set 1.2000 1
 gated condition 1.2501 false false true 4
-~ func after | func after 1.2999
-~ slow done | slow done 1.2999
+~ func after {t}
+~ slow done {t}
 periodic 1.5001 4 true nil 1 1
-~ w 1 | w 1 1.7000 true
+~ w 1 {t} true
 expire trigger 1.7501 true 4
 expire callback 1.7501 false false
-~ w 0 | w 0 1.7999
-~ w 0.05 | w 0.05 1.9999
+~ w 0 {t}
+~ w 0.05 {t}
 periodic 2.0001 4 true nil 2 2
-~ w 0.33 | w 0.33 2.3999
-~ w -1 | w -1 2.4999
+~ w 0.33 {t}
+~ w -1 {t}
 enable 3.0001
-~ w pcall | w pcall 3.0999 false war3map.lua:175: after
+~ w pcall {t} false war3map.lua:175: after
 periodic 3.5001 4 true nil 5 3
-~ w polled | w polled 4.2999
-~ w second action | w second action 4.2999
+~ w polled {t}
+~ w second action {t}
 timer sleep
 timer bare sleep
 late 

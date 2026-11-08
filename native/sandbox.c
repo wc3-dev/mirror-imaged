@@ -86,13 +86,12 @@ static int coisyieldable (lua_State *L) {
 
 /* coroutine.resume, which refuses a thread of the natives' own: only they run it on after its wait (not measured) */
 static int coresume (lua_State *L) {
-  int own = 0;
-  if (lua_type(L, 1) == LUA_TTHREAD) {
-    lua_getfield(L, LUA_REGISTRYINDEX, THREADS);
-    lua_pushvalue(L, 1);
-    own = lua_rawget(L, -2) != LUA_TNIL;
-    lua_pop(L, 2);
-  }
+  int own;
+  luaL_argcheck(L, lua_type(L, 1) == LUA_TTHREAD, 1, "thread expected");  /* as stock Lua's, at the caller's line */
+  lua_getfield(L, LUA_REGISTRYINDEX, THREADS);
+  lua_pushvalue(L, 1);
+  own = lua_rawget(L, -2) != LUA_TNIL;
+  lua_pop(L, 2);
   if (own) {
     lua_pushboolean(L, 0);
     lua_pushliteral(L, "cannot resume non-suspended coroutine");

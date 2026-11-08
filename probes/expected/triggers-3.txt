@@ -1,6 +1,7 @@
-# probes/triggers-3.lua on 3.0.1.24371, single player, 11-08: the game's lines. One run, and the same in the test run after.
-# A line "~ label | line" varies from run to run (a wait's length, decisions D71): a run is compared without the
-# lines that start with a label, and must give one such line for each. Lines starting "# " are notes.
+# probes/triggers-3.lua on 3.0.1.24371, single player, 11-08: the game's lines. One run, and the same in the test runs after.
+# A line starting "~ " varies from run to run (a wait's length, decisions D71): each {t} in it stands for a
+# number, the rest must match exactly, and the run may give it anywhere. The other lines come in order, exactly.
+# Lines starting "# " are notes.
 start 0 0
 divine LESS_THAN 0:-255,1:-255,1:-255,0:-255
 divine LESS_THAN_OR_EQUAL 0:-254,1:-254,2:-254,2:-254,1:-254,0:-254
