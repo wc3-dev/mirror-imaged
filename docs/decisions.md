@@ -399,6 +399,86 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   JASS's integer division is Lua's `//`, which floors where JASS cuts toward zero. What the game's own Lua gives for
   these is not measured. After W1-1: 2 Exact, 108 Close, 2 Recorded, 1,723 Missing.
 
+### Triggers and threads (W1-2)
+
+The measurements are four probes, `probes/triggers*.lua`, in `docs/facts.md`, "Triggers and threads", with their lines
+in `probes/expected`.
+
+- **D70. The script's callbacks run in Lua threads of their own,** as the game's do (not the main thread,
+  `coroutine.isyieldable()` false): a timer's callback, a condition or filter, a trigger's action and `ExecuteFunc`'s
+  function each start a thread (`LuaFunction.Start`, sandbox.c's `mirror_start` and `mirror_resume`). The script can't
+  yield one: there sandbox.c's `coroutine.yield` raises "attempt to yield across a C-call boundary" and
+  `coroutine.isyieldable` is false, while a coroutine the script makes yields as usual. Nor can it run one on:
+  `coroutine.resume` of one answers false, "cannot resume non-suspended coroutine" (not measured; the game's threads
+  aren't Lua's to resume). A wait is the only yield: a C# function asks for it (`LuaState.Yield`), and the trampoline
+  yields the calling thread once C# has returned, so `pcall` and `xpcall` across it keep working (facts). A trigger's
+  actions and `ExecuteFunc`'s function are run on after their wait; a timer's callback or a condition that waits is let
+  go of, so it never goes on, as measured. The natives know no Lua: a function the script gave them is the target of
+  their delegate, an `IScriptFunction` that starts it in a thread; `IScriptThreads` starts a global by name and makes
+  the caller wait; an `IScriptThread` waiting is run on or let go of. Not matched, as the game's threads are stacks of
+  their own rather than Lua coroutines: a wait past a C function (a `table.sort` comparator in an action) raises here
+  and waits in the game, and a wait in a coroutine the script made inside an action yields that coroutine here and ends
+  the action in the game. A wait in `main` raises Lua's "attempt to yield from outside a coroutine" (not measured). The
+  state now makes a table for its threads and wraps `coroutine.resume`, which moves the addresses `LuaDeterminismTests`
+  pins. Left to wave 2 (W2-6, `docs/tasks/wave-2.md`): `ForGroup`, `ForForce`, `Enum*` and filter callbacks, measured
+  only as far as timers, conditions, actions and `ExecuteFunc` go; and to wave 7 (`docs/tasks/later.md`): `common.ai`'s
+  threads.
+- **D71. A wait ends at the first tenth of a second of game time after its timeout has passed,** counted in steps from
+  the start; a timeout of 0 or less takes 0.1 s, and one past the clock's range never ends. Close: the game's waits end
+  mostly on that grid, at or one tenth after the timeout, but differ between runs (facts). Of the 28 waits measured in
+  `triggers` and `triggers-2`'s first run, as call + timeout = the game's end, the rule matches 19: 0.6 + 1 = 1.7, 1.7 +
+  0 = 1.8, 2.0 + 0.33 = 2.4, 2.4 + (-1) = 2.5, 2.5 + 0.5 = 3.1, 2.0 + 0.1 = 2.2, 2.2 + 0.1 = 2.4, 2.8 + 0.2 = 3.1, 3.1 +
+  0.25 = 3.4, 3.4 + 0.5 = 4.0, 4.0 + 0.55 = 4.6, 4.6 + 0.01 = 4.7, 2.033 + 0.1 = 2.2, 2.2 + 0.2 = 2.5, 2.5 + 0 = 2.6,
+  2.6 + 0.5 = 3.2, 2.4 + 0.3 = 2.8, 2.8 + 1 = 3.9, 0.8 + 0.2 = 1.1; and misses 9, the rule's end in brackets: 1.8 + 0.05
+  = 2.0 (1.9), 0.8 + 0.5 = 1.3 (1.4), 0.9 + 0.25 = 1.3 (1.2), 2.4 + 0.1 = 2.5 (2.6), 2.5 + 0.15 = 2.8 (2.7), 4.7 + 0.09
+  = 4.9 (4.8), 4.9 + 0.11 = 5.125 (5.1), 2.25 + 0 = 2.4 (2.3), 0.6 + 0.5 = 1.1 (1.2). Rounding the timeout to tenths and
+  adding one matched 20; the rule is the simplest to state. A wait never ends in the step it started in, so
+  `PolledWait`'s loop always moves the clock; `PolledWait(1)` takes 1.1 s, as twice in the game. As wait lengths vary,
+  `probes/expected/<probe>.txt` marks the lines they reach: a line starting `# ` is a note; one starting `~ ` varies
+  from run to run, each `{t}` in it standing for a number and the rest exact, and a run gives it once, anywhere, as its
+  time decides its place; every other line comes in order, exactly; a `~ ` line without a `{t}` is refused. W1-8's
+  comparison reads the same format (`docs/tasks/wave-1.md`); `ExpectedLines` in `GameProbeTests.cs` reads it now.
+- **D72. `==` holds for the same handle seen as two types:** each handle type's metatable has an `__eq` comparing the
+  handles' keys (D63), so `GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED` and a widget equal to its unit, as the game
+  measures; `rawequal` stays false (D41). Called straight from the metatable with anything but two handles, it answers
+  false. The game's `==` also holds between different handles with the same id (`GetTriggerEventId()` with id 4 `==`
+  `ConvertPlayerColor(4)`; `Condition(nil) == Filter(nil)`), which needs the id in the userdata: left to W1-6
+  (`docs/tasks/wave-1.md`), so `GetTriggerEventId`, `Condition` and `Filter` are Close until then.
+- **D73. Boolexprs:** `And` and `Or` run their second operand only when needed; a nil operand, `Not(nil)` and a nil
+  condition are false; a destroyed `Condition` or `Filter` fails without running, while a destroyed `And`, `Or` or `Not`
+  still runs. `Condition(nil)` and `Filter(nil)` each give one handle every call, which passes as a trigger's own
+  condition and is false in an `And`, `Or` or `Not`: this matches every measured case but one, `And(true,
+  Condition(nil))`, true in the game. In the game the two are one handle; here, as C# types, two. In `triggers` a
+  condition destroyed while a trigger had it, then a new one added and removed, still ran the new one through the old
+  one's place (`ran removed`; handle id reuse inferred), which isn't modelled: `TriggerAddCondition`,
+  `TriggerRemoveCondition`, `DestroyCondition` and `TriggerEvaluate` are Close for it, left to W1-6 with the ids.
+- **D74. A run takes the trigger's actions as it starts** (facts), so an action removed while a run goes on, by
+  `TriggerRemoveAction`, `TriggerClearActions` or `DestroyTrigger`, is let go of only once the trigger's last running
+  thread has ended. `DestroyTrigger` lets go of its events too and lets a waiting run go on: the claim that it breaks
+  the game's handle stack isn't modelled.
+- **D75. The event responses read the running thread's firing:** its trigger, its event id and its game state, kept
+  across its waits. An event sets all three; `TriggerExecute` keeps the caller's event and names its trigger;
+  `TriggerEvaluate` names the trigger for its conditions; `ExecuteFunc` keeps the caller's (after its wait the game read
+  only the trigger: the event kept there too is the model). Outside an event the event id is `ConvertGameEvent(0)` seen
+  as `eventid` (the game's has id 0). Units, players and the other responses join it in their tasks.
+- **D76. Events here:** timer events schedule themselves, not through a timer handle, so `GetExpiredTimer` is nil in
+  them, as measured; a timeout under 0.01 s is 0.01 s. Among what falls due in one step, a timer event keeps the place
+  it got when registered, every time (`Game.At` with a place), which both measured ties fit: a periodic event registered
+  before a timer started later ran first when both fell due (`triggers`, at 3.0), and a periodic 0 s event fired 10
+  times in 0.1 s, before the 0.1 s timer started after it (`triggers-2`); so it is Exact. Whether timers keep such a
+  place too, against D45's queue order, is W1-8's to probe. Variable events never fire, as in the game for a Lua global.
+  Integer game states (divine intervention, disconnected; W1-4's `GameState.cs`) fire their events on a change as
+  measured, with the event id the comparison's value less 255 (`ConvertGameEvent(-253)` for `EQUAL`). The time of day's
+  events are W1-9's, with W1-4's clock: their registrations are kept in `_stateEvents`, for the clock to fire with
+  `Fire` and the id 3; until then `TriggerRegisterGameStateEvent` is Close. `TriggerRegisterGameEvent` is W1-9's too.
+- **D77. `BlzTriggerIsRunning` and `BlzTriggerInterrupt`** (probe `triggers-4`): a trigger is running while a run of its
+  actions hasn't ended, waiting or not; `TriggerEvaluate`'s conditions are no run. An interrupt stops the runs started
+  before it: the action running goes on, but no other action runs, and a run that waits stops at its wait's end, so it
+  reads running until then. When the action running interrupts its own trigger and then waits, the wait wins: the run
+  stops at that wait's end, and the rest of the action never runs (not measured; the probe's action ended without a
+  wait). A run started after the interrupt runs as usual (not measured). After W1-2, with W1-3 and W1-4 merged first: 93
+  Exact, 265 Close, 7 Recorded, 1,470 Missing.
+
 ### Hashtables, strings, maths and randomness (W1-3)
 
 The facts are `docs/facts.md`, "Strings, numbers and hashtables": four probes in `probes/`, kept so W1-8 can compare

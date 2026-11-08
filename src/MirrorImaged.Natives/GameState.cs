@@ -74,14 +74,21 @@ public sealed partial class GameNatives
         _daySuspended = b;
     }
 
-    [Native(Level.Close)]
+    /// <summary>0 at the start.</summary>
+    [Native(Level.Exact, Fact = Probe3)]
     public int GetIntegerGameState(igamestate? whichIntegerGameState) =>
         whichIntegerGameState is null ? 0 : _integerStates.GetValueOrDefault(whichIntegerGameState.Id);
 
-    [Native(Level.Close)]
+    /// <summary>
+    /// Kept and read back; a change fires the state's events (TriggerRegisterGameStateEvent). What the game does with
+    /// divine intervention or the disconnected state isn't simulated.
+    /// </summary>
+    [Native(Level.Exact, Fact = Probe3)]
     public void SetIntegerGameState(igamestate? whichIntegerGameState, int value)
     {
-        if (whichIntegerGameState is not null) _integerStates[whichIntegerGameState.Id] = value;
+        if (whichIntegerGameState is null || GetIntegerGameState(whichIntegerGameState) == value) return;
+        _integerStates[whichIntegerGameState.Id] = value;
+        IntegerStateChanged(whichIntegerGameState, value);
     }
 
     /// <summary>

@@ -1,0 +1,70 @@
+# probes/triggers.lua on 3.0.1.24371, single player, 11-08: the game's lines. Two runs.
+# A line starting "~ " varies from run to run (a wait's length, decisions D71): each {t} in it stands for a
+# number, the rest must match exactly, and the run may give it anywhere. The other lines come in order, exactly.
+# Lines starting "# " are notes.
+timer thread false false trig nil event 0
+basics
+new true false 0 0
+evaluate empty true 0 0
+execute empty 1 1
+reset 0 0
+conditions
+conditions false
+ran a,b,e,d
+values nothing=false,nil=false,zero=false,one=true,empty=false,true=true
+boolexprs
+handles false 1048736 1048736 1048737 1048738
+boolexpr false
+ran f1,t2,t3,t4,f5
+nil operands false false false false
+destroyed condition false
+ran removed
+actions
+ran a1,a2 1,a3,a2 2,a3
+disabled false true 3
+ran a2 3,a3,disabled condition
+nested outer false false true event 0,inner true,back true
+condition thread
+in condition false false true 0
+condition evaluated false 0.5001
+waits
+w before 0.6000
+w start 0.6000 false false
+w after execute 0.6000
+wait in a coroutine
+execute wait
+waiter start 0.8000
+waiter after 0.8000
+waiter left 0.8000
+execute func
+func false false 0.9000 trig nil
+after ExecuteFunc 0.9000
+timer events
+zero event 1.0100
+variable
+variable set 1.1000
+game state
+state 1.2000 0 -253
+state set 1.2000 1
+gated condition 1.2501 false false true 4
+~ func after {t}
+~ slow done {t}
+periodic 1.5001 4 true nil 1 1
+~ w 1 {t} true
+expire trigger 1.7501 true 4
+expire callback 1.7501 false false
+~ w 0 {t}
+~ w 0.05 {t}
+periodic 2.0001 4 true nil 2 2
+~ w 0.33 {t}
+~ w -1 {t}
+enable 3.0001
+~ w pcall {t} false war3map.lua:175: after
+periodic 3.5001 4 true nil 5 3
+~ w polled {t}
+~ w second action {t}
+timer sleep
+timer bare sleep
+late 
+at end 10 13 15 13
+# Run 2, the same but for its varying lines: func after 1.2999; slow done 1.2999; w 1 1.7000 true; w 0 1.7999; w 0.05 1.9999; w 0.33 2.3999; w -1 2.4999; w pcall 3.0999 false war3map.lua:175: after; w polled 4.2999; w second action 4.2999.

@@ -54,9 +54,19 @@ public sealed class Game
 
     /// <summary>
     /// Runs <paramref name="action"/> when the clock reaches <paramref name="step"/>, or in this step if that has
-    /// passed, after everything already due then.
+    /// passed, after everything already due then. Answers the place it got, for <see cref="At(long, long, Action)"/>.
     /// </summary>
-    public void At(long step, Action action) => _due.Enqueue(action, (Math.Max(step, Step), _scheduled++));
+    public long At(long step, Action action)
+    {
+        At(step, _scheduled, action);
+        return _scheduled++;
+    }
+
+    /// <summary>
+    /// As <see cref="At(long, Action)"/>, in the place an earlier call got among what falls due in one step: what
+    /// comes again, such as a periodic timer event, keeps the place it got first.
+    /// </summary>
+    public void At(long step, long place, Action action) => _due.Enqueue(action, (Math.Max(step, Step), place));
 
     /// <summary>Whether the game is paused: the clock doesn't move.</summary>
     public bool Paused { get; set; }
