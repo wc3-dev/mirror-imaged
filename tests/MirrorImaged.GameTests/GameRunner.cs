@@ -60,7 +60,10 @@ public sealed class GameRunner(string game, string documents, string maps)
 
     static readonly TimeSpan LongestTurnWait = TimeSpan.FromMinutes(10);
 
-    const string AtLoginSays = "needs Sven: the game never got past its Battle.net login (it didn't open the account)";
+    const string AtLoginSays =
+        "needs Sven: the game never got past its Battle.net login (it didn't open the account). It logs in online at every " +
+        "launch (docs/facts.md), so first check that this process can reach the internet; if it can, look at the game in a " +
+        "normal window to see what it asks";
 
     /// <summary>The game's executable.</summary>
     public string Game => game;

@@ -61,9 +61,10 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
 (W0-4) unless marked.
 
 - Login: a `-loadfile` launch logs in to Battle.net by itself, with nothing typed (Sven, 11-08, had seen a login prompt
-  that morning). Seen in the pictures of every run in a normal window (`PrintWindow`, 2 so far): a door, then a "Login
-  Queue" box ("The Blizzard servers are busy right now! You're position 1 in the queue (estimated time: 5s).", with a
-  Cancel button) for 2 to 5 s, then the map's loading screen, "Loading...", then "Press any key to continue". In every
+  that morning). Seen in the pictures of runs in a normal window (`PrintWindow` every 2 s, 18 runs from 03:58 to 04:54,
+  3 looked at): a door, then a "Login Queue" box ("The Blizzard servers are busy right now! You're position 1 in the
+  queue (estimated time: 5s).", with a Cancel button) for 2 to 5 s, then the map's loading screen, "Loading...", then
+  "Press any key to continue"; each of the 18 runs saved a picture of the queue box's size. In every
   run whose `War3Log.txt` was written out (about 15), `[CLoginCallbacks] LoginDoorClose called` came 5 to 6 s after the
   start, before `Activating WebUI`. Once logged in, 10 to 14 s after the start, the game rewrites `War3Preferences.txt`
   and the account's `BattleNet\<account>\Campaigns\Classic\Classic.w3p` and `Reforged\Reforged.w3p`, before the map
@@ -71,7 +72,7 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
 - What the game shows can be captured only from a window on the visible desktop: `PrintWindow` with
   `PW_RENDERFULLCONTENT` of the game's window on a hidden desktop gives its frame and title bar and a black inside (3
   runs), while on the visible desktop it gives the game's picture, also with the display switched off by power saving
-  (2 runs).
+  (18 runs).
 - A map without a minimap image (`war3mapMap.blp` or `war3mapMap.tga`) closes the game as the map starts. Seen:
   War3Net's `MapFactory` map (info format 28, terrain, `war3map.lua`) exited with code 0 about 8 s after the game made
   `TempReplay.w3g`, 4 runs (two on a hidden desktop, two minimised); World Editor's own new map (`e10-probe.w3m`) packed
@@ -88,15 +89,15 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
   reached the file while a game ran (read every 250 ms, for up to 150 s, in about 20 runs). The rest is written when the
   game ends normally or crashes (the crash report holds a copy), and is lost when the process is killed. So
   `Opening map - <path>` can't confirm a load while the game runs, nor after a kill.
-- Once a map has loaded, its `main` has run but the game waits on its loading screen (Sven: for a click): a zero-second
-  timer started in `main` ran only after input. A space key posted to the game's window (`PostMessage`, `WM_KEYDOWN`
-  then `WM_KEYUP`, `VK_SPACE`) gets past it without the window being in front, minimised or on a hidden desktop: in
-  every run that logged it (over 20), the game started within 0.7 s of a posted key, the first one 3 s after `main` in
-  most. A left click posted the same way at (100, 100), 3 s after `main`, did not (3 runs). `SendInput` was not needed
+- Once a map has loaded, its `main` has run but the game waits on its loading screen (Sven; the picture says "Press
+  any key to continue"): a zero-second timer started in `main` ran only after input. A space key posted to the game's
+  window (`PostMessage`, `WM_KEYDOWN` then `WM_KEYUP`, `VK_SPACE`) gets past it without the window being in front,
+  minimised or on a hidden desktop: in every run that logged it (over 70), the game started within 0.7 s of a posted
+  key, the first one 3 s after `main` in most. A left click posted the same way at (100, 100), 3 s after `main`, did not (3 runs). `SendInput` was not needed
   and not tried. One run with no input posted (minimised, while Sven was watching) gave its lines 23 s after launch;
   whether he clicked is not known, so it is not known whether the screen ever goes by itself.
 - Game time and the window (probe `game-time`: a 1-second periodic timer for 20 ticks, each with a timer's elapsed
-  time and `os.time()`): on a hidden desktop (over 10 runs) and in a normal window kept in front (1 run), 20 game
+  time and `os.time()`): on a hidden desktop (over 40 runs) and in a normal window kept in front (1 run), 20 game
   seconds took 20 real seconds and the timer read 1.01 to 20.00. Minimised (started with `SW_SHOWMINNOACTIVE`, never in
   front; 1 run), the game got past the loading screen and ran its zero-second timer, but the 1-second timer never fired
   in 100 s: game time stops. Behind other windows it runs slower (8.73 s counted as 3.19 s; workspace fact of 10-02);
@@ -117,9 +118,17 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
   account's `Classic.w3p` and `Reforged.w3p` are rewritten with the same bytes; `Replays\LastReplay.w3g` is replaced by
   the probe's game (it ends with `EndGame(false)`). Other accounts' folders were not touched.
 - Two runs started at the same moment both launched a game (the check for a running game raced): one gave its lines,
-  the other's game started but gave none in 100 s (1 pair). Inferred: the plan reviewer's two failed runs of 02:53 to
-  02:57, where the game stopped before rewriting the account's files, may have overlapped with the code reviewer's; they
-  were not reproduced in about 25 later single runs.
+  the other's game started but gave none in 100 s (1 pair, before runs took turns).
+- The game sometimes stays at its login: in the reviewers' runs (2 at 02:53 to 02:57, and 3 at 03:45 to 03:51 that took
+  turns), the map never loaded and the game never rewrote `War3Preferences.txt` or the account's files, so it never
+  logged in; the job held up to 9 `BlizzardBrowser` processes. Not seen in any of this task's own runs before or after:
+  18 runs in a normal window and 18 runs of the 3 game tests on a hidden desktop between 03:56 and 04:55, 1 to 2 minutes
+  apart, all logged in. The browser count alone says nothing: runs that logged in had up to 10 for a few seconds (4 or
+  5 otherwise). The
+  Battle.net app's log (`%LOCALAPPDATA%\Battle.net\Logs`, in UTC) shows only that a game ran. Inferred, not tested:
+  as the game logs in online at every launch, a run whose process can't reach the internet (the reviewers' commands
+  may run in another sandbox than this task's) would stay at the login door or queue this way; a login prompt, as Sven
+  saw once, would too. What the game showed in those runs is not known: on a hidden desktop it can't be captured.
 - The hub's read works: `Preloader` of a file written by the runner in the game's Preload format, holding
   `call BlzSetAbilityTooltip('AHbz', "<path>", 0)`, gave the 150-character path back from
   `BlzGetAbilityTooltip(FourCC("AHbz"), 0)` on the first poll, in the same call (1 run).
