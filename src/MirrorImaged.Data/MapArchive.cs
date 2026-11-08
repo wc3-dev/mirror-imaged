@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Numerics;
 using War3Net.Build;
 using War3Net.Build.Extensions;
@@ -14,8 +15,9 @@ namespace MirrorImaged.Data;
 /// (<c>w3r</c>), cameras (<c>w3c</c>), sounds (<c>w3s</c>) and the import list (<c>imp</c>); a file the map lacks is null.
 /// The terrain and placed-unit files, which no wave reads yet, are null too when War3Net can't read them, and
 /// <see cref="Unread"/> names them (decisions D209); a doodad file whose doodad states War3Net refuses is read here
-/// (decisions D258), and is left out only when it can't be read either. <c>war3mapMisc.txt</c> is kept as it is, and
-/// any other file, such as an FDF or TOC file, is read by name.
+/// (decisions D258), and is left out only when it can't be read either. Two kinds of info and sound file War3Net
+/// refuses are mended before it reads them (D300, D301). <c>war3mapMisc.txt</c> is kept as it is, and any other file,
+/// such as an FDF or TOC file, is read by name.
 /// </summary>
 public sealed class MapArchive
 {
@@ -61,10 +63,11 @@ public sealed class MapArchive
     {
         using var archive = MpqArchive.Open(path, false);
         var unread = new List<string>();
-        T? Read<T>(string name, Func<BinaryReader, T> read) where T : class
+        T? Read<T>(string name, Func<BinaryReader, T> read, Func<byte[], byte[]>? mend = null) where T : class
         {
             if (Bytes(archive, name) is not { } bytes) return null;
-            try { return read(new BinaryReader(new MemoryStream(bytes))); }
+            // A file is mended only when War3Net can't read it whole as it is (D300)
+            try { return mend is not null && Whole(read, bytes) is { } plain ? plain : read(new BinaryReader(new MemoryStream(mend?.Invoke(bytes) ?? bytes))); }
             catch (Exception e) when (e is not OutOfMemoryException)
             {
                 if (!LeftOut.Contains(name)) throw new InvalidDataException($"{name} in {path} can't be read: {e.Message}", e);
@@ -75,7 +78,7 @@ public sealed class MapArchive
 
         var map = new Map
         {
-            Info = Read("war3map.w3i", reader => reader.ReadMapInfo()),
+            Info = Read("war3map.w3i", reader => reader.ReadMapInfo(), PlayerRaceHuds),
             TriggerStrings = Read("war3map.wts", reader => new StreamReader(reader.BaseStream).ReadTriggerStrings()),
             Environment = Read("war3map.w3e", reader => reader.ReadMapEnvironment()),
             PathingMap = Read("war3map.wpm", reader => reader.ReadMapPathingMap()),
@@ -91,7 +94,7 @@ public sealed class MapArchive
             Units = Read("war3mapUnits.doo", reader => reader.ReadMapUnits()),
             Regions = Read("war3map.w3r", reader => reader.ReadMapRegions()),
             Cameras = Read("war3map.w3c", reader => reader.ReadMapCameras()),
-            Sounds = Read("war3map.w3s", reader => reader.ReadMapSounds()),
+            Sounds = Read("war3map.w3s", reader => reader.ReadMapSounds(), SoundNamesRepeated),
             ImportedFiles = Read("war3map.imp", reader => reader.ReadImportedFiles()),
             UnitObjectData = Read("war3map.w3u", reader => reader.ReadUnitObjectData()),
             ItemObjectData = Read("war3map.w3t", reader => reader.ReadItemObjectData()),
@@ -179,5 +182,77 @@ public sealed class MapArchive
             stream.CopyTo(bytes);
             return bytes.ToArray();
         }
+    }
+
+    // World Editor 6117 and 6127 (2.0.4's campaign maps) wrote format 39 without the race HUD each player has from
+    // 6140, which War3Net 6.1.2 reads in every format-39 file, so it took a player's flags from its name: such a file
+    // is given a race HUD of none in each player (D300).
+    static byte[] PlayerRaceHuds(byte[] bytes)
+    {
+        if (Int(bytes, 0) != 39 || Int(bytes, 8) >= 6140) return bytes;
+        var at = Strings(bytes, 28, 4);       // after the versions: the name, author, description and players' text
+        at = Strings(bytes, at + 69, 4);      // after the camera to the race HUD: the loading screen's path and texts
+        at = Strings(bytes, at + 4, 4);       // after the data set: the prologue's path and texts
+        at = Strings(bytes, at + 48, 1) + 69; // after the fog and weather: the sound environment; lighting to minimap
+        var count = Int(bytes, at);
+        var output = new MemoryStream();
+        output.Write(bytes, 0, at += 4);
+        for (; count > 0; count--)
+        {
+            // The id, controller and race, the race HUD, then the flags, name, start and priorities
+            var end = Strings(bytes, at + 16, 1) + 24;
+            output.Write(bytes, at, 12);
+            output.Write(new byte[4]);
+            output.Write(bytes, at + 12, end - at - 12);
+            at = end;
+        }
+
+        output.Write(bytes, at, bytes.Length - at);
+        return output.ToArray();
+    }
+
+    // war3map.w3s repeats each sound's name and file after its settings, and War3Net 6.1.2 refuses a sound whose repeat
+    // differs (15 in four of Reforged's maps: g_snd_X, then gg_snd_X, the scripts' name): the name is taken as repeated
+    // (D301).
+    static byte[] SoundNamesRepeated(byte[] bytes)
+    {
+        var format = Int(bytes, 0);
+        if (format < 2) return bytes;
+        var output = new MemoryStream();
+        output.Write(bytes, 0, 8);
+        var at = 8;
+        for (var count = Int(bytes, 4); count > 0; count--)
+        {
+            var file = Strings(bytes, at, 1);
+            var repeat = Strings(bytes, file, 2) + 68;  // after the file, EAX setting and settings
+            var label = Strings(bytes, repeat, 1);
+            var keys = Strings(bytes, label, 2);        // after the label and the file repeated
+            var unk4 = Strings(bytes, keys + 4, 1) + 4; // after the text key, a text and the speaker key
+            var end = Strings(bytes, unk4 + 4, Int(bytes, unk4) != 0 ? 6 : 5) + (format >= 3 ? 4 : 0);
+            output.Write(bytes, repeat, label - repeat); // the name as repeated, in the first name's place
+            output.Write(bytes, file, end - file);
+            at = end;
+        }
+
+        output.Write(bytes, at, bytes.Length - at);
+        return output.ToArray();
+    }
+
+    // What War3Net reads from bytes when it reads every one of them; null when it throws or stops short
+    static T? Whole<T>(Func<BinaryReader, T> read, byte[] bytes) where T : class
+    {
+        var reader = new BinaryReader(new MemoryStream(bytes));
+        try { return read(reader) is var value && reader.BaseStream.Position == bytes.Length ? value : null; }
+        catch (Exception e) when (e is not OutOfMemoryException) { return null; }
+    }
+
+    static int Int(byte[] bytes, int at) => BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(at));
+
+    // The place after the count null-terminated strings at at
+    static int Strings(byte[] bytes, int at, int count)
+    {
+        for (; count > 0; count--)
+            at = Array.IndexOf(bytes, (byte)0, at) is >= 0 and var end ? end + 1 : throw new EndOfStreamException();
+        return at;
     }
 }

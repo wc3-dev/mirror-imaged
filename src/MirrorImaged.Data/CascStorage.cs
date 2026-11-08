@@ -59,6 +59,9 @@ public sealed class CascStorage : IDisposable
             ? ReadEncoded(encodingKey)
             : null;
 
+    /// <summary>The paths the root names, as <see cref="Read"/> takes them, stored locally or not.</summary>
+    internal IEnumerable<string> Names => _root.Keys;
+
     public void Dispose()
     {
         foreach (var archive in _archives.Values)

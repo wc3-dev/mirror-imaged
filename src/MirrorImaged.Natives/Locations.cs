@@ -39,7 +39,8 @@ public sealed partial class GameNatives
     /// The terrain's height (<c>Terrain</c>), or a standing bridge's deck where it is higher. Close: a deck is measured in
     /// whole units, 0.5 off the game's at most points; a dying deck is gone from the next step where the game's falls
     /// over 2 s and leaves its ends, and a restored one is back at the next step where the game's takes 0.5 s, or 7 s
-    /// with birth; the terrain off the map isn't measured (W2-6).
+    /// with birth; the walkable types without a measured deck (the ice floes ITf1 to ITf4, whose decks moved, DTep and
+    /// RW00) have none here; the terrain off the map isn't measured (W2-6).
     /// </summary>
     [Native(Level.Close)]
     public float GetLocationZ(location? whichLocation) => whichLocation is null ? 0 : Height(whichLocation.X, whichLocation.Y);

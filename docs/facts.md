@@ -759,6 +759,13 @@ lines they kept the same each time.
   base tables (Forsaken Kingdom's data) and 2 `custom_v1`. Read 11-08.
 - The install's text files have sections with words after the bracket (`[Hleo] leonid`, `[Scth] Scarlet Crusade
   Captain Hero`, `[AHw2] - T2 - Spell Blade`). Read 11-08.
+- The install's 193 campaign maps (`Campaign/Classic` and `Campaign/Reforged`, 97 and 96, no `.w3n`; read 11-08): 130
+  have a format-39 `war3map.w3i` of World Editor 6117 or 6127 (2.0.4.23839) with no race HUD in its players, where
+  6140 and later put one after each player's race (both have the map's own after the loading screen number). 15
+  sounds in 4 of Reforged's maps (Human03 1, Human09 1, Undead05 12, OrcX01_02 1) are named `g_snd_X` in their
+  `war3map.w3s` and repeated `gg_snd_X` (`g_snd_H09Arthas16`, `gg_snd_H09Arthas16`), the repeated name the one their
+  scripts make the sound in; the paths repeat as they are. That the game loads all of them is assumed, as they ship
+  with it; not measured here. With decisions D300 and D301 every file of every one reads to its end.
 
 ## The number model's probes
 
@@ -905,7 +912,7 @@ subtracting 1 in [1, 2), `R2I` of a whole number).
 ## Destructables
 
 Probe `probes/destructables.lua` on 3.0.1.24371, 11-08 (W2-4): MirrorImaged's probe map (D51, flat ground at 0, no
-`war3map.doo`) started with `-loadfile` on a hidden desktop, single player; four runs as it grew, the lines they shared
+`war3map.doo`) started with `-loadfile` on a hidden desktop, single player; six runs as it grew, the lines they shared
 the same each time. Its lines are in `probes/expected/destructables.txt`.
 
 - Creating: `CreateDestructable` of a unit's id (`hfoo`) and of 0 gives nil; LTlt at variation 15 (it has 10) and -1
@@ -959,10 +966,20 @@ the same each time. Its lines are in `probes/expected/destructables.txt`.
   -968.5) don't find it, (-1030, -990) does. So a rect finds a destructable when the 32 cell holding its place lies in
   the rect with its west and south edges strictly inside, not by the place itself.
 - Five trees made at (1408, -1280), (1152, -1280), (1280, -1152), (1280, -1408) and (1280, -1280), in that order, are
-  given to the filter as the 4th, 2nd, 5th, 3rd, 1st: rows of 256 cells from the south, west to east, and the 5th, 3rd
-  and 1st (one cell) the last made first. The callback came for those the filter passed, in that order, with
+  given to the filter as the 4th, 2nd, 5th, 3rd, 1st. Five made at (704, 576), (576, 704), (640, 640), (576, 576) and
+  (704, 704), all in one square of 256, are listed 5th, 4th, 3rd, 2nd, 1st, whatever their places. Sixteen made in a
+  grid at -320, -64, 64 and 320 each way, in an order unlike their places, are listed row by row from the south, west
+  to east, and a tree at (0, 0), made long before, comes after the one at (64, 64), in its square. So the order is by
+  squares of 256 world units, in rows from the south, west to east, the last made first in a square (squares of 128 or
+  512 would give other orders). The callback came for those the filter passed, in that order, with
   `GetFilterDestructable` the destructable it was called for, as `GetEnumDestructable`; without a filter
   `GetFilterDestructable` is still set in the callback. Both are nil after.
+- `RemoveDestructable` of a destructable inside its own death event fires the event again there, nested: a tree killed
+  and a tree removed, each removed again in its death event while a count stayed under 3, fired three deaths each
+  (reading 0 for the killed one, 50 for the removed one), and then read type id 0 and were no longer listed. In a
+  destructable's death event `GetTriggerUnit` and `GetDyingUnit` are nil and `GetTriggerWidget() ==
+  GetTriggerDestructable()`. A tree killed with a trigger that waits 1 s and restores it to its most life with birth
+  read 50 of 50 3 s later.
 - `GetLocationZ` on flat ground at 0 around a YT16 made at (0, -1280), standing at (32, -1280): 286.5 at its place,
   277.5, 255.0, 247.1, 198.8 and 158.2 at 128, 256, -256, 512 and -640 north, 288.9 at 128 east, 0 at 256 east and
   west and 300 east: it runs north-south. An LT06 made at (-1280, 0), standing at (-1280, 32): 274.2 at its place and
@@ -985,3 +1002,116 @@ Read from the install's 273 maps (11-08):
 - A destructable's pathing texture (`bptx`) is a TGA whose width and height are cells: `4x4Default` 4 by 4, `2x2Default`
   2 by 2, `CityBridgeLarge0` 32 by 18, `Gate1Path` 20 by 4, `8x2Default` 8 by 2; 16 types (OTsp, YTc1, Volc among them)
   have none.
+
+## Units
+
+Probes `probes/units.lua`, `units-decay.lua`, `units-attribute.lua` and `units-primary.lua`, on 3.0.1.24371, 11-08
+(W2-2): MirrorImaged's probe map (D51: info format 28, the Default data set, not melee, so `custom_v1`'s data; flat
+ground at height 0), started with `-loadfile` on a hidden desktop, single player. `units` (in its final form, after
+the review added `rawequal` to the death lines) and `units-decay` ran twice each with the same lines, which are in
+`probes/expected`; earlier forms of `units` ran six more times, and their lines that the final form keeps were the
+same. The two closing probes each closed the game once, as the units probe's runs did at the same call.
+
+- Making: `CreateUnit` gives nil for an id that is no unit's (`zzzz`, the item `phea`, the destructable `LTlt`, the
+  ability `AHhb`) and for 0. A unit takes one handle id, a Paladin too (a timer made before and after it is one id off
+  each way). Made at (1500.5, -1700.25) facing 30 it reads exactly that, `BlzGetUnitZ` 0 on the flat map. Made on a
+  spot where other units stand, it is moved off them (48 and -112 from 0, in the first runs); made at (5000, -5000) on
+  the 32 by 32 map, it stands at (2032, -2000). `BlzCreateUnitWithSkin(.., 'hfoo', .., 'hkni')` gives a footman (type
+  id `hfoo`, name "Footman", 420 life, `UNIT_RF_SCALING_VALUE` 0.8) whose `BlzGetUnitSkin` is `hkni`. `CreateCorpse`
+  gives a dead unit: type id, life 0, not alive, `UNIT_TYPE_DEAD`, most life 420.
+- At creation: a footman has 420 life of 420, no mana, level 2, move speed 270 (default 270), turn rate 0.6, fly height
+  0, acquisition range 500, propulsion window 1.047197 (`GetUnitPropWindow`, radians: 60 degrees made radians as
+  `Deg2Rad` makes them) and 60 (`GetUnitDefaultPropWindow`, degrees), food 2 used, point value 100, race 1, user data
+  0. A Paladin has 650 life (100 + 22 strength x 25), 255 mana of 255 (100 + 17 intelligence x 15, at most 255), level
+  1, name "Paladin". A barracks reads level 0, move speed 0, turn rate 0.001 (its data has none;
+  `GetUnitDefaultTurnSpeed` 0), acquisition range 0 (default 900, its sight: the data has none); a gryphon rider fly
+  height 240 (default 240), level 5; a farm `hhou` food made 6. `GetUnitRace`: human 1, orc 2, undead 3, night elf 4,
+  demon 5 (`ninf`), other 7 (`ncop`), creeps 8 (`nmrl`, `nfrl`), commoner 9 (`nvil`), critters 10 (`nshe`), naga 11
+  (`nmyr`). `IsHeroUnitId` is true for `Hpal`, `Hzzz`, `Ozzz` and `Nngs`, false for `hfoo`.
+- Facing: made facing 400 reads 40.00002, -90 270, 720 0, 359.9 359.9, -0.5 359.5, 1e9 0, 100000 280.0085, -100000
+  79.99146, 3600.5 0.5002212. `BlzSetUnitFacingEx` 123.5 reads 123.5 at once, -30 330. `SetUnitFacing` reads the old
+  facing at once and turns the short way round, half a turn going up: read every 1/16 s from the call, a footman (turn
+  rate 0.6) from 0 to 180 read 0, 12.0, 35.0, 57.9, 80.8, 103.7, 126.6, 149.5, 172.5, 179.6, 179.9, 179.9, 180; a knight
+  (0.5) 0, 6.9, 22.3, 39.5, then 17.2 a read, easing from 125 to 178.3 at 1 s; a gryphon rider (0.4) 0, 5.2, 16.0,
+  then 11.5 a read to 179.1 at 1 s. Steady, that is 6.4, 4.8 and 3.2 radians a second. A footman whose turn rate was
+  set to 0.2 turned exactly as at 0.6.
+- Life: `SetWidgetLife` and `SetUnitState(UNIT_STATE_LIFE)` keep a fraction (100.5, 200.25) and stop at the most life
+  (500 reads 420). The life left reads as the most life less the damage, in floats: 0.41 reads 0.4100037 on a footman
+  of 420 and 0.4099731 on a Paladin of 650, 1.1 reads 1.100006 and 1.099976. Below 0.405 after that the unit dies:
+  0.405 kills the footman (420 less 419.595 is under 0.405) but not the Paladin (0.4050293); 0.4049 and 0.4 kill both.
+  `SetUnitState(UNIT_STATE_MAX_LIFE)` changes nothing; `BlzSetUnitMaxHP` 150 cuts the life to 150, 600 then keeps 150,
+  0 kills, -5 reads -5; a life of 0.5 stays 0.5 when the most goes to 1000. A dead unit set to 100 reads 100 and stays
+  dead; its most set to 50 cuts it to 50; -5 reads 0.
+- Mana: a footman (no mana) set to 10 reads 0; given a most of 50 by `BlzSetUnitMaxMana`, its mana stays 0, 70 reads
+  50, 20.5 then a most of 10 reads 10, -5 reads 0; `SetUnitState(UNIT_STATE_MAX_MANA)` changes nothing. A Paladin set
+  to 300 reads 255, 100.5 reads 100.5.
+- Flags: `PauseUnit` true twice and false once leaves `IsUnitPaused` false; `BlzPauseUnitEx(u, true)`, once or twice,
+  never makes it true. `ShowUnit(u, false)` makes `IsUnitHidden` true and keeps the unit's place and life.
+  `SetUnitInvulnerable` true and false read back through `BlzIsUnitInvulnerable`, with no crash (against w3ts's
+  claim). `SetUnitUserData` reads back. `BlzSetUnitName` renames the one unit (`GetObjectName` and a new footman keep
+  "Footman"). `SetUnitScale(2.5, 1, 1)` leaves `UNIT_RF_SCALING_VALUE` 0.8; `SetUnitVertexColor(300, -50, 100, 128)`
+  leaves the tint fields 255. `SetUnitX`/`SetUnitY` to (5096.5, -300.25) read back, the unit alive.
+- Speeds: `SetUnitMoveSpeed` 1000 reads 400, 5 and -10 150 (the constants' `MaxUnitSpeed` and `MinUnitSpeed`); a
+  barracks keeps 0 whatever is set. `SetUnitTurnSpeed` keeps an angle from 0 below 2 pi, at least 0.001: 5 reads 5, -1
+  5.283185, 7 0.7168145, 0 0.001. `SetUnitAcquireRange` 0, 7.5 and 50 aren't taken; 55 to 100 and 300.5 on a footman
+  and 100 to 600 on a rifleman are, 30 on a rifleman and -5 aren't; a barracks and a sheep (no attack) keep 0.
+  `SetUnitPropWindow(1)` reads 1. `SetUnitFlyHeight` reads the new height at once, on a footman (200) too, and with a
+  rate of 100 (a gryphon rider at 100 set to 300 read 300 at once and 0.5 to 2.5 s later).
+- `IsUnitType` (types 0 to 26): footman ground, attacks ground, melee; Paladin hero and the same; barracks structure
+  and mechanical (not ground); gryphon rider flying, attacks flying and ground, ranged; peasant the footman's and
+  peon; sheep ground only; ghoul the footman's and undead; mortar team ground, attacks ground, ranged; tauren the
+  footman's and tauren; haunted gold mine structure, undead and mechanical; wisp ground and peon; a dead footman also
+  dead.
+- `GetObjectName` reads `hfoo` "Footman", `Hpal` "Paladin", `phea` "Potion of Healing", `AHhb` "Holy Light", `Rhme`
+  "Iron Forged Swords", and "Default string" for the buffs `Bdef` and `BHbd`, the destructables `LTlt` and `YTlb`,
+  `ZPfw`, `zzzz` and 0.
+- Death: `KillUnit` fires, inside the call, the unit's `TriggerRegisterDeathEvent` events first (event id 89,
+  `GetTriggerUnit` and `GetTriggerWidget` the unit, the widget `==` the unit but not `rawequal` to it, `GetDyingUnit`
+  nil, `GetTriggerPlayer` nil), then its owner's
+  `EVENT_PLAYER_UNIT_DEATH` events (20; `GetTriggerWidget` nil, `GetDyingUnit` the unit, `GetTriggerPlayer` the owner),
+  then its `EVENT_UNIT_DEATH` events (53, as the player's), each kind in the order registered, though they were
+  registered unit, player, widget, unit; life 0, not alive, `GetKillingUnit` nil in all. A player-unit event's filter
+  never ran, and one returning false didn't hold the event back. Another player's registration didn't fire. A second
+  `KillUnit` fires nothing. `SetWidgetLife(u, 0.3)`, `SetUnitState(u, UNIT_STATE_LIFE, -5)` and `BlzSetUnitMaxHP(u,
+  0)` each fire the death inside the call, life 0.
+- Decay (`units-decay`, polled every 0.25 s from a kill at 0.1): a footman's decay event came at 3.14 (its death time
+  3.04 later), the owner's `EVENT_PLAYER_UNIT_DECAY` (21) before the unit's `EVENT_UNIT_DECAY` (54), `GetDecayingUnit`
+  and `GetTriggerUnit` the unit, `GetTriggerPlayer` the owner; a rifleman's at 1.80 (1.7). A barracks fired no decay
+  and was gone at 32.50 (2.34 + `StructureDecayTime` 30); a gryphon rider, whose death type doesn't decay, fired none
+  and was gone at 2.00 (1.67 later). An exploded footman (`SetUnitExploded`) and a dead one removed were gone at the
+  first poll. A Paladin, a footman whose decay was suspended after its death (its decay event still came at 3.14) and
+  a `CreateCorpse` corpse (no decay event) were still there at 45 s, dead, life 0. Decayable and raisable follow the
+  death type (`deathType` 3 both, 2 decays, 0 neither).
+- Owner (`SetUnitOwner(u, Player(1), true)` on a living footman): its stop (851972) fires first, the owner's
+  `EVENT_PLAYER_UNIT_ISSUED_ORDER` (38) then the unit's `EVENT_UNIT_ISSUED_ORDER` (75), reading the old owner, with
+  `GetOrderedUnit` the unit; then the change, the new owner's `EVENT_PLAYER_UNIT_CHANGE_OWNER` (270) then the unit's
+  `EVENT_UNIT_CHANGE_OWNER` (287), `GetChangingUnit` the unit, `GetChangingUnitPrevOwner` the old owner and
+  `GetTriggerPlayer` the new; then the footman's `undefend` (852056, its Defend) on the new owner's and the unit's
+  order events. Given to the owner it has, nothing fires. A dead footman given away fires no stop, an `undefend` on its
+  old owner's order registration (not its own unit's) and its change.
+- Removal: a removed unit reads, in the same callback, its type, life 420, alive and owner; a dead one removed reads
+  dead. After a 0 s timer the dead one reads type 0. A living unit removed and then killed in the same callback fires
+  its death (unit and widget events) and stays: after the 0 s timer it reads its type id, life 0, not alive, its new
+  owner (given away after the removal) and its name.
+- Fields read on a footman, Paladin, barracks and gryphon rider (and set on the first three to 7, 7.5, the other
+  boolean, or "Probe"): integer fields give the words of the data as common.j's constants (armour type: Metal 2, Stone
+  5, Flesh 1; defence type: large 2, hero 5, fort 3, small 0; regeneration: always 1, none 0; move type: foot 1, fly 2,
+  none 0; targeted as: ground 2, structure 8, air 4; classification: mechanical 8; placement prevented by: the
+  barracks' `preventPlace` unbuildable, 8), and a set reads back, but for the tint fields (255) and the primary
+  attribute (1, also for the Paladin set to 2), which a set doesn't change; a hero's level set to 7 reads 8 and to 3
+  reads 4; the gold bounty, formation rank, elevation points and looping fade rates read the data. Real fields: life
+  (`UNIT_RF_HP`), mana, move speed, turn rate, acquisition range and fly height are the unit's (a set as their natives
+  set them: speed 7.5 reads 150, turn rate 7.5 1.216815; a footman's fly height set to 50 stays 0, a gryphon rider's
+  set to 100 reads 100, and its most fly height set to 50 then makes it 90, its least); armour (`UNIT_RF_DEFENSE`) 2
+  for the footman and 3.9 for the Paladin (2 - 2 + 13 agility x 0.3); sight 800, 800, 600, 900 (the night sight: the
+  game starts at midnight); the gains per level read 0 and refuse a set (false) on a unit that isn't a hero; the most
+  pitch and roll read 0 and refuse every set; the least attack range refuses the barracks (no attack); the shadow's
+  size and the sight take a set (true) but keep their value. Boolean fields read the data (a neutral building's minimap
+  icon true where the data has none) and every set reads back but hiding on the minimap (stays false). String fields:
+  names; the Paladin's proper name is one of its type's drawn at random and numbered ("Granis Darkhammer XII", "Zann
+  the Defender XII" in two runs); a footman's is "", and a set leaves it "".
+- The hero attributes (`UNIT_IF_AGILITY` and the rest, which have no metadata rows) on a Paladin read 13, 17 and 22;
+  set, the attribute reads the value, its permanent one reads 1 (after a set of 7, and of 0, which also left agility
+  1), and the one with bonus refuses a set; strength set to 30 makes life and most life 850. Reading `UNIT_IF_AGILITY`
+  on a footman closes the game (probe `units-attribute` and the units probe's first two runs), and so does setting a
+  footman's primary attribute to 3 (`units-primary` and the units probe's third run); 7 is refused there.

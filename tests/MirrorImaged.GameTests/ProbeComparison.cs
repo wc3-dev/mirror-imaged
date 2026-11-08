@@ -130,10 +130,11 @@ public static class ProbeComparison
     public static bool WithComputer(string name) => name is "events" or "lobby" or "data-names";
 
     /// <summary>
-    /// Whether a probe reads the game's data: W2-1's probes and W2-4's, run in MirrorImaged with the install's standard
-    /// data, so only where the game is installed (decisions D213).
+    /// Whether a probe reads the game's data: W2-1's, W2-2's and W2-4's probes, run in MirrorImaged with the install's
+    /// standard data, so only where the game is installed (decisions D213).
     /// </summary>
-    public static bool ReadsData(string name) => name.StartsWith("data", StringComparison.Ordinal) || name.StartsWith("destructables", StringComparison.Ordinal);
+    public static bool ReadsData(string name) => name.StartsWith("data", StringComparison.Ordinal) || name.StartsWith("units", StringComparison.Ordinal)
+        || name.StartsWith("destructables", StringComparison.Ordinal);
 
     /// <summary>How a probe's map is changed, if it is: the data probes' info, strings and object data (decisions D213).</summary>
     public static Action<Map>? Change(string name) => name switch

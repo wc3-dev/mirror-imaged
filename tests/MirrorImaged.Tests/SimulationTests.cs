@@ -102,14 +102,14 @@ public sealed class SimulationTests : IDisposable
             function config() print("config") end
             function main()
               print("main")
-              local u = CreateUnit(Player(0), FourCC("hfoo"), 0, 0, 0)
+              StartMeleeAI(Player(0), "human.ai")
               print("after")
             end
             """), "");
 
         var stop = simulation.Stopped!;
-        Assert.StartsWith("war3map.lua:4: The native CreateUnit is Missing", stop.Message);
-        Assert.Equal("CreateUnit", Assert.IsType<MissingNativeException>(stop.InnerException).Native);
+        Assert.StartsWith("war3map.lua:4: The native StartMeleeAI is Missing", stop.Message);
+        Assert.Equal("StartMeleeAI", Assert.IsType<MissingNativeException>(stop.InnerException).Native);
         Assert.Equal(["0.000 print: config", "0.000 print: main"], simulation.Log);
         Assert.Same(stop, Assert.Throws<LuaException>(() => simulation.Advance(TimeSpan.FromSeconds(1))));
     }
@@ -117,9 +117,9 @@ public sealed class SimulationTests : IDisposable
     [Fact]
     public void A_missing_native_stops_the_run_before_its_arguments_are_read()
     {
-        using var simulation = Load("CreateUnit({}, coroutine.create(print), 0, 0, 0)");
+        using var simulation = Load("StartMeleeAI({}, coroutine.create(print))");
 
-        Assert.StartsWith("war3map.lua:3: The native CreateUnit is Missing", simulation.Stopped!.Message);
+        Assert.StartsWith("war3map.lua:3: The native StartMeleeAI is Missing", simulation.Stopped!.Message);
     }
 
     [Theory]

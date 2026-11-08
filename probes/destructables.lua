@@ -246,6 +246,59 @@ end
 out("portal " .. at(portal) .. " " .. table.concat(hits, " "))
 RemoveDestructable(portal)
 
+-- The order: five trees made inside one square of 256 in an order unlike their places, and sixteen in a grid across
+-- x = 0 and y = 0, made out of order.
+local function listed(x1, y1, x2, y2)
+    local seen = {}
+    EnumDestructablesInRect(Rect(x1, y1, x2, y2), nil, function() seen[#seen + 1] = names[GetHandleId(GetEnumDestructable())] end)
+    return table.concat(seen, " ")
+end
+local inside = {}
+for i, p in ipairs({ { 704, 576 }, { 576, 704 }, { 640, 640 }, { 576, 576 }, { 704, 704 } }) do
+    inside[i] = make("in" .. i, "LTlt", p[1], p[2])
+end
+out("one square " .. listed(520, 520, 760, 760))
+for _, d in ipairs(inside) do RemoveDestructable(d) end
+local grid, places = {}, { -320, -64, 64, 320 }
+for _, k in ipairs({ 6, 11, 1, 16, 9, 3, 14, 5, 12, 2, 8, 15, 4, 10, 13, 7 }) do
+    local x, y = places[(k - 1) % 4 + 1], places[(k - 1) // 4 + 1]
+    grid[#grid + 1] = make("g" .. k, "LTlt", x, y)
+end
+out("grid " .. listed(-400, -400, 400, 400))
+for _, d in ipairs(grid) do RemoveDestructable(d) end
+
+-- Removing a destructable inside its own death event, and a tree brought back a second after it died, as tree revival
+-- triggers do.
+local selfCount = 0
+local selfTrigger = CreateTrigger()
+TriggerAddAction(selfTrigger, function()
+    selfCount = selfCount + 1
+    local d = GetTriggerDestructable()
+    out("  self death " .. selfCount .. " " .. show(names[GetHandleId(d)]) .. " life " .. n(GetDestructableLife(d)))
+    if selfCount < 3 then RemoveDestructable(d) end
+end)
+local killed = CreateDestructable(id("LTlt"), 512, 512, 270, 1, 0)
+names[GetHandleId(killed)] = "killed"
+TriggerRegisterDeathEvent(selfTrigger, killed)
+KillDestructable(killed)
+out("self killed " .. selfCount .. " " .. GetDestructableTypeId(killed) .. " [" .. listed(400, 400, 600, 600) .. "]")
+selfCount = 0
+local removed = CreateDestructable(id("LTlt"), 512, 512, 270, 1, 0)
+names[GetHandleId(removed)] = "removed"
+TriggerRegisterDeathEvent(selfTrigger, removed)
+RemoveDestructable(removed)
+out("self removed " .. selfCount .. " " .. GetDestructableTypeId(removed))
+local revived = CreateDestructable(id("LTlt"), 768, 768, 270, 1, 0)
+local revival = CreateTrigger()
+TriggerRegisterDeathEvent(revival, revived)
+TriggerAddAction(revival, function()
+    out("revival unit " .. show(GetTriggerUnit()) .. " " .. show(GetDyingUnit()) .. " " .. tostring(GetTriggerWidget() == GetTriggerDestructable()))
+    TriggerSleepAction(1)
+    local d = GetTriggerDestructable()
+    DestructableRestoreLife(d, GetDestructableMaxLife(d), true)
+end)
+KillDestructable(revived)
+
 -- GetLocationZ on bridges made on flat ground: the decks, when one is killed, 3 s later, and 3 s after restoring.
 local where = Location(0, 0)
 local function heights(x, y, offsets)
@@ -265,6 +318,7 @@ KillDestructable(bridge)
 out("deck killed " .. heights(GetDestructableX(bridge), GetDestructableY(bridge), across))
 TimerStart(CreateTimer(), 3, false, guard(function()
     out("deck 3 s " .. heights(GetDestructableX(bridge), GetDestructableY(bridge), across))
+    out("revived " .. life(revived))
     DestructableRestoreLife(bridge, 2500, false)
     TimerStart(CreateTimer(), 3, false, guard(function()
         out("deck restored 3 s " .. heights(GetDestructableX(bridge), GetDestructableY(bridge), across))

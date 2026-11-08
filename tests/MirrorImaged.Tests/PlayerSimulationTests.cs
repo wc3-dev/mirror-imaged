@@ -107,7 +107,7 @@ public sealed class PlayerSimulationTests : IDisposable
     public void Options_are_checked_against_the_maps_slots_before_its_lua_runs(int[] users, int[]? computers, string message)
     {
         // The map's top level would stop the run, so a run that got that far would come back stopped instead.
-        var map = Map("", top: "CreateUnit(Player(0), FourCC('hfoo'), 0, 0, 0)");
+        var map = Map("", top: "StartMeleeAI(Player(0), 'human.ai')");
 
         var error = Assert.Throws<ArgumentException>(() => Simulation.Load(map, "", new SimulationOptions { Users = users, Computers = computers }));
 

@@ -43,6 +43,7 @@ public sealed class NoGameFilesCheckTests : IDisposable
     [InlineData("a.mdl")]
     [InlineData("a.blp")]
     [InlineData("a.dds")]
+    [InlineData("PathTextures/4x4Default.TGA")]
     [InlineData("a.slk")]
     [InlineData("a.w3e")]
     [InlineData("a.doo")]

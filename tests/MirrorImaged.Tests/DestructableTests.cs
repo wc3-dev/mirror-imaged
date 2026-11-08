@@ -34,7 +34,7 @@ public sealed class DestructableTests : IDisposable
             .Add(ObjectKind.Destructable, "XTmx", Type("50", "-1", @"PathTextures\8x2Default.tga"))
             .Add(ObjectKind.Destructable, "OTsp", Type("50", "-1", name: "WESTRING_DOOD_OZSP"))
             .Add(ObjectKind.Destructable, "YTc1", Type("50", "270"))
-            .Add(ObjectKind.Unit, "hfoo");
+            .Add(ObjectKind.Unit, "hfoo", new Dictionary<string, string> { ["uhpm"] = "420" });
         data.EditorStrings["WESTRING_DEST_SUMMER_TREE_WALL"] = "Summer Tree Wall";
         data.EditorStrings["WESTRING_DEST_BARREL"] = "Barrel";
         data.EditorStrings["WESTRING_DEST_LONG_STONE_CLIFF_1_VERTICAL"] = "Long Stone Bridge";
@@ -357,15 +357,25 @@ public sealed class DestructableTests : IDisposable
             """));
     }
 
-    // probe destructables: rows of 256 cells from the south, west to east, the last made first in a cell; the filter runs
-    // for each with GetFilterDestructable it, then the callback, for which both natives give the destructable; nil after
+    // probe destructables: squares of 256 world units, rows from the south, west to east, the last made first in a square
+    // whatever its place in it (five made in one square; sixteen in a grid across x = 0 and y = 0, out of order, with the
+    // tree at 0, 0 made first sharing a square with g11); the filter runs for each with GetFilterDestructable it, then
+    // the callback, for which both natives give the destructable; nil after
     [Fact]
-    public void The_enumeration_goes_by_cells_and_runs_the_filter_then_the_callback()
+    public void The_enumeration_goes_by_squares_and_runs_the_filter_then_the_callback()
     {
         Assert.Equal([
             "filtered order4 order2 order5 order3 order1 enum order4=filter order2=filter order5=filter order1=filter after nil nil",
             "no filter order4+filter order2+filter order5+filter order3+filter order1+filter",
+            "one square in5 in4 in3 in2 in1",
+            "grid g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11 tree g12 g13 g14 g15 g16",
         ], Run("""
+            local function listed(x1, y1, x2, y2)
+              local seen = {}
+              EnumDestructablesInRect(Rect(x1, y1, x2, y2), nil, function() seen[#seen + 1] = names[GetHandleId(GetEnumDestructable())] end)
+              return table.concat(seen, " ")
+            end
+            names[GetHandleId(CreateDestructable(id("LTlt"), 0, 0, 270, 1, 0))] = "tree"
             local order = {}
             for i, p in ipairs({ { 1, 128, 0 }, { 2, -128, 0 }, { 3, 0, 128 }, { 4, 0, -128 }, { 5, 0, 0 } }) do
               order[i] = make("order" .. p[1], "LTlt", 1280 + p[2], -1280 + p[3])
@@ -386,6 +396,15 @@ public sealed class DestructableTests : IDisposable
               seen[#seen + 1] = names[GetHandleId(GetEnumDestructable())] .. (GetFilterDestructable() == nil and "" or "+filter")
             end)
             print("no filter " .. table.concat(seen, " "))
+            for i, p in ipairs({ { 704, 576 }, { 576, 704 }, { 640, 640 }, { 576, 576 }, { 704, 704 } }) do
+              names[GetHandleId(CreateDestructable(id("LTlt"), p[1], p[2], 270, 1, 0))] = "in" .. i
+            end
+            print("one square " .. listed(520, 520, 760, 760))
+            local places = { -320, -64, 64, 320 }
+            for _, k in ipairs({ 6, 11, 1, 16, 9, 3, 14, 5, 12, 2, 8, 15, 4, 10, 13, 7 }) do
+              names[GetHandleId(CreateDestructable(id("LTlt"), places[(k - 1) % 4 + 1], places[(k - 1) // 4 + 1], 270, 1, 0))] = "g" .. k
+            end
+            print("grid " .. listed(-400, -400, 400, 400))
             """));
     }
 
@@ -485,19 +504,81 @@ public sealed class DestructableTests : IDisposable
             """, Placed));
     }
 
-    // A unit given to the widget natives and the death registration waits for its task (W2-2) and stops the run
+    // D252: the widget natives and the death registration take units and destructables alike; an item waits for W2-3
+    // and stops the run as the native being Missing
     [Fact]
-    public void A_unit_given_to_the_widget_natives_stops_the_run_until_units_come()
+    public void The_widget_natives_take_units_and_destructables_and_an_item_stops_the_run()
     {
-        var natives = new GameNatives(new World.Game(0));
-        var footman = new unit();
+        Assert.Equal(["420.000 -32.000 tree 50.000", "  death footman", "  death tree life 0.000 widget true event 89"], Run("""
+            local footman, tree = CreateUnit(Player(0), id("hfoo"), -32, 0, 0), make("tree", "LTlt")
+            local t = CreateTrigger()
+            TriggerRegisterDeathEvent(t, footman)
+            TriggerAddAction(t, function() print("  death footman") end)
+            print(n(GetWidgetLife(footman)) .. " " .. n(GetWidgetX(footman)) .. " tree " .. n(GetWidgetLife(tree)))
+            SetWidgetLife(footman, 0)
+            SetWidgetLife(tree, 0)
+            """));
 
-        Assert.Equal("GetWidgetLife", Assert.Throws<MissingNativeException>(() => natives.GetWidgetLife(footman)).Native);
-        Assert.Equal("SetWidgetLife", Assert.Throws<MissingNativeException>(() => natives.SetWidgetLife(footman, 1)).Native);
-        Assert.Equal("GetWidgetX", Assert.Throws<MissingNativeException>(() => natives.GetWidgetX(footman)).Native);
+        var natives = new GameNatives(new World.Game(0));
+        var potion = new item();
+        Assert.Equal("GetWidgetLife", Assert.Throws<MissingNativeException>(() => natives.GetWidgetLife(potion)).Native);
+        Assert.Equal("SetWidgetLife", Assert.Throws<MissingNativeException>(() => natives.SetWidgetLife(potion, 1)).Native);
+        Assert.Equal("GetWidgetY", Assert.Throws<MissingNativeException>(() => natives.GetWidgetY(potion)).Native);
         Assert.Equal("TriggerRegisterDeathEvent",
-            Assert.Throws<MissingNativeException>(() => natives.TriggerRegisterDeathEvent(natives.CreateTrigger(), footman)).Native);
+            Assert.Throws<MissingNativeException>(() => natives.TriggerRegisterDeathEvent(natives.CreateTrigger(), potion)).Native);
         Assert.Equal(0, natives.GetWidgetLife(null));
+    }
+
+    // probe destructables: in a destructable's death event GetTriggerUnit and GetDyingUnit are nil and GetTriggerWidget
+    // == GetTriggerDestructable; removed inside its own death event it fires the event again there, nested, each time;
+    // a tree brought back a second after it died (tree revival) stands again
+    [Fact]
+    public void A_destructables_death_event_reads_no_unit_and_a_removal_inside_it_fires_again()
+    {
+        using var simulation = Load("""
+            local selfCount = 0
+            local selfTrigger = CreateTrigger()
+            TriggerAddAction(selfTrigger, function()
+              selfCount = selfCount + 1
+              local d = GetTriggerDestructable()
+              print("  self death " .. selfCount .. " " .. show(names[GetHandleId(d)]) .. " life " .. n(GetDestructableLife(d)))
+              if selfCount < 3 then RemoveDestructable(d) end
+            end)
+            local function listed(x1, y1, x2, y2)
+              local seen = {}
+              EnumDestructablesInRect(Rect(x1, y1, x2, y2), nil, function() seen[#seen + 1] = names[GetHandleId(GetEnumDestructable())] end)
+              return table.concat(seen, " ")
+            end
+            local killed = CreateDestructable(id("LTlt"), 512, 512, 270, 1, 0)
+            names[GetHandleId(killed)] = "killed"
+            TriggerRegisterDeathEvent(selfTrigger, killed)
+            KillDestructable(killed)
+            print("self killed " .. selfCount .. " " .. GetDestructableTypeId(killed) .. " [" .. listed(400, 400, 600, 600) .. "]")
+            selfCount = 0
+            local removed = CreateDestructable(id("LTlt"), 512, 512, 270, 1, 0)
+            names[GetHandleId(removed)] = "removed"
+            TriggerRegisterDeathEvent(selfTrigger, removed)
+            RemoveDestructable(removed)
+            print("self removed " .. selfCount .. " " .. GetDestructableTypeId(removed))
+            local revived = CreateDestructable(id("LTlt"), 768, 768, 270, 1, 0)
+            local revival = CreateTrigger()
+            TriggerRegisterDeathEvent(revival, revived)
+            TriggerAddAction(revival, function()
+              print("revival unit " .. show(GetTriggerUnit()) .. " " .. show(GetDyingUnit()) .. " " .. tostring(GetTriggerWidget() == GetTriggerDestructable()))
+              TriggerSleepAction(1)
+              local d = GetTriggerDestructable()
+              DestructableRestoreLife(d, GetDestructableMaxLife(d), true)
+            end)
+            KillDestructable(revived)
+            TimerStart(CreateTimer(), 3, false, function() print("revived " .. life(revived)) end)
+            """);
+        simulation.Advance(TimeSpan.FromSeconds(3));
+
+        Assert.Equal([
+            "  self death 1 killed life 0.000", "  self death 2 killed life 0.000", "  self death 3 killed life 0.000", "self killed 3 0 []",
+            "  self death 1 removed life 50.000", "  self death 2 removed life 50.000", "  self death 3 removed life 50.000", "self removed 3 0",
+            "revival unit nil nil true", "revived 50.000/50.000",
+        ], Printed(simulation));
     }
 
     // A map's own pathing texture comes before the game's: a 4x4 one made 2x2 puts the tree 32 off the 64 grid

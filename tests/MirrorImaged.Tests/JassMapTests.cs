@@ -260,9 +260,8 @@ public sealed class JassMapTests : IDisposable
             endfunction
             """, ScriptLanguage.Jass), "");
 
-        Assert.NotNull(simulation.Stopped);
-        Assert.StartsWith("war3map.lua:", simulation.Stopped.Message);
-        Assert.Contains("The native UnitAlive is Missing", simulation.Stopped.Message);
+        Assert.Null(simulation.Stopped);
+        Assert.Equal(["0.000 player 0: declared"], simulation.Log);
     }
 
     // probe jass-threads: natives take null strings (Lua's binding refuses nil, decisions D80)

@@ -15,8 +15,15 @@ public sealed class Deck
     readonly float[] _values; // NaN where it has none
     readonly int _columns, _rows, _column, _row;
 
-    Deck(float[] values, int columns, int rows, int column, int row) =>
+    Deck(float[] values, int columns, int rows, int column, int row)
+    {
         (_values, _columns, _rows, _column, _row) = (values, columns, rows, column, row);
+        float across = Math.Max(column, columns - 1 - column) + 0.5f, up = Math.Max(row, rows - 1 - row) + 0.5f;
+        Reach = MathF.Sqrt(across * across + up * up) * Cell;
+    }
+
+    /// <summary>How far from the place its farthest point measured is, at scale 1: past it there is no deck.</summary>
+    public float Reach { get; }
 
     /// <summary>The deck of the type <paramref name="id"/> (as <c>FourCC</c> gives it); null for a type without one.</summary>
     public static Deck? Of(int id) => All.Value.GetValueOrDefault(id);

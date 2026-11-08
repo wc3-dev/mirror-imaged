@@ -6,9 +6,10 @@ namespace MirrorImaged.Natives;
 public partial class destructable
 {
     internal GameObject Type = null!;
-    internal float X, Y, Face, Scale, Life, MaxLife, Occluder, Ground;
+    internal float X, Y, Life, MaxLife, Occluder;
     internal bool Invulnerable, Listed = true;
     internal Deck? Deck;
+    internal float Ground, Scale, Cos, Sin, Reach; // where its deck stands, how it is scaled and turned, how far it reaches
     internal bool WasDead; // dead or not before the step its life last changed in, which its deck shows until the next
     internal long Turned = -1;
 
@@ -16,20 +17,17 @@ public partial class destructable
 }
 
 // Destructables, trees and gates, as the destructables probe measures them (docs/facts.md, "Destructables") with the
-// facts' "Units". A destructable's data is its type's; widgets of other kinds wait for their tasks (units W2-2, items
-// W2-3) and stop the run as Missing until then.
+// facts' "Units". A destructable's data is its type's. The natives every widget takes are in Widgets.cs.
 public sealed partial class GameNatives
 {
     const string Destructables = "facts.md, Destructables: probe destructables (11-08)";
-    const int WidgetDied = 89; // EVENT_WIDGET_DEATH
 
-    static readonly int DestructableLife = Rawcode("bhps"), Occlusion = Rawcode("boch"), FixedRotation = Rawcode("bfxr"),
-        PathTexture = Rawcode("bptx"), DestructableName = Rawcode("bnam");
+    static readonly int DestructableLife = Code("bhps"), Occlusion = Code("boch"), FixedRotation = Code("bfxr"), PathTexture = Code("bptx"),
+        DestructableName = Code("bnam");
 
     readonly List<destructable> _destructables = []; // in the order made
     readonly List<destructable> _decks = []; // those with a deck, which GetLocationZ reads
-    readonly List<(destructable Destructable, @event Event)> _deaths = [];
-    destructable? _enumDestructable, _filterDestructable;
+    destructable? _enumDestructable; // EnumDestructablesInRect's, for its filter and its callback
 
     /// <summary>
     /// Makes the map's placed destructables, as the game makes those of <c>war3map.doo</c> before the script runs: one
@@ -41,7 +39,7 @@ public sealed partial class GameNatives
         foreach (var placed in Data.Map?.Files.Doodads?.Doodads ?? [])
         {
             var (state, id, facing) = ((int)placed.State, BinaryPrimitives.ReverseEndianness(placed.TypeId), placed.Rotation * 180 / MathF.PI);
-            if ((state & 3) == 0 || Create(id, placed.Position.X, placed.Position.Y, facing, placed.Scale.X, false) is not { } d) continue;
+            if ((state & 3) == 0 || NewDestructable(id, placed.Position.X, placed.Position.Y, facing, placed.Scale.X, false) is not { } d) continue;
             d.Listed = (state & 1) == 0;
             d.Life = d.MaxLife * Math.Min((int)placed.Life, 100) / 100;
         }
@@ -49,26 +47,30 @@ public sealed partial class GameNatives
 
     // A place is cut down to a quarter; then, for a type with a pathing texture, onto the 64 grid toward 0, or 32 off it
     // away from 0 when half the texture's cells across that way is odd (probe destructables). A type turned exactly 0 or
-    // 180 degrees, by its fixed rotation or else its facing, has the texture's sides swapped.
-    destructable? Create(int objectid, float x, float y, float face, float scale, bool dead)
+    // 180 degrees, by its fixed rotation or else its facing, has the texture's sides swapped. A deck turns with the facing
+    // unless the rotation is fixed (D255).
+    destructable? NewDestructable(int objectid, float x, float y, float face, float scale, bool dead)
     {
         if (Data.Object(ObjectKind.Destructable, objectid) is not { } type) return null;
-        var rotation = type.Real(FixedRotation) is >= 0 and var fixedRotation ? fixedRotation : face;
+        var fixedRotation = type.Real(FixedRotation);
+        var rotation = fixedRotation >= 0 ? fixedRotation : face;
         var (across, up) = type.Text(PathTexture) is { } texture ? Data.PathingSize(texture) ?? (0, 0) : (0, 0);
         if (rotation is 0 or 180) (across, up) = (up, across);
+        var turn = (fixedRotation >= 0 ? 0 : face - 270) * MathF.PI / 180;
         var d = Make(new destructable
         {
-            Type = type, X = Snap(x, across), Y = Snap(y, up), Face = face, Scale = scale,
-            MaxLife = type.Real(DestructableLife), Occluder = type.Real(Occlusion), Deck = Deck.Of(type.Id) ?? Deck.Of(type.BaseId),
+            Type = type, X = Snap(x, across), Y = Snap(y, up), MaxLife = type.Real(DestructableLife), Occluder = type.Real(Occlusion),
+            Deck = Deck.Of(type.Id) ?? Deck.Of(type.BaseId), Scale = scale, Cos = MathF.Cos(turn), Sin = MathF.Sin(turn),
         });
         d.Life = dead ? 0 : d.MaxLife;
-        d.Ground = Data.Terrain?.Ground(d.X, d.Y) ?? 0;
         _destructables.Add(d);
-        if (d.Deck is not null) _decks.Add(d);
+        if (d.Deck is not null)
+        {
+            (d.Ground, d.Reach) = (Data.Terrain?.Ground(d.X, d.Y) ?? 0, d.Deck.Reach * Math.Abs(scale));
+            _decks.Add(d);
+        }
         return d;
     }
-
-    static int Rawcode(string id) => id.Aggregate(0, (value, letter) => value << 8 | letter);
 
     static float Snap(float at, int cells)
     {
@@ -83,148 +85,150 @@ public sealed partial class GameNatives
     /// </summary>
     [Native(Level.Exact, Fact = Destructables)]
     public destructable? CreateDestructable(int objectid, float x, float y, float face, float scale, int variation) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     /// <summary>As CreateDestructable; the height isn't read back.</summary>
     [Native(Level.Exact, Fact = Destructables)]
     public destructable? CreateDestructableZ(int objectid, float x, float y, float z, float face, float scale, int variation) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     /// <summary>Made dead, its life 0 of its most: KillDestructable fires nothing, and restoring brings it back.</summary>
     [Native(Level.Exact, Fact = Destructables)]
     public destructable? CreateDeadDestructable(int objectid, float x, float y, float face, float scale, int variation) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     /// <summary>As CreateDeadDestructable (not measured).</summary>
     [Native(Level.Close)]
     public destructable? CreateDeadDestructableZ(int objectid, float x, float y, float z, float face, float scale, int variation) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     // As CreateDestructable and CreateDeadDestructable: the height, skin, colour, pitch and roll aren't read back (not measured).
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructablePitchRoll(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructablePitchRollWithColor(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, playercolor? color) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableWithColor(int objectid, float x, float y, float face, float scale, int variation, playercolor? color) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableWithSkin(int objectid, float x, float y, float face, float scale, int variation, int skinId) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableWithSkinColor(int objectid, float x, float y, float face, float scale, int variation, int skinId, playercolor? color) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableWithSkinPitchRoll(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, int skinId) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableWithSkinPitchRollColor(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, int skinId, playercolor? color) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableZPitchRoll(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableZPitchRollWithColor(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, playercolor? color) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableZWithColor(int objectid, float x, float y, float z, float face, float scale, int variation, playercolor? color) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableZWithSkin(int objectid, float x, float y, float z, float face, float scale, int variation, int skinId) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableZWithSkinColor(int objectid, float x, float y, float z, float face, float scale, int variation, int skinId, playercolor? color) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableZWithSkinPitchRoll(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, int skinId) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDeadDestructableZWithSkinPitchRollColor(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, int skinId, playercolor? color) =>
-        Create(objectid, x, y, face, scale, true);
+        NewDestructable(objectid, x, y, face, scale, true);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructablePitchRoll(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructablePitchRollWithColor(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, playercolor? color) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableWithColor(int objectid, float x, float y, float face, float scale, int variation, playercolor? color) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableWithSkin(int objectid, float x, float y, float face, float scale, int variation, int skinId) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableWithSkinColor(int objectid, float x, float y, float face, float scale, int variation, int skinId, playercolor? color) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableWithSkinPitchRoll(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, int skinId) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableWithSkinPitchRollColor(int objectid, float x, float y, float face, float roll, float pitch, float scale, int variation, int skinId, playercolor? color) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableZPitchRoll(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableZPitchRollWithColor(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, playercolor? color) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableZWithColor(int objectid, float x, float y, float z, float face, float scale, int variation, playercolor? color) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableZWithSkin(int objectid, float x, float y, float z, float face, float scale, int variation, int skinId) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableZWithSkinColor(int objectid, float x, float y, float z, float face, float scale, int variation, int skinId, playercolor? color) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableZWithSkinPitchRoll(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, int skinId) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     [Native(Level.Close)]
     public destructable? BlzCreateDestructableZWithSkinPitchRollColor(int objectid, float x, float y, float z, float face, float roll, float pitch, float scale, int variation, int skinId, playercolor? color) =>
-        Create(objectid, x, y, face, scale, false);
+        NewDestructable(objectid, x, y, face, scale, false);
 
     /// <summary>
     /// Fires its death event inside the call, dead or not, reading the life it had; then it is gone, and every native
-    /// reads it as nil (its type id, life and place 0).
+    /// reads it as nil (its type id, life and place 0). Removed again inside that event, it fires the event again
+    /// there, nested, as many times as the event removes it (probe: three deep).
     /// </summary>
     [Native(Level.Exact, Fact = Destructables + "; game-facts.md, Units: RemoveDestructable fires the death event (10-23)")]
     public void RemoveDestructable(destructable? d)
     {
-        if (d is null || !_destructables.Remove(d)) return;
+        if (d is null) return;
         FireDeath(d);
+        if (!_destructables.Remove(d)) return; // a removal inside its death event has done it
         _decks.Remove(d);
-        _deaths.RemoveAll(registered => registered.Destructable == d);
+        _widgetEvents.Remove(d);
         _game.Remove(d.Key);
     }
 
@@ -253,10 +257,11 @@ public sealed partial class GameNatives
         d.Life = life;
     }
 
+    // Its own widget death registrations, in the order made (D225)
     void FireDeath(destructable d)
     {
-        foreach (var (registered, @event) in _deaths.ToArray())
-            if (registered == d) Fire(@event, Convert<widgetevent>(WidgetDied), widget: d);
+        foreach (var (kind, registered) in _widgetEvents.GetValueOrDefault(d)?.ToArray() ?? [])
+            if (kind == WidgetDeath) Fire(registered, Convert<widgetevent>(kind), destructable: d);
     }
 
     [Native(Level.Exact, Fact = Destructables)]
@@ -341,13 +346,13 @@ public sealed partial class GameNatives
     /// <summary>
     /// The listed destructables whose 32 cell, the one holding its place, lies in the rect with its west and south edges
     /// past the rect's (a rect of 32 around one never finds it), each passed to the filter, then the callback, with
-    /// GetFilterDestructable and GetEnumDestructable it; in rows of 256 cells from the south, west to east, the last made
-    /// first in a cell. Hidden destructables are listed.
+    /// GetFilterDestructable and GetEnumDestructable it; by squares of 256 world units, in rows from the south, west to
+    /// east, the last made first in a square whatever its place in it. Hidden destructables are listed.
     /// </summary>
     [Native(Level.Exact, Fact = Destructables + "; game-facts.md, Units: a rect of 32 finds none (10-26)")]
     public void EnumDestructablesInRect(rect? r, boolexpr? filter, Action? actionFunc)
     {
-        var (outerEnum, outerFilter) = (_enumDestructable, _filterDestructable);
+        var outer = _enumDestructable;
         try
         {
             if (r is null) return;
@@ -356,13 +361,13 @@ public sealed partial class GameNatives
             foreach (var d in found)
             {
                 if (_game.Handle(d.Key) is null) continue; // removed by a callback before it
-                _enumDestructable = _filterDestructable = d;
+                _enumDestructable = d;
                 if (filter is null || Holds(filter, alone: true)) actionFunc?.Invoke();
             }
         }
         finally
         {
-            (_enumDestructable, _filterDestructable) = (outerEnum, outerFilter);
+            _enumDestructable = outer;
             Release(actionFunc);
         }
     }
@@ -379,48 +384,11 @@ public sealed partial class GameNatives
 
     /// <summary>The destructable EnumDestructablesInRect's filter, and its callback, is running for; nil outside it.</summary>
     [Native(Level.Exact, Fact = Destructables)]
-    public destructable? GetFilterDestructable() => _filterDestructable;
-
-    /// <summary>
-    /// Fires inside the destructable's death: KillDestructable, its life set below 0.405 and RemoveDestructable. A unit's
-    /// or an item's waits for its task (units W2-2, items W2-3) and stops the run as Missing.
-    /// </summary>
-    [Native(Level.Close)]
-    public @event? TriggerRegisterDeathEvent(trigger? whichTrigger, widget? whichWidget)
-    {
-        if (whichWidget is not (null or destructable)) throw new MissingNativeException(nameof(TriggerRegisterDeathEvent));
-        if (whichTrigger is null || whichWidget is not destructable d) return null;
-        var registered = Register(whichTrigger);
-        _deaths.Add((d, registered));
-        return registered;
-    }
+    public destructable? GetFilterDestructable() => _enumDestructable;
 
     /// <summary>The destructable of the death event that fired the trigger; nil outside one.</summary>
     [Native(Level.Exact, Fact = Destructables)]
-    public destructable? GetTriggerDestructable() => Current.Widget as destructable;
-
-    /// <summary>The widget of the event that fired the trigger, == the destructable; nil outside one.</summary>
-    [Native(Level.Exact, Fact = Destructables)]
-    public widget? GetTriggerWidget() => Current.Widget;
-
-    /// <summary>A destructable's life; a unit's or item's waits for its task and stops the run as Missing.</summary>
-    [Native(Level.Close)]
-    public float GetWidgetLife(widget? whichWidget) => Widget(whichWidget, nameof(GetWidgetLife))?.Life ?? 0;
-
-    /// <summary>A destructable's as SetDestructableLife; a unit's or item's waits for its task and stops the run as Missing.</summary>
-    [Native(Level.Close)]
-    public void SetWidgetLife(widget? whichWidget, float newLife) => SetDestructableLife(Widget(whichWidget, nameof(SetWidgetLife)), newLife);
-
-    /// <summary>A destructable's place; a unit's or item's waits for its task and stops the run as Missing.</summary>
-    [Native(Level.Close)]
-    public float GetWidgetX(widget? whichWidget) => Widget(whichWidget, nameof(GetWidgetX))?.X ?? 0;
-
-    /// <summary>As GetWidgetX.</summary>
-    [Native(Level.Close)]
-    public float GetWidgetY(widget? whichWidget) => Widget(whichWidget, nameof(GetWidgetY))?.Y ?? 0;
-
-    static destructable? Widget(widget? w, string native) =>
-        w is null or destructable ? w as destructable : throw new MissingNativeException(native);
+    public destructable? GetTriggerDestructable() => Current.Destructable;
 
     // GetLocationZ: the ground, or a standing walkable destructable's deck where it is higher; the deck stands on the ground
     // beneath any water at its place, turned with its facing unless its type's rotation is fixed, and scaled about its
@@ -430,10 +398,10 @@ public sealed partial class GameNatives
         var height = Data.Terrain?.Height(x, y) ?? 0;
         foreach (var d in _decks)
         {
-            if (_game.Step > d.Turned ? d.Dead : d.WasDead) continue;
-            var turn = (d.Type.Real(FixedRotation) < 0 ? d.Face - 270 : 0) * MathF.PI / 180;
-            var (cos, sin, dx, dy) = (MathF.Cos(turn), MathF.Sin(turn), (x - d.X) / d.Scale, (y - d.Y) / d.Scale);
-            if (d.Deck!.Height(dx * cos + dy * sin, dy * cos - dx * sin) is { } deck && d.Ground + d.Scale * deck > height)
+            var (dx, dy) = (x - d.X, y - d.Y);
+            if (dx * dx + dy * dy > d.Reach * d.Reach || (_game.Step > d.Turned ? d.Dead : d.WasDead)) continue;
+            (dx, dy) = (dx / d.Scale, dy / d.Scale);
+            if (d.Deck!.Height(dx * d.Cos + dy * d.Sin, dy * d.Cos - dx * d.Sin) is { } deck && d.Ground + d.Scale * deck > height)
                 height = d.Ground + d.Scale * deck;
         }
         return height;
@@ -463,4 +431,10 @@ public sealed partial class GameNatives
 
     [Native(Level.Recorded, Reason = "Plays an animation of doodads in a rect, which nothing reads back")]
     public void SetDoodadAnimationRect(rect? r, int doodadID, string? animName, bool animRandom) { }
+
+    [Native(Level.Recorded, Reason = "Gives doodads near a point a team colour, which nothing reads back")]
+    public void SetDoodadColor(float x, float y, float radius, int doodadID, bool nearestOnly, playercolor? whichColor) { }
+
+    [Native(Level.Recorded, Reason = "Gives doodads in a rect a team colour, which nothing reads back")]
+    public void SetDoodadColorRect(rect? r, int doodadID, playercolor? whichColor) { }
 }

@@ -77,6 +77,7 @@ public partial class @event
 {
     internal trigger? Trigger;
     internal timer? Timer;  // an expiry event's
+    internal agent? Of;  // a unit event's widget or player, whose list holds it
 }
 
 public partial class timer
@@ -94,8 +95,10 @@ public sealed partial class GameNatives
     const string Probe4 = "facts.md, Triggers and threads: probe triggers-4 (11-08)";
     const int TimerExpired = 4;  // EVENT_GAME_TIMER_EXPIRED
 
-    // What the event responses read in a thread: the trigger it runs for and the event that started it (decisions D75)
-    sealed record Firing(trigger? Trigger, eventid Event, gamestate? State = null, player? Player = null, playerstate? PlayerState = null, widget? Widget = null);
+    // What the event responses read in a thread: the trigger it runs for and the event that started it (decisions D75),
+    // and the unit or destructable it is about
+    sealed record Firing(trigger? Trigger, eventid Event, gamestate? State = null, player? Player = null, playerstate? PlayerState = null,
+        Happening? Unit = null, destructable? Destructable = null);
 
     readonly List<(gamestate State, limitop Op, float Limit, @event Event)> _stateEvents = [];
     Firing? _firing, _outside;
@@ -128,13 +131,13 @@ public sealed partial class GameNatives
         {
             _game.Remove(registered.Key);
             registered.Timer?.ExpireEvents?.Remove(registered);
+            ForgetUnitEvent(registered);
         }
         whichTrigger.Events.Clear();
         _stateEvents.RemoveAll(state => state.Event.Trigger == whichTrigger);
         _playerEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _allianceEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _playerStateEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
-        _deaths.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _game.Remove(whichTrigger.Key);
     }
 
@@ -469,12 +472,13 @@ public sealed partial class GameNatives
     }
 
     // An event: counted; then, when the trigger is enabled and its conditions pass, its actions run (probe triggers-2)
-    void Fire(@event registered, eventid id, gamestate? state = null, player? player = null, playerstate? playerState = null, widget? widget = null)
+    void Fire(@event registered, eventid id, gamestate? state = null, player? player = null, playerstate? playerState = null,
+        Happening? unit = null, destructable? destructable = null)
     {
         if (registered.Trigger is not { Destroyed: false } t) return;
         t.EvalCount++;
         if (!t.Enabled) return;
-        var firing = new Firing(t, id, state, player, playerState, widget);
+        var firing = new Firing(t, id, state, player, playerState, unit, destructable);
         if (!In(firing, () => Passes(t))) return;
         t.ExecCount++;
         Execute(t, firing);

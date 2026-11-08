@@ -108,6 +108,9 @@ public sealed partial class StandardData
 
     internal Dictionary<(ObjectKind Kind, int Id), StandardObject> Objects { get; } = [];
 
+    /// <summary>The objects the balance set leaves out, which don't exist but have their text.</summary>
+    internal Dictionary<(ObjectKind Kind, int Id), StandardObject> Absent { get; } = [];
+
     internal Dictionary<ObjectKind, Dictionary<int, Field>> Fields { get; } = [];
 
     /// <summary>The gameplay constants, the <c>[Misc]</c> keys of <c>units/miscdata.txt</c> and <c>units/miscgame.txt</c>.</summary>
@@ -166,12 +169,14 @@ public sealed partial class StandardData
                     foreach (var (column, value) in cells) merged[column] = value;
                 }
 
+            // An object the set leaves out doesn't exist, but its text is still read: GetObjectName names it (probe data-sets-melee).
+            var absent = new HashSet<string>(StringComparer.Ordinal);
             if (objects is not null)
                 foreach (var table in tables)
                     if (File($"_balance/{objects}.w3mod/{table}") is { } bytes)
                     {
                         var listed = Tables.Slk(bytes).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-                        foreach (var id in rows.Keys.Where(id => !listed.Contains(id)).ToList()) rows.Remove(id);
+                        absent.UnionWith(rows.Keys.Where(id => !listed.Contains(id)));
                     }
 
             // A text section is the object's whatever its case (the Command Aura buff BOac's is [Boac]), its exact id first.
@@ -183,7 +188,7 @@ public sealed partial class StandardData
                         foreach (var (key, value) in keys) merged[key] = value;
 
             foreach (var (id, merged) in rows)
-                if (id.Length == 4) data.Objects[(kind, Ids.Of(id))] = new StandardObject(merged);
+                if (id.Length == 4) (absent.Contains(id) ? data.Absent : data.Objects)[(kind, Ids.Of(id))] = new StandardObject(merged);
         }
 
         foreach (var path in new[] { "units/miscdata.txt", "units/miscgame.txt" })
@@ -200,12 +205,11 @@ public sealed partial class StandardData
             if (name.Equals("WorldEditStrings", StringComparison.OrdinalIgnoreCase))
                 foreach (var (key, value) in keys) data.EditorStrings.TryAdd(key, Tables.Unquoted(value));
 
-        // A pathing texture's size is its TGA header's width and height, a cell a pixel.
         var pathing = data.Fields[ObjectKind.Destructable].GetValueOrDefault(Ids.Of("bptx"));
         foreach (var ((kind, _), standard) in data.Objects)
             if (kind == ObjectKind.Destructable && pathing is not null && standard.Cell(pathing, 0) is { } texture && !data.PathingSizes.ContainsKey(texture)
-                && File(texture.Replace('\\', '/')) is { Length: >= 16 } tga)
-                data.PathingSizes[texture] = (BinaryPrimitives.ReadInt16LittleEndian(tga.AsSpan(12)), BinaryPrimitives.ReadInt16LittleEndian(tga.AsSpan(14)));
+                && PathingSize(File(texture.Replace('\\', '/'))) is { } size)
+                data.PathingSizes[texture] = size;
 
         // A hotkey is key='C', and in another language key:deDE='W' (or key:esES,itIT=...); the installed language's first.
         foreach (var (name, keys) in Profile("ui/miscui.txt"))
@@ -261,6 +265,10 @@ public sealed partial class StandardData
         return (set, set);
     }
 
+    /// <summary>A pathing texture's size in cells, across and up: its TGA header's width and height, a cell a pixel.</summary>
+    internal static (int Across, int Up)? PathingSize(byte[]? tga) =>
+        tga is { Length: >= 16 } ? (BinaryPrimitives.ReadInt16LittleEndian(tga.AsSpan(12)), BinaryPrimitives.ReadInt16LittleEndian(tga.AsSpan(14))) : null;
+
     /// <summary>
     /// Adds a standard object with the values a test gives, by field and level: <c>uhpm</c> for a field without levels,
     /// <c>Hhb1:2</c> for level 2 of a field with them.
@@ -308,7 +316,7 @@ public sealed partial class StandardData
 }
 
 /// <summary>Object and field ids: four characters, read as the game reads them, big-endian.</summary>
-static class Ids
+public static class Ids
 {
     public static int Of(string id) => id.Aggregate(0, (value, letter) => (value << 8) | (byte)letter);
 }
