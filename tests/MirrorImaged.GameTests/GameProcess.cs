@@ -37,8 +37,18 @@ sealed class GameProcess : IDisposable
 
             var startup = new Win32.StartupInfo { Size = Marshal.SizeOf<Win32.StartupInfo>(), Desktop = desktop };
             var command = new StringBuilder($"\"{application}\" {arguments}");
-            if (!Win32.CreateProcess(application, command, 0, 0, false, Win32.CreateSuspended, 0, directory, ref startup, out var started))
-                throw new Win32Exception();
+            var environment = UsersOwnEnvironment();
+            Win32.ProcessInformation started;
+            try
+            {
+                if (!Win32.CreateProcess(
+                        application, command, 0, 0, false, Win32.CreateSuspended | Win32.CreateUnicodeEnvironment, environment, directory, ref startup, out started))
+                    throw new Win32Exception();
+            }
+            finally
+            {
+                Win32.DestroyEnvironmentBlock(environment);
+            }
 
             try
             {
@@ -72,6 +82,24 @@ sealed class GameProcess : IDisposable
         {
             Win32.CloseHandle(job);
             throw;
+        }
+    }
+
+    // The user's environment as a new logon gets it, not the caller's: started from Git Bash's, the game never logs in
+    // (docs/facts.md).
+    static nint UsersOwnEnvironment()
+    {
+        if (!Win32.OpenProcessToken(Win32.GetCurrentProcess(), Win32.TokenQueryAndDuplicate, out var token))
+            throw new Win32Exception();
+        try
+        {
+            if (!Win32.CreateEnvironmentBlock(out var environment, token, false))
+                throw new Win32Exception();
+            return environment;
+        }
+        finally
+        {
+            Win32.CloseHandle(token);
         }
     }
 

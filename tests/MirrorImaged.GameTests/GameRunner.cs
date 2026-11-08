@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using MirrorImaged.Data;
 using MirrorImaged.Probes;
@@ -58,20 +60,21 @@ public sealed class GameRunner(string game, string documents, string maps)
 
     static readonly TimeSpan Patience = TimeSpan.FromSeconds(3);
 
-    static readonly TimeSpan LongestTurnWait = TimeSpan.FromMinutes(10);
+    // Well inside the 10 minutes after which the test host's blame collector ends a run (tests/Tests.runsettings).
+    static readonly TimeSpan LongestTurnWait = TimeSpan.FromMinutes(5);
 
     const string AtLoginSays =
-        "needs Sven: the game never got past its Battle.net login (it didn't open the account). It logs in online at every " +
-        "launch (docs/facts.md), so first check that this process can reach the internet; if it can, look at the game in a " +
-        "normal window to see what it asks";
+        "needs Sven: the game never got past its Battle.net login (it didn't open the account). Seen every time the runner " +
+        "ran under Claude Code's Bash tool, where the game's window stays black, and never from PowerShell (docs/facts.md): " +
+        "run the game tests from PowerShell or a normal terminal; if it happens there, look at the game in a normal window";
 
     /// <summary>The game's executable.</summary>
     public string Game => game;
 
     string Data => Path.Combine(documents, "CustomMapData", ProbeMap.Folder);
 
-    // Beside the maps' folder, so a run's keep outlives its test host.
-    string KeptFolder => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(maps))!, "kept");
+    // Beside the maps' folder: the hashes of the replays probe runs made, one a line.
+    string ProbeReplays => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(maps))!, "probe-replays.txt");
 
     /// <summary>
     /// Runs a probe in a game started on its map with <c>-loadfile</c>, and ends that game. One run at a time on this
@@ -79,7 +82,7 @@ public sealed class GameRunner(string game, string documents, string maps)
     /// </summary>
     /// <exception cref="InvalidOperationException">A Warcraft III that this runner didn't start is running.</exception>
     /// <exception cref="ArgumentException">The name is not a probe's, or makes the map's path too long for the game.</exception>
-    /// <exception cref="TimeoutException">Another run kept the game longer than ten minutes.</exception>
+    /// <exception cref="TimeoutException">Another run kept the game longer than five minutes.</exception>
     public ProbeRun Run(string name, string lua, TimeSpan timeout)
     {
         using var one = new Mutex(false, OneRunAtATime);
@@ -117,8 +120,10 @@ public sealed class GameRunner(string game, string documents, string maps)
         var started = Path.Combine(documents, "CustomMapData", ProbeMap.Started);
         var events = new List<string> { Version() };
         IReadOnlyList<string>? lines = null;
-        if (KeptFiles.Left(KeptFolder) is { } left)
-            events.AddRange(left.PutBack(left.LastMark + TimeSpan.FromSeconds(5)).Select(line => $"from a run that ended early: {line}"));
+
+        // The probe's game replaces the account's last replay (facts): Sven's is copied aside first. Nothing is ever put back.
+        var replays = Replays();
+        events.AddRange(SaveReplays(replays.Select(replay => replay.File), ProbeReplays).Select(copy => $"saved Sven's replay as {copy}"));
 
         // The game rewrites the preferences once it has logged in to Battle.net and opened the account (facts).
         var preferences = Path.Combine(documents, "War3Preferences.txt");
@@ -127,7 +132,6 @@ public sealed class GameRunner(string game, string documents, string maps)
         var loggedIn = false;
         var stillRunning = false;
 
-        var kept = KeptFiles.Keep(KeptFolder, Kept());
         using var watch = new Watch();
         GameProcess? running = null;
         try
@@ -138,7 +142,7 @@ public sealed class GameRunner(string game, string documents, string maps)
             File.Delete(loaded);
             File.Delete(started);
             running = GameProcess.Start(game, $"-launch -windowmode windowed -loadfile \"{map}\"", Path.GetDirectoryName(Path.GetDirectoryName(game))!, watch.Desktop);
-            lines = Wait(output, loaded, started, timeout, watch, running, kept, LoggedIn, events);
+            lines = Wait(output, loaded, started, timeout, watch, running, LoggedIn, events);
             loggedIn = LoggedIn();
             stillRunning = !running.Process.HasExited;
             events.Add($"in the game's job: {string.Join(", ", running.Ids().Select(Name))}");
@@ -151,10 +155,12 @@ public sealed class GameRunner(string game, string documents, string maps)
                 running.Dispose();
             }
 
-            // Another Warcraft III may be Sven's own, writing his files: they are left as they are.
-            events.AddRange(watch.Foreign
-                ? kept.Forget().Select(file => $"another Warcraft III ran, so this was left as it is: {file}")
-                : kept.PutBack());
+            // A replay that came during the run is the probe's, unless another Warcraft III ran: then it may be Sven's,
+            // and the next run saves it.
+            if (watch.Foreign)
+                events.Add("another Warcraft III ran, so no replay was noted as a probe's");
+            else
+                NoteProbeReplays(replays, ProbeReplays);
             if (File.Exists(map))
                 File.Delete(map);
         }
@@ -186,25 +192,57 @@ public sealed class GameRunner(string game, string documents, string maps)
             : $"game {version}; warning: the facts this runner relies on were measured on {MeasuredOn} (docs/facts.md)";
     }
 
-    // Files of Sven's that the game rewrites: his preferences, and for each account the replays and campaign profiles.
-    // Only LastReplay.w3g changed in a run (docs/facts.md), but all are put back as they were.
-    List<string> Kept()
+    // Each account's LastReplay.w3g, with its hash before the run (null when there is none).
+    List<(string File, string? Hash)> Replays()
     {
-        var files = new List<string> { Path.Combine(documents, "War3Preferences.txt") };
         var accounts = Path.Combine(documents, "BattleNet");
-        if (Directory.Exists(accounts))
+        return Directory.Exists(accounts)
+            ? Directory.GetDirectories(accounts).Select(account => Path.Combine(account, "Replays", "LastReplay.w3g")).Select(file => (file, Hash(file))).ToList()
+            : [];
+    }
+
+    /// <summary>
+    /// Copies each replay that no probe run made (its hash isn't in <paramref name="probeReplays"/>) to
+    /// <c>Saved by MirrorImaged\LastReplay &lt;its write time&gt;.w3g</c> beside it, never over a file that is there. Says
+    /// which copies it made.
+    /// </summary>
+    internal static List<string> SaveReplays(IEnumerable<string> replays, string probeReplays)
+    {
+        var probes = File.Exists(probeReplays) ? File.ReadAllLines(probeReplays).ToHashSet(StringComparer.Ordinal) : [];
+        var saved = new List<string>();
+        foreach (var replay in replays)
         {
-            foreach (var account in Directory.GetDirectories(accounts))
+            if (Hash(replay) is not { } hash || probes.Contains(hash))
+                continue;
+            var folder = Path.Combine(Path.GetDirectoryName(replay)!, "Saved by MirrorImaged");
+            var copy = Path.Combine(folder, $"LastReplay {File.GetLastWriteTime(replay).ToString("yyyy-MM-dd HHmmss", CultureInfo.InvariantCulture)}.w3g");
+            Directory.CreateDirectory(folder);
+            try
             {
-                files.Add(Path.Combine(account, "Replays", "LastReplay.w3g"));
-                files.Add(Path.Combine(account, "Replays", "TempReplay.w3g"));
-                files.Add(Path.Combine(account, "Campaigns", "Classic", "Classic.w3p"));
-                files.Add(Path.Combine(account, "Campaigns", "Reforged", "Reforged.w3p"));
+                File.Copy(replay, copy, overwrite: false);
+                saved.Add(copy);
+            }
+            catch (IOException) when (File.Exists(copy))
+            {
+                // Saved already, by an earlier run.
             }
         }
 
-        return files;
+        return saved;
     }
+
+    /// <summary>Adds the hash of each replay that is no longer what it was before the run to <paramref name="probeReplays"/>.</summary>
+    internal static void NoteProbeReplays(IEnumerable<(string File, string? Hash)> before, string probeReplays)
+    {
+        var made = before.Select(replay => (Before: replay.Hash, Now: Hash(replay.File)))
+            .Where(replay => replay.Now is not null && replay.Now != replay.Before)
+            .Select(replay => replay.Now!)
+            .ToList();
+        if (made.Count > 0)
+            File.AppendAllLines(probeReplays, made);
+    }
+
+    static string? Hash(string file) => File.Exists(file) ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file))) : null;
 
     /// <summary>A new path for this run's map: the probe's name and a random suffix, so two runs never share one.</summary>
     /// <exception cref="ArgumentException">The path is longer than <see cref="LongestMapPath"/>.</exception>
@@ -232,7 +270,7 @@ public sealed class GameRunner(string game, string documents, string maps)
     // Waits for the probe's lines. A loaded map waits on its loading screen for a key (Sven, 11-08), so while it does, a
     // space key is posted to the game's window every few seconds.
     static IReadOnlyList<string>? Wait(
-        string output, string loaded, string started, TimeSpan timeout, Watch watch, GameProcess running, KeptFiles kept, Func<bool> loggedIn,
+        string output, string loaded, string started, TimeSpan timeout, Watch watch, GameProcess running, Func<bool> loggedIn,
         List<string> events)
     {
         var time = Stopwatch.StartNew();
@@ -243,7 +281,6 @@ public sealed class GameRunner(string game, string documents, string maps)
         while (time.Elapsed < timeout && !running.Process.HasExited)
         {
             Thread.Sleep(250);
-            kept.Mark();
             watch.Look(running.Ids());
             if (!account && loggedIn())
             {

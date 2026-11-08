@@ -1,3 +1,4 @@
+using MirrorImaged.Lua;
 using MirrorImaged.Probes;
 using War3Net.Build;
 using War3Net.Build.Info;
@@ -63,25 +64,43 @@ public sealed class ProbeMapTests : IDisposable
     }
 
     [Fact]
-    public void A_line_is_refused_when_it_is_too_long_for_one_Preload_call_counting_a_backslash_twice_or_has_a_line_break()
+    public void Lines_come_back_as_given()
     {
-        var script = Build("hello", "done()").Script!;
+        Assert.Equal(["1", "a \"quoted\" line", new string('\\', 126) + "a"], Run("out(1)\nout('a \"quoted\" line')\nout(string.rep('\\\\', 126) .. 'a')\ndone()"));
+    }
 
-        Assert.Contains("    -- The game writes a backslash doubled, so it counts two.\n    if #text + select(2, text:gsub(\"\\\\\", \"\")) > 253 or text:find(\"[\\r\\n]\") then\n        error(", script);
+    [Theory]
+    [InlineData("out(string.rep('a', 254))")]
+    [InlineData("out(string.rep('\\\\', 127))")]
+    [InlineData("out('two\\nlines')")]
+    [InlineData("out('a\\rb')")]
+    public void A_line_too_long_for_one_Preload_call_a_backslash_counting_two_or_with_a_line_break_ends_the_probe_with_its_error(string line)
+    {
+        var lines = Run($"out('kept')\n{line}\nout('never')\ndone()");
+
+        Assert.Equal(2, lines.Count);
+        Assert.Equal("kept", lines[0]);
+        Assert.StartsWith("error: ", lines[1]);
+        Assert.Contains("a line is at most 253 bytes, a backslash counting two, with no line break", lines[1]);
     }
 
     [Fact]
-    public void An_error_in_the_probe_or_a_guarded_function_becomes_its_last_line_and_ends_the_probe()
+    public void An_error_line_is_cut_to_fit_one_Preload_call_a_backslash_counting_two()
     {
-        var script = Build("hello", "error('x')").Script!;
+        var lines = Run("error(string.rep('\\\\', 300), 0)");
 
-        Assert.Contains(
-            "        local ok, problem = pcall(f, ...)\n        if not ok then\n" +
-            "            lines[#lines + 1] = (\"error: \" .. tostring(problem)):gsub(\"[\\r\\n]\", \" \"):sub(1, 253)\n" +
-            "            done()\n",
-            script);
+        var line = Assert.Single(lines);
+        Assert.StartsWith("error: \\\\\\", line);
+        Assert.Equal(253, line.Length + line.Count(letter => letter == '\\'));
     }
 
+    [Fact]
+    public void An_error_in_a_guarded_timer_function_ends_the_probe_with_its_error()
+    {
+        var lines = Run("out('before')\nTimerStart(CreateTimer(), 1.0, false, guard(function() error('in the timer', 0) end))");
+
+        Assert.Equal(["before", "error: in the timer"], lines);
+    }
     [Theory]
     [InlineData("")]
     [InlineData("a b")]
@@ -105,6 +124,33 @@ public sealed class ProbeMapTests : IDisposable
             var name = Path.GetFileNameWithoutExtension(source);
             Assert.Contains(ProbeMap.Source(name).ReplaceLineEndings("\n"), Build(name, ProbeMap.Source(name)).Script!);
         }
+    }
+
+    // Runs a probe map's script in the game's Lua, with stand-ins for the natives it calls; returns the lines done() wrote.
+    List<string> Run(string lua)
+    {
+        var script = Build("probe", lua).Script!;
+        using var state = new LuaState();
+        var written = new List<string>();
+        state.Register("record", values => { written.Add((string)values[0]!); return []; });
+        state.Run("""
+            local timers = {}
+            function CreateTimer() return {} end
+            function TimerStart(timer, timeout, periodic, f) timers[#timers + 1] = f end
+            function InitBlizzard() end
+            function PreloadGenClear() end
+            function PreloadGenStart() end
+            function Preload(text) record(text) end
+            function PreloadGenEnd(file) end
+            function EndGame() end
+            function runTimers()
+                for _, f in ipairs(timers) do f() end
+            end
+            """);
+        state.Run(script);
+        state.Call("main");
+        state.Call("runTimers");
+        return written.Select(text => text["\")\n".Length..^"\n//".Length]).ToList();
     }
 
     // Line ends as \n whatever the checkout gives the raw string the script is written from.

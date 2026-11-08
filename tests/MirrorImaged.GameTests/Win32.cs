@@ -7,7 +7,8 @@ static class Win32
 {
     // DESKTOP_READOBJECTS to list its windows, and DESKTOP_CREATEWINDOW, without which CreateDesktop fails with error 8.
     public const uint DesktopRights = 0x1 | 0x2;
-    public const int CreateSuspended = 0x4;
+    public const int CreateSuspended = 0x4, CreateUnicodeEnvironment = 0x400;
+    public const uint TokenQueryAndDuplicate = 0x8 | 0x2;
     public const int JobObjectBasicProcessIdList = 3, JobObjectExtendedLimitInformation = 9;
     public const uint KillOnJobClose = 0x2000;
     public const uint KeyDown = 0x100, KeyUp = 0x101;
@@ -61,6 +62,18 @@ static class Win32
 
     [DllImport("kernel32", SetLastError = true)]
     public static extern uint ResumeThread(nint thread);
+
+    [DllImport("kernel32")]
+    public static extern nint GetCurrentProcess();
+
+    [DllImport("advapi32", SetLastError = true)]
+    public static extern bool OpenProcessToken(nint process, uint access, out nint token);
+
+    [DllImport("userenv", SetLastError = true)]
+    public static extern bool CreateEnvironmentBlock(out nint environment, nint token, bool inherit);
+
+    [DllImport("userenv")]
+    public static extern bool DestroyEnvironmentBlock(nint environment);
 
     [DllImport("kernel32", SetLastError = true)]
     public static extern bool TerminateProcess(nint process, uint exitCode);

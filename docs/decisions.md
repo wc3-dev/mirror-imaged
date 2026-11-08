@@ -189,8 +189,9 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   one user player, and a black 256x256 `war3mapMap.tga` made in code, since the game closes a map with no minimap image
   (facts) and no game file may be in git. No pathing, shadow or doodad file: the game loads it without. (W0-4)
 - **D43.** A probe is plain Lua that calls `out(text)` per line and `done()` at the end. It runs in the first
-  zero-second timer, through `guard(f)`, which runs `f` in `pcall` and on an error adds the line `error: <message>` (cut
-  to 253 bytes, line breaks made spaces) and calls `done()`; a probe passes its own timer functions through `guard` too.
+  zero-second timer, through `guard(f)`, which runs `f` in `pcall` and on an error adds the line
+  `error: <message>` (line breaks made spaces, cut to fit as below) and calls `done()`; a probe passes its own timer
+  functions through `guard` too. These rules are tested by running a probe map's script in MirrorImaged's Lua with stand-ins for the natives.
   `out` refuses, with a Lua error, a line over 253 bytes or with a line break, the most one `Preload` call keeps whole
   as one line of the file (facts "Files and Preload"); a backslash counts two, as the game writes it doubled (whether
   the game's cut counts it once or twice is not measured, so this is the safe side). `done()` writes the lines to
@@ -207,30 +208,33 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   space key to the game's window every 3 s (facts: the loading screen waits; a posted key passes it). These marks, not
   `War3Log.txt`, say the map loaded, because the game holds the log back while it runs and loses it when killed
   (facts). A run with no lines is `NoOutput` when the map loaded; `AtLogin` when the game still ran but never logged in
-  (it rewrites `War3Preferences.txt` once it has, facts), with its detail starting "needs Sven: ..."; and `Queued`
-  otherwise. What the game shows can't be captured on the hidden desktop (facts), so `AtLogin` is told from the
+  (it rewrites `War3Preferences.txt` once it has, facts), with its detail starting "needs Sven: ..." and saying what is
+  known: it was seen every time the runner ran under Claude Code's Bash tool and never from PowerShell (facts); and
+  `Queued` otherwise. What the game shows can't be captured on the hidden desktop (facts), so `AtLogin` is told from the
   preferences file, not from a picture. (W0-4)
 - **D47.** The game starts suspended in a job object of its own with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, and is
   resumed once in it, so everything it starts is in the job (measured: no breakaway). The runner ends the job, never
   closing the game's window, which opens the quit dialog; when the test host ends, however it ends, Windows closes the
-  job and the game goes with it. It stops nothing outside the job. (W0-4)
+  job and the game goes with it. It stops nothing outside the job. The game gets the user's own environment as a new
+  logon builds it (`CreateEnvironmentBlock` without inheriting), not the test host's, so the caller's shell (Git Bash's
+  `HOME`, `MSYSTEM` and `PATH`) never reaches it; that alone did not end the stalls under the Bash tool (facts). (W0-4)
 - **D48.** Runs are one at a time on a computer: a run holds the named mutex `MirrorImaged.GameRunner` for its whole
-  length, a second waits for it up to 10 minutes and then fails saying so, and a run refuses to start while any
+  length, a second waits for it up to 5 minutes (well inside the 10 after which the test host's blame collector ends a
+  run) and then fails saying so, and a run refuses to start while any
   Warcraft III is running, as it couldn't tell that game's files from its own. Two runs at once made one fail (facts).
   A test that starts a fake `Warcraft III.exe` holds the mutex while it runs. The run's detail names the installed
   build and warns when it isn't 3.0.1.24371, the version the facts were measured on. (W0-4)
 - **D49.** Built maps go to `%LOCALAPPDATA%\MirrorImaged\maps`, as `<name>-<8 random hex digits>.w3x`, new each run and
   deleted after it, since the game loads no map whose path is longer than 173 characters (facts) and the test assembly's
   folder is long already; a longer path is refused before the run. (W0-4)
-- **D50.** Before a run the runner keeps copies of `War3Preferences.txt` and of each account's `LastReplay.w3g`,
-  `TempReplay.w3g`, `Classic.w3p` and `Reforged.w3p`, with their write times, in `%LOCALAPPDATA%\MirrorImaged\kept`,
-  and after the game is stopped, also when the run fails, puts back content and time of each one that changed and
-  removes each one that wasn't there. Only `LastReplay.w3g` changed in content in the run that was measured (facts), but
-  the others are rewritten each run, so they are kept too. While the game runs the keep's list is touched every 250 ms;
-  a keep a run left (its test host killed) is put back by the next run, except a file written more than 5 s after the
-  last touch, which someone else wrote. When a Warcraft III outside the run's job is seen during the run (Sven's own
-  game, or World Editor's Test Map), nothing is put back, as the files may be his, and the run's detail lists the files
-  that differ from the copies. (W0-4)
+- **D50.** The runner never writes over any of Sven's files and puts nothing back. The one file a run changes is the
+  account's `LastReplay.w3g`, which the probe's game replaces (facts). So before a run each account's
+  `LastReplay.w3g` whose SHA-256 isn't one a probe run made is copied to `Replays\Saved by MirrorImaged\LastReplay
+  <its write time, yyyy-MM-dd HHmmss>.w3g`, never over a file that is there; after the run the hash of each
+  `LastReplay.w3g` that changed is added to `%LOCALAPPDATA%\MirrorImaged\probe-replays.txt` (hexadecimal, one a line),
+  unless a Warcraft III outside the run's job was seen during it (Sven's own game, or World Editor's Test Map), in which
+  case the replay may be his and the next run saves it. This replaced a keep-and-restore of five files, which could put
+  a stale copy over a newer file. (W0-4)
 - **D51.** A `Needs=Game` test whose probe gives no lines fails with the run's detail, rather than passing or being
   skipped: xUnit 2 can't skip once a test runs, and a pass would hide that nothing was checked. (W0-4)
 - **D52.** The hub (one game kept open, handed each probe through a Preload request and `ChangeLevel`, each probe going

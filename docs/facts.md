@@ -119,16 +119,24 @@ All on 3.0.1.24371, one PC (Windows 11), single player, with the Battle.net app 
   the probe's game (it ends with `EndGame(false)`). Other accounts' folders were not touched.
 - Two runs started at the same moment both launched a game (the check for a running game raced): one gave its lines,
   the other's game started but gave none in 100 s (1 pair, before runs took turns).
-- The game sometimes stays at its login: in the reviewers' runs (2 at 02:53 to 02:57, and 3 at 03:45 to 03:51 that took
-  turns), the map never loaded and the game never rewrote `War3Preferences.txt` or the account's files, so it never
-  logged in; the job held up to 9 `BlizzardBrowser` processes. Not seen in any of this task's own runs before or after:
-  18 runs in a normal window and 18 runs of the 3 game tests on a hidden desktop between 03:56 and 04:55, 1 to 2 minutes
-  apart, all logged in. The browser count alone says nothing: runs that logged in had up to 10 for a few seconds (4 or
-  5 otherwise). The
-  Battle.net app's log (`%LOCALAPPDATA%\Battle.net\Logs`, in UTC) shows only that a game ran. Inferred, not tested:
-  as the game logs in online at every launch, a run whose process can't reach the internet (the reviewers' commands
-  may run in another sandbox than this task's) would stay at the login door or queue this way; a login prompt, as Sven
-  saw once, would too. What the game showed in those runs is not known: on a hidden desktop it can't be captured.
+- A game started from Claude Code's Bash tool never logs in, and one started from its PowerShell tool always does.
+  Seen: the reviewers' runs (2 at 02:53 to 02:57, 3 at 03:45 to 03:51, 3 at 05:03 to 05:09, all from Git Bash) and
+  this task's runs from the Bash tool (the 3 game tests at 05:12 to 05:18, 4 runs of `hello`, 1 game in a normal window,
+  and RUNSFROMBASH) all ended with the map never loaded and `War3Preferences.txt` and the account's files never
+  rewritten, the job holding up to 11 `BlizzardBrowser` processes, against 4 or 5 in a run that logs in. The one game
+  from the Bash tool that was pictured, in a normal window, stayed black for its 60 s, where a game started from
+  PowerShell shows the door and the login queue; the reviewer saw its stuck game holding a TCP connection to a
+  Battle.net server (port 1119). Every run from the PowerShell tool logged in, about 80 since 03:56, also with Git
+  Bash's `PATH` (1 run), with Git Bash's other variables (`HOME`, `MSYSTEM`, `TERM`, `SHELL` and the rest; 1 run) and
+  inside a job of its own with no limits (1 run). Starting the game with a clean environment built from the user's
+  profile (`CreateEnvironmentBlock`, not inherited) did not help from the Bash tool (2 runs). A process the Bash tool
+  starts is in a Windows job (no UI or limit flags set) and one the PowerShell tool starts is not; both have the same
+  token (medium integrity) and the same process mitigations. Inferred: something of the Bash tool's sandbox, not the
+  environment, keeps the game's picture and its WebUI from starting, so it never reaches the login; which restriction
+  is not known (the sandbox could not be turned off to check). Not separated either: a game Git Bash started through
+  PowerShell's `Start-Process` (1 run) did log in and load the map. The browser count alone says nothing: runs that
+  logged in had up to 10 for a few seconds. The Battle.net app's log (`%LOCALAPPDATA%\Battle.net\Logs`, in UTC) shows
+  only that a game ran.
 - The hub's read works: `Preloader` of a file written by the runner in the game's Preload format, holding
   `call BlzSetAbilityTooltip('AHbz', "<path>", 0)`, gave the 150-character path back from
   `BlzGetAbilityTooltip(FourCC("AHbz"), 0)` on the first poll, in the same call (1 run).

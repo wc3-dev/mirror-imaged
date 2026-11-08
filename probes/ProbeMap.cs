@@ -48,10 +48,14 @@ public static partial class ProbeMap
         var script = $$"""
             local lines = {}
 
+            -- The game writes a backslash doubled, so it counts two.
+            local function size(text)
+                return #text + select(2, text:gsub("\\", ""))
+            end
+
             function out(text)
                 text = tostring(text)
-                -- The game writes a backslash doubled, so it counts two.
-                if #text + select(2, text:gsub("\\", "")) > 253 or text:find("[\r\n]") then
+                if size(text) > 253 or text:find("[\r\n]") then
                     error("a line is at most 253 bytes, a backslash counting two, with no line break: "
                         .. (text:sub(1, 40):gsub("[\r\n]", " ")), 2)
                 end
@@ -72,7 +76,11 @@ public static partial class ProbeMap
                 return function(...)
                     local ok, problem = pcall(f, ...)
                     if not ok then
-                        lines[#lines + 1] = ("error: " .. tostring(problem)):gsub("[\r\n]", " "):sub(1, 253)
+                        local line = ("error: " .. tostring(problem)):gsub("[\r\n]", " ")
+                        while size(line) > 253 do
+                            line = line:sub(1, -2)
+                        end
+                        lines[#lines + 1] = line
                         done()
                     end
                 end
