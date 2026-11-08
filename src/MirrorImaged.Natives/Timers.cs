@@ -12,13 +12,15 @@ public partial class timer
     internal long Laps;
     internal float Remaining;  // while paused
     internal int Generation;  // moved on to drop the expiry already queued
+    internal long Place;  // among what falls due in one step, from the last start or resume
 }
 
 // Timers expire on the clock's steps (decisions D45): a timer started for 0 s in a callback runs in the same step, as
 // the facts measure ("Errors and callbacks"). Measured and matched: a periodic 1/256 s timer, and a one-shot started
 // again every 1/256 s, both run 256 times a second; a 10 s timer started again in its own callback keeps time.
-// Not matched: the game ran timers due at 0.5, 2 and 3.25 s 0.0001 s early; here they run on time. Not measured: the
-// order of timers due in one step, a timeout below a step, pausing and resuming.
+// Not matched: the game ran timers due at 0.5, 2 and 3.25 s 0.0001 s early, and reads the clock a hair off whole
+// timeouts (probes timers and timers-2, D153); here they run on time. Timers due in one step run in the order they were
+// started or resumed, a periodic one in its first place (D153). Not measured: a timeout below a step.
 public sealed partial class GameNatives
 {
     timer? _expired;
@@ -114,14 +116,15 @@ public sealed partial class GameNatives
         Queue(t);
     }
 
+    // A periodic timer's later expiries keep the place among what falls due in one step that it got when started or
+    // resumed (probes timers and timers-2, decisions D153).
     void Queue(timer t)
     {
         var generation = ++t.Generation;
         var due = Game.Steps(Expiry(t));
-        _game.At(t.Laps > 0 ? Math.Max(due, _game.Step + 1) : due, () =>
-        {
-            if (t.Generation == generation) Expire(t);
-        });
+        void Due() { if (t.Generation == generation) Expire(t); }
+        if (t.Laps > 0) _game.At(Math.Max(due, _game.Step + 1), t.Place, Due);
+        else t.Place = _game.At(due, Due);
     }
 
     void Expire(timer t)

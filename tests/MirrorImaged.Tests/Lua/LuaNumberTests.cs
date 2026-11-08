@@ -118,6 +118,31 @@ public sealed class LuaNumberTests : IDisposable
     [InlineData("tonumber('-0.0')", "0x80000000")]
     [InlineData("1 / -0.0", "0xff000000")]
     [InlineData("0.0 * -1.0", "0x00000000")]
+    // probes numbers-ops and numbers-fine (decisions D151): a subtraction is exact, then cut; results are packed
+    // without a range check; a product's range is checked before the carry; zeros divide as the game's
+    [InlineData("f(0x3f82d6ea) - f(0x3eabf225)", "0x3f2fb4c1")]
+    [InlineData("f(0x3fa72a3f) - f(0x3ef945af)", "0x3f51b1a6")]
+    [InlineData("f(0x3fcc62ea) - f(0x3f3491a2)", "0x3f643432")]
+    [InlineData("1 - 0.001", "0x3f7fbe76")]  // W1-7's JASS probe
+    [InlineData("0.0 - 0.0", "0x80000000")]
+    [InlineData("0.0 + -0.0", "0x80000000")]
+    [InlineData("f(0x00800000) - f(0x00800001)", "0xf5000000")]
+    [InlineData("f(0x01000000) - f(0x00800001)", "0x007ffffe")]
+    [InlineData("math.huge + math.huge", "0x80000000")]
+    [InlineData("f(0x7f400000) * 6", "0x80900000")]
+    [InlineData("f(0x7f400000) * 12", "0x00000000")]
+    [InlineData("f(0xff000000) * 4", "0x80000000")]
+    [InlineData("f(0x7f000000) * 8", "0x00000000")]
+    [InlineData("f(0x00800000) * f(0x3f7fffff)", "0x00000000")]
+    [InlineData("0.0 / 0.0", "0x3f800000")]
+    [InlineData("-0.0 / -0.0", "0x3f800000")]
+    [InlineData("-0.0 / 0.0", "0x00000000")]
+    [InlineData("0.0 / -0.0", "0x00000000")]
+    [InlineData("f(1) / 0.0", "0x00000000")]
+    [InlineData("1 / f(0x00400000)", "0x7eaaaaab")]
+    [InlineData("f(0x7f7fffff) / f(0x3f7fffff)", "0x7f800000")]
+    [InlineData("f(0x7f000000) / 0.125", "0x00000000")]
+    [InlineData("f(0x3fffffff) / f(0x3fffffff)", "0x3f800000")]
     public void Arithmetic(string expression, string game) => Assert.Equal(Expected(game), _lua.Bits(expression));
 
     [Fact]

@@ -48,13 +48,18 @@ Each item names the wave whose file it goes into when that file is written.
 - Wave 3 (orders and movement): the game moves a unit made where others stand off them (D223); `SetUnitPosition`;
   what `PauseUnit` and `BlzPauseUnitEx` hold back; `SetUnitFacing`'s turning eased into its end and on the game's
   frames, and the facing of angles past a turn (D224); orders beyond `SetUnitOwner`'s stop (W2-2).
-- Later (units, W2-2's leftovers): `TriggerRegisterUnitStateEvent` and `TriggerRegisterFilterUnitEvent`; a player's
-  unit counts (`GetPlayerUnitCount`, `GetPlayerTypedUnitCount`, units in `GetPlayerTechCount`, D93);
-  `CreateUnitByName`, `UnitId` and `UnitId2String`; timed life, summons and sleep; when a body whose decay was
-  suspended goes once let go (D228).
 - Wave 5 (presentation): the unit animation natives and `SetUnitTimeScale` (W2-2).
 - Wave 10 (speed): a cross-process cache of the standard data (about 1.2-1.7 s a process) if the benchmark or the
   corpus runs need it; it must live outside the repo and packages (A15) (W2-1).
+- Wave 10 (the number model, W1-10's rest): find the game's `exp`, `log` and `atan` (tables on straight lines, by the
+  fine probes; `numbers-fine-2` has runs to start from) and with them `asin`, `acos` and powers that aren't whole; the
+  reciprocal between its knots, a step off for about 1 in 5 divisors (D151; `numbers-div` and `numbers-fine` hold 2,376
+  measured); and the game's integer root in `math.sqrt`, a step higher for six of `numbers-squares`' roots (D152), which
+  keeps `(int)Sqrt(n * n)` going wrong 70 times here against the game's 64.
+- Wave 10 (timers, W1-10's rest): the game's clock starts a hair past 0 and timers' ends drop it, so reads come a float
+  step past whole times, and a timer paused and resumed at 0.25 for 0.75 ran before those due with it (D153); model the
+  clock as the game's floats, or accept the reads against A2. Also W1-9's time of day: the frame effects of a set
+  (D144) and the read-back drift with the day stopped (D149), not started here.
 - Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
   is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
-- Wave 10 (JASS): a rawcode with a backslash (`'ac'`) loads here but the game refuses the map (D137) (W1-7).
+- Wave 10 (JASS): a rawcode with a backslash (`'a\bc'`) loads here but the game refuses the map (D137) (W1-7).

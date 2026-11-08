@@ -80,12 +80,13 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   million additions to the last bit, the four stalls with their exact counts, and `1 - cos(0)` = 2^-24. Rejected:
   plain truncation (`2^24 + 3` gives 2^24 + 2), pre-shifting both operands (`33000.01 + 0.004` loses a step), aligning
   the smaller to two steps (adding 3 steps gives 2), no guard bit (`1 - cos(0)` gives 2^-23; for additions one guard bit
-  and none always agree). Not measured: subtractions that shift out two or more bits, sums past the range.
+  and none always agree). Not measured: subtractions that shift out two or more bits, sums past the range. (Measured
+  since, and the subtraction replaced: D151.)
 - **D28. Multiplication** keeps the top 24 bits of the 48-bit product (toward zero); a zero or subnormal operand gives +0.
   A result's biased exponent is kept from 1 to 256 and packed as it is, so 255 and 256 carry into the inf, nan and sign
   bits; anything else is +0. Measured: 256 kept (`1e38 * 10` = -5.5e-39, `(1 / 0) * 4` = -0), 259 and 260 zero
   (`1e20 * 1e20`, `100 / 0`); 257 and 258 aren't, and fall on the zero side. Matches all of N7's products, nine r*r
-  products, the `10 * 0.7` family and the limits.
+  products, the `10 * 0.7` family and the limits. (Replaced in part by D151: the range is checked before the carry.)
 - **D29. Division** is the dividend times a reciprocal, R = ⌊(2^47 + 0xCC0000) / m⌋ with m the divisor's 24-bit mantissa
   without its lowest bit, cut toward zero, with no zero check: zero reads as 1.0 × 2^-127, so `0/0` is 1, `1/0` is
   2^127 and `100/0` is past the range, 0. Matches the twelve measured quotients, `3/5`, `7.2 % 0.1` = 0, 21 of
@@ -93,7 +94,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   truncation (`1/3`), rounding up (`1/5`), Newton-Raphson reciprocals in the game's arithmetic from 2- to 12-bit tables
   (no quotient set matched), a table with one exact Newton step plus a bias. **Close:** `(int)(n / d)` for n 1-2000, d
   2-100 is wrong 268 times in the game and 102 in the model, `Ceiling` 893 and 956; the correction step after the roots
-  of 3 and 1,000,000 is one step lower than the game's.
+  of 3 and 1,000,000 is one step lower than the game's. (Replaced by D151.)
 - **D30. floor, ceil and fmod.** floor is exact. ceil reads a zero exponent as a fraction, so `math.ceil(0.0)` and
   `math.ceil(-0.0)` are 1 as in the game. fmod is `a - trunc(a / b) * b` in the game's arithmetic (exact fmod gives
   0.0999997 for 7.2 and 0.1; the game 0), and Lua's float `%` uses it.
@@ -104,7 +105,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   model's 1.93e-5 (at 2.25) and 1.34e-5 below 2, never low, and `(int)Sqrt(n * n)` for n 1-4096 is wrong 64 times in
   the game and never here. The algorithm wasn't found: the error jumps between near mantissas (3 gives 0.2e-5, 3.0625
   gives 1.67e-5), which neither a Newton step from straight lines over [1, 2], [2, 3], [3, 4] nor a table and a Newton
-  step reproduce.
+  step reproduce. (Replaced by D152: found, exact.)
 - **D32. sin, cos, tan, asin, acos, atan, exp, log and pow are Close.** They are computed in doubles with + - × ÷ only
   (no C library), then cut to a float toward zero after a nudge of 2^-45, so that exact results (2^10, 10^3) stay exact.
   sin and cos go through a 31-bit fraction as the game's do (cos 0 = 1 - 2^-24, sin 90° the same), and tan is sin over
@@ -115,7 +116,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   cosines by up to 5.3e-6 (18 the same). Tried for sin: an angle in 2^14 to 2^20 units a turn, floored or rounded, into
   an exact sine; at most 19 of the 720 matched. `math.log(x, 2)` is `log(x) / log(2)` in the game's arithmetic (D33),
   so `math.log(8, 2)` is 3.00000024. Outside their domains the functions give 0, as `math.sqrt(-1)` does; `log(0)` is
-  -inf; a nan result is 0.
+  -inf; a nan result is 0. (Replaced in part by D152: sin, cos, the domains' ends, exp below 0, log(0) and the powers.)
 - **D33. One configuration on every platform: Windows's.** Lua's `luaconf.h` gives a Windows build `LUA_USE_C89` and
   others C99 paths, which differ in what a script sees: `math.log(x, 2)`, hex numerals, `%a` and `os.date`'s options.
   Every platform is built as a stock Windows build is (`-DLUA_USE_C89` and Windows's `os.date` options), chosen to
@@ -132,7 +133,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   in the game, and a probe can settle it. Changed in the vendored sources, and nowhere else: `luaconf.h` (`LUA_32BITS`,
   the include of `mifloat.h`, Windows's `os.date` options, a fixed `table.sort` pivot instead of the clock, pointers
   written as arena offsets), `lstate.c` (the string hash seed is 0 instead of the time and addresses; the game's seed
-  is unknown), `lmathlib.c` (`math.log` with a base, `math.modf`, `math.rad` and `math.deg` use the game's arithmetic
+  is unknown; replaced by D154: the game's), `lmathlib.c` (`math.log` with a base, `math.modf`, `math.rad` and `math.deg` use the game's arithmetic
   instead of C operators), `ldo.c` (binary chunks refused, D36), `lapi.c` and `ltable.c` (a C function is hashed and
   written by its place in the library, D39), `loslib.c` (the time functions on the simulated clock, D44).
 - **D36. The sandbox** leaves out `math.random` and `math.randomseed`: the game's are its own generator, shared with
@@ -231,7 +232,7 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
   plus whole timeouts, exactly in seconds, each run in the step nearest it, so it doesn't drift; the clock reads the
   step during its callback, and a 0 s timer started there runs in the same step (fact). Timers due in one step run in
   the order their expiries were queued: when the timer was started or resumed, or for a periodic timer's next
-  expiry, when the one before ran, before its callback. Not measured in the game. A periodic timer runs at most once a
+  expiry, when the one before ran, before its callback. Not measured in the game. (Replaced by D153.) A periodic timer runs at most once a
   step, so a periodic 0 s one runs every step (not measured). A timer paused in the step it was due, before it ran,
   has 0 left and runs as soon as it is resumed (not measured). An expiry past the clock's range (2^60 steps, as for a
   timeout of 1e30 or `math.huge`) never comes. The remaining time is the next expiry less the clock, and elapsed the
@@ -941,7 +942,8 @@ The measurements are three probes, `probes/lobby.lua`, `events.lua` and `forforc
   probe in `probes/` in MirrorImaged and compares its lines with the game's in `probes/expected/<probe>.txt` (D71's
   format), so CI does it on all three platforms. A probe's map runs through the seam without blizzard.j (D65), as rule
   5 of `docs/tasks/how-tasks-run.md` asks, with the three blizzard.j functions the map's `config` and `main` call
-  (`SetPlayerSlotAvailable`, `InitGenericPlayerSlots`, `InitBlizzard`) given as functions that do nothing. With the
+  (`SetPlayerSlotAvailable`, `InitGenericPlayerSlots`, `InitBlizzard`) given as functions that do nothing (replaced by
+  D150). With the
   installed blizzard.j it would be no closer: `InitBlizzard` stops at `IsFogEnabled`, Missing, and the rest of it needs
   sounds, rects and units (later waves). So a probe reading what those three set (players) or calling another blizzard.j
   function (`PolledWait` in triggers and triggers-2, `GetPlayersAll` in players) differs there, recorded as below. The
@@ -1151,6 +1153,99 @@ W2-4, W2-6 and W2-8 (`docs/tasks/wave-2.md`) and `docs/tasks/later.md`.
   not a number) is passed over for 480 s and 24 hours, rather than a day that never moves or divides by 0. Not
   measured.
 - **D216. After W2-1,** with W1-6, W1-8 and W1-9 merged first: 133 Exact, 266 Close, 11 Recorded, 1,425 Missing.
+
+### The Lua number model fitted to the game (W1-10)
+
+The measurements are twelve probes in `probes/` (`numbers-*`, `string-order`, `timers-2`, `condition-places`), each run
+twice with the same lines by the game runner, 11-08, their lines in `probes/expected` and `docs/facts.md`, "The number model's probes". Each
+model was found in Python against those lines first, then written into `native/mifloat.c`.
+
+- **D150. The probe comparison's stand-in for blizzard.j** (`ProbeComparison.Frame`) does what blizzard.j does that the
+  probe maps and the probes read, written in Lua as blizzard.j has it: its seven handle globals (4 timers, 3 groups, in
+  blizzard.j's order), `SetPlayerSlotAvailable` noting the slot, `InitGenericPlayerSlots` with `TeamInitPlayerSlots`
+  (`SetTeams` and a team per noted slot), and of `InitBlizzard` `ConfigureNeutralVictim` and `bj_FORCE_ALL_PLAYERS`,
+  `GetPlayersAll` and `PolledWait`. This replaces D120's three functions that did nothing: the installed blizzard.j's
+  `InitBlizzard` still stops at `IsFogEnabled`, then needs sounds (`CreateSoundFromLabel`), rects and units, which are
+  later waves', so running it under `Needs=Game` would compare nothing more. The players, lobby, triggers and
+  forforce-wait probes now run to their ends, and their lines on Exact natives (`ForceEnum*`, `GetGameTypeSelected`,
+  `IsMapFlagSet`, `GetGameSpeed`, `GetTeams`, the alliances and bounty `ConfigureNeutralVictim` sets, `PolledWait`'s
+  natives) all match the game; what still differs is the time of day (D96, D149), an upgrade's level count (W2-1) and
+  raw ids (D110), whose stand-in handles are made after the players and miss `InitBlizzard`'s sounds, rects and units.
+  Left out, of `InitBlizzard`: `InitBlizzardGlobals`' seven filters, `bj_FORCE_PLAYER`'s 28 forces and the rest of its
+  globals, `InitQueuedTriggers`, `InitRescuableBehaviorBJ`, the sounds (`InitDNCSounds` and the others), `InitMapRects`,
+  `InitSummonableCaps`, `InitNeutralBuildings` and `DetectGameStarted`'s timer; no probe reads what they make or set but
+  as raw ids, the handles they make shifting the ids after them. It is not blizzard.j: a probe calling another BJ
+  function gets nil, as before.
+- **D151. The game's arithmetic, measured further** (probes `numbers-ops`, `numbers-div`, `numbers-fine`). A
+  subtraction is the exact difference cut toward zero, not D27's single guard bit (`numbers-ops`: all 72 shifting 1 to
+  22 octaves; the guard bit missed 31); a number 23 or more octaves smaller is still dropped, and of two of the same
+  size the second is kept, so `0 + -0`, `0 - 0` and `-0 - 0` are -0. A result is packed with its exponent or-ed in, never
+  range-checked: `2^-126 - (2^-126 + 2^-149)` is `f5000000`, its exponent borrowing into the sign, and `-2^127 * 4` is
+  `80000000` (D28's addition gave 0). A product is +0 when its exponent is outside 1 to 256 before the mantissas'
+  carry: `1.5 * 2^127 * 6` (carry to 257) is `80900000`, `2^127 * 8` is 0. Division is the dividend times a reciprocal
+  of the divisor's mantissa. The game's reciprocal at the 1024 divisors 1 + k/1024 is measured: `2^47 / (m - 1)` of
+  the mantissa m, cut, but for the first knot, 1/1, which is `2^24` (1.0; the formula would pass it). Between the knots
+  the model is a fit, not the game's algorithm, which wasn't found: straight lines to `(2^47 - 2^16) / m` at the next
+  knot (`2^23` at the last), the interpolated value cut and one added. On divisors with every mantissa bit varied it
+  misses about 1 in 5 by a step (the 312 random 1/d 55 times, the 192 random n/d 41 times); over all 2,887 quotients
+  measured, knots and grids included, 2,753 (D29's model 1,597). `(int)(n / d)` for n 1-2000, d 2-100 now goes wrong
+  268 times and `Ceiling` 893, as in the game (102 and 956 before). So division stays Close. Also measured: a number
+  divided by the same bits is 1 (`0/0` and `-0/-0` too), and any other zero or subnormal dividend gives +0 (`-0/0`
+  and `0/-0` are 0). `1 - 0.001` is `3f7fbe76`, as W1-7's JASS probe measured (D27's guard bit gave `3f7fbe77`).
+- **D152. The game's maths** (probes `numbers-sqrt`, `numbers-trig`, `numbers-functions`, `numbers-fine-2`).
+  `math.sqrt` is one more than the integer root of the mantissa times 2^8 (46341 to 65536), made a number as 1 + 46341
+  (r - 46341) / 2^31, times the float nearest sqrt(2) for an odd exponent; it repeats every octave, not D31's two. It
+  gives 6,156 of the 6,162 roots measured (`numbers-sqrt`, `numbers-fine`, and `numbers-squares`' n * n for n 1 to
+  4096): for six squares the game's integer root is a step higher, its m * 2^8 just below a square (by 49 and 68),
+  while two others 25 and 145 below aren't, so no offset fits; (int)Sqrt(n * n) goes wrong 64 times in the game, in plain
+  Lua too, and 70 here. So Close. `math.sin` and `math.cos` fit all but three of the measured: the angle x times the float nearest
+  1/(2 pi) in the game's arithmetic, cut toward zero to 2^-20 turns (a quarter turn more for the cosine), then a table
+  of sin(pi k / 2048) for half a turn, in 2^-31 and cut (its top 2^31 - 1, its last 1), each 256 steps between two
+  values on a straight line divided into 255, negated for the other half: 2,333 of 2,336 (the three a 2^-31 step near pi
+  and its multiples) and 716 of the 720 whole degrees (sin 19 and 199 degrees, cos 109 and 289, a float step off; their
+  angles were made in C#, which may differ). A rounded table or a float one fits fewer. So Close. The table is worked out in doubles when read, the same on every platform, rather than
+  held. `tan` is sin over cos, as D32 had it, so Close with the division. `math.rad(x)` is `x * pi / 180` and
+  `math.deg(x)` `x * 180 / pi` in the game's arithmetic (all 130 measured). From 1 and past it `asin` is the float
+  nearest pi/2 and `acos` 0, from -1 down -pi/2 and pi (`asin(2)` is pi/2, D81's question); `atan(y, x)` on an axis is
+  0, pi/2 or pi, those floats, and `atan(0, 0)` pi/2; the natives keep their own 0 outside the domains and for
+  `Atan2(0, 0)` (`Maths.cs`). `exp` below 0 is 1 over `exp(-x)` in the game's division (135 of 160 pairs; `exp(-104)` is
+  2^127, as 1/0 is), past the range packed as a product (`exp(89)` a nan, `exp(100)` 0). `log` reads a zero or
+  subnormal number as 1.m * 2^-127 (`log(0)` -88.0296860) and is 0 below 0. A whole power from 1 up is multiplied
+  out, squaring as it goes (1000^10 is `7149f2c9`; one by one would be `7149f2c8`), so `(-8)^3` is -512; any other is
+  `exp(y log|x|)`, so `(-8)^(1/3)` is 1.99999964 and `(-8)^-1` 0.125; 0 to any power but 0 is 0. Still Close and
+  D32's doubles: `exp` itself (the game's moves by a constant slope over runs of inputs, a table on straight lines),
+  `log` (right near 1, off from 1.5 up: `log(1000)` by 41 float steps, `log(1.5)` by 5e-7), `atan` (the game's is x
+  (1 - 2^-20) near 0), `asin` and `acos` inside the domain, and the powers that go through them. `log` and `log10` read inf
+  and nan through the double's exponent (`log(math.huge)` 709.78), not measured. `SquareRoot`, `Sin`, `Cos` and `Tan`
+  match every case the strings probe measured, but not every case of the number probes, so all stay Close.
+  `S2R`, which divides, now matches 74 of its 77 measured strings (D83's 67).
+- **D153. Timers due at the same moment** (probes `timers`, `timers-2`): they run in the order they were started or
+  resumed, a periodic timer keeping the place of its start for every later expiry (D45 queued each expiry when the
+  one before ran; measured: `timers-2`'s a2 and `timers`' periodic timer ran in the place of their start). That a timer
+  paused and resumed in one instant is queued again is inferred from one case (`timers-2`'s b2 ran after b4, which was
+  started before the resume). This matches every order measured but one: in `timers` the timer paused and resumed at
+  0.25 for 0.75 ran first, before those started at 0. Another rule fits all of them: ends in the game's float clock,
+  ties in the order started or resumed, if that timer's end fell a hair before 1.0; it needs the clock below, so the
+  model takes the order rule. The clock reads are not modelled (inferred from three probes): a timer read in the
+  instant it was started reads one float step of its timeout past 0 (2^-23 for 2 s, 2^-12 for 3600 s, 2^-7 for
+  100000 s), and the 3600 and 100000 s timers read a float step past each whole second up to 6 (`game-time`'s 100000 s
+  timer up to 7, whole from 8). That fits a float clock starting a hair past 0, between 4.8e-7 and 9.5e-7 s, which it
+  keeps while its value is small enough to hold it, and a timer's end made as start plus timeout in floats, which drops
+  it. The 0.01 s periodic timer's reads in `timers-2` aren't that simple: the 2 s timer's elapsed time drifts from 0.01
+  times the count by up to 2.2e-7 and is exact at the 25th, where the 3600 s timer reads a step past 0.25 (`timers`: at
+  0.25 and 0.5). Here the clock is the 1/1024 s step (D45), so `TimerGetElapsed` and `TimerGetRemaining` stay Close and
+  the timers probes' read lines are recorded differences.
+- **D154. The string hash seed is `0x1c46318e`** (probes `lua-config` and `string-order`): the 20 keys of `lua-config`
+  fit 49,152 seeds, whose low 20 bits are one of 12 patterns, and of those the six sets of 24 keys of 8 to 60 letters
+  in `string-order` fit one; Lua 5.3.6's own hash and table code reproduce every order with it. So `pairs` over string
+  keys visits them as the game's does (the same in three games over the day; whether it changes between machines or
+  installs isn't measured). This replaces D35's seed 0 (`native/lua/lstate.c`); D126's inference holds.
+- **D155. A condition's place taken twice** (probe `condition-places`): as D115 modelled it. c1 destroyed and taken by
+  c2, c2 destroyed and taken by c3: the triggers of c1, c2 and c3 all ran c3; destroying the stale c1 freed c3's place
+  (all three ran nothing), the next condition took it (all three ran it), and destroying the stale c2 did the same.
+  `And(nil, nil)`, `Or(nil, nil)`, `Not(nil)`, `Condition(nil)` and `Filter(nil)` made after a destroy took no place,
+  and the next `Condition` did. After W1-10, with W2-1 merged first: 133 Exact, 266 Close, 11 Recorded, 1,425
+  Missing, as after W2-1 (D216).
 
 ### Units (W2-2)
 

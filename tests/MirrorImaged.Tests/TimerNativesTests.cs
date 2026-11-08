@@ -38,6 +38,27 @@ public sealed class TimerNativesTests
         Assert.Equal(["half 0.5", "every 0.75", "every 1.5", "two 2"], _ran);
     }
 
+    // probe timers-2 (due at 2.0, a1 to a5): due at one moment, timers run in the order they were started or resumed,
+    // a periodic one in the place of its start, not of its last expiry
+    [Fact]
+    public void Timers_due_together_run_in_the_order_started_and_a_periodic_one_keeps_its_place()
+    {
+        Start(2, false, () => _ran.Add("a1"));
+        var runs = 0;
+        var a2 = Start(1, true, () => { if (++runs == 2) _ran.Add("a2"); });
+        Start(2, false, () => _ran.Add("a3"));
+        var b2 = Start(2, false, () => _ran.Add("b2"));
+        Advance(0.5);
+        _natives.PauseTimer(b2);
+        _natives.ResumeTimer(b2);
+        Start(1.5f, false, () => _ran.Add("a4"));
+
+        Advance(2);
+
+        Assert.Equal(["a1", "a2", "a3", "b2", "a4"], _ran);
+        _natives.PauseTimer(a2);
+    }
+
     [Fact]
     public void A_periodic_timer_doesnt_drift()
     {

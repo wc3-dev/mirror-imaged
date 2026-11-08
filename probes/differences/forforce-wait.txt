@@ -1,10 +1,7 @@
 # Where MirrorImaged differs from the game's lines in expected/forforce-wait.txt, in order, with why (decisions D121): a line
 # starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
 
-# PolledWait is blizzard.j's, which the comparison runs without (D120; W1-10).
-- 8 polled: ended
-+ 8 polled: waiting
-
-# Ids: InitBlizzard's handles aren't made here (D110, D120; W1-10).
+# Ids: the players' ids start where the game's don't, and InitBlizzard's sounds, rects and units aren't made (D110,
+# D150).
 - ids: force 1048708, then trigger 1048709, timer 1048711
-+ ids: force 1048624, then trigger 1048625, timer 1048627
++ ids: force 1048632, then trigger 1048633, timer 1048635

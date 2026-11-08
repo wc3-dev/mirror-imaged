@@ -39,7 +39,7 @@ public sealed class LuaDeterminismTests
         Assert.Equal(DeterminismHash, hash);
     }
 
-    const int DeterminismHash = -1790714231;
+    const int DeterminismHash = 1229561353;
 
     [Fact]
     public void SortGivesTheSameOrderEveryRun()
@@ -113,6 +113,6 @@ public sealed class LuaDeterminismTests
         Assert.Equal([PairsHash, Finalized, NewTable], result);
     }
 
-    const int PairsHash = 12433922, Finalized = 2000;
-    const string NewTable = "table: 00000000005A5E80";
+    const int PairsHash = 6593288, Finalized = 2000;
+    const string NewTable = "table: 00000000005592E0";
 }
