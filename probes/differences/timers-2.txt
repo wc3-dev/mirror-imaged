@@ -1,8 +1,9 @@
 # Where MirrorImaged differs from the game's lines in expected/timers-2.txt, in order, with why (decisions D121): a line
 # starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
 
-# The game reads a timer a float step past the whole time it was started at (its clock's start is a hair past 0,
-# kept in the clock but not in a timer's end); here the clock is the 1/1024 s step (D45, D153, Close).
+# The game reads a timer a float step past the time it was started at, and drifts by up to 2.2e-7 over the 0.01 s
+# ticks (inferred: a float clock starting a hair past 0, which a timer's end drops); here the clock is the 1/1024 s step
+# (D45, D153, Close).
 - start 34000000 3fffffff 39800000 3c000000
 + start 00000000 40000000 00000000 00000000
 - reads 1 3c23d780 3ffeb851 3c240000 3c800000 3ca3d780 3ffd70a2 3ca40000 3cc00000 3cf5c300 3ffc28f4 3cf60000 3d000000 3d23d740 3ffae146 3d240000 3d400000 3d4ccd00 3ff99998 3d4d0000 3d600000 3d75c2c0 3ff851ea 3d760000 3d800000

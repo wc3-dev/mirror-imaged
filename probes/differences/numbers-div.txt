@@ -1,7 +1,8 @@
 # Where MirrorImaged differs from the game's lines in expected/numbers-div.txt, in order, with why (decisions D121): a line
 # starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
 
-# The game's reciprocal is a table of 1024 knots on straight lines; the model hits 96% of it (D151, Close).
+# The reciprocal is measured at its 1024 knots; between them the model is a fit, not the game's algorithm, and a step
+# off for about 1 in 5 divisors (D151, Close).
 - 1/d random 3fd31f49:3f1b356c 3ff194d4:3f07a3be 3f82ab01:3f7ac5e7 3fb21af0:3f37fb2c 3fe51a46:3f0f0712 3f977f50:3f584b55 3fd1c8ae:3f1c32e7 3fcd704c:3f1f80ac 3fdd87ae:3f13eab2 3fa456fa:3f47644f 3f9dd7e7:3f4f9926 3fcfee37:3f1d9753 3fa3eb93:3f47e6f4
 + 1/d random 3fd31f49:3f1b356c 3ff194d4:3f07a3be 3f82ab01:3f7ac5e7 3fb21af0:3f37fb2c 3fe51a46:3f0f0711 3f977f50:3f584b55 3fd1c8ae:3f1c32e7 3fcd704c:3f1f80ac 3fdd87ae:3f13eab2 3fa456fa:3f476450 3f9dd7e7:3f4f9926 3fcfee37:3f1d9753 3fa3eb93:3f47e6f5
 - 1/d random 3fe3591b:3f1021a5 3fc5a31b:3f25cc80 3ff2a948:3f070937 3faad645:3f3fcf01 3fa3abb4:3f4834f7 3ff58f9e:3f0570ff 3fcefe7d:3f1e4dd5 3faf041d:3f3b3a82 3fb4f0eb:3f3518ff 3f989f5f:3f56b31a 3f9fe8a6:3f4ceab8 3fee6e43:3f096e96 3fe16890:3f115f26

@@ -35,7 +35,8 @@ maths probe (11-01, `moonwell-maths-numbers.txt`, printed with `%.9g`). 3.0.1.24
   50.0000038, 10000 100.000008, 40000 200.000015, 1000000 1000.00006, 0.00999999978 0.100000001, 0.0001 0.00999999978,
   and the exact root for 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 144, 1024, 2^24 and 0.25.
 - By octave, `math.sqrt`'s worst is 1.92854142 parts in 100,000 high and 0.0773249492 low in the even octaves (2^0, 2^2,
-  ...) and 1.92324328 high and 0.087634936 low in the odd ones, the same in every octave from 2^-6 to 2^26.
+  ...) and 1.92324328 high and 0.087634936 low in the odd ones, the same in every octave from 2^-6 to 2^26. That sweep
+  was coarser than every float: `numbers-fine` ("The number model's probes") measured 2.04 high just above 1.
 - Sums of a float added to 0 again and again: 0.001 10,000 times is 9.99838257, 100,000 times 99.9489441, 1,000,000
   times 981.466797; 0.01: 99.971489, 996.854736, 9799.05859; 0.03: 299.988312, 2989.46997, 29441.9434; 0.1: 999.804871,
   9973.49512, 97000.0703; 0.37: 3699.40674, 36906.2461, 357990.594; 1.7: 16995.1406, 169506.906, 1664565. 0.03 added
@@ -761,8 +762,8 @@ lines they kept the same each time.
 
 ## The number model's probes
 
-Eleven probes run once each by the game runner from the PowerShell tool, 3.0.1.24371, single player, 11-08 (W1-10),
-their lines in `probes/expected`. Floats are given by their bits.
+Twelve probes run twice each by the game runner from the PowerShell tool, with the same lines, 3.0.1.24371, single
+player, 11-08 (W1-10), their lines in `probes/expected`. Floats are given by their bits.
 
 - Subtraction (`numbers-ops`): a - b for a in [1, 2) and b 1 to 22 octaves smaller, both with every mantissa bit
   varied, 72 cases: always the exact difference cut toward zero. With b 23 to 25 octaves smaller, a. a - b for b 1, 2,
@@ -778,18 +779,22 @@ their lines in `probes/expected`. Floats are given by their bits.
   `7f800000`; `2 / 0` `7f800000`, `4 / 0` `80000000`, `8 / 0` 0, `0.5 / 0` `7e800000`.
 - Division (`numbers-div`, `numbers-fine`): 1/d for the 1024 divisors 1 + k/1024 is `floor(2^47 / (m - 1))` of the
   divisor's mantissa m, each one (1/1 is 1). Between them, by the 312 random divisors and the runs of 1 + j * 2^-16
-  and 1 + j * 2^-23: close to a straight line to the next, a step up from below, at most 5 steps above the exact
-  reciprocal near 1 and 0.5 near 2. n/d is n times that reciprocal: 240 of the 244 grid quotients equal n times the
+  and 1 + j * 2^-23: up to 5 steps above the exact reciprocal near 1 and 0.5 near 2, near straight lines between the
+  knots; the lines MirrorImaged draws are a fit, a step off for about 1 in 5 of the random divisors (decisions D151). n/d is n times that reciprocal: 240 of the 244 grid quotients equal n times the
   game's 1/d.
 - `math.sqrt` (`numbers-sqrt`, `numbers-fine`), over 1 + k/512, 2 + k/128, 4 + k/64 and 260 random mantissas, and every
   float from 1 to 1 + 263 steps: the root is the same over runs of inputs (1 for inputs up to 1 + 18 steps, then
   `3f8000b5` up to 1 + 263 steps and beyond) and steps by 2.16e-5, and the error depends on the mantissa only, the
-  same in [1, 2), [2, 4) and [4, 8). Every value is one more than the integer root of the mantissa times 2^8, mapped to
-  1 + 46341 (r - 46341) / 2^31, times `3fb504f3` for an odd exponent.
+  same in [1, 2), [2, 4) and [4, 8). Every one of these is one more than the integer root of the mantissa times 2^8,
+  mapped to 1 + 46341 (r - 46341) / 2^31, times `3fb504f3` for an odd exponent. `numbers-squares`, the roots of n * n
+  for n 1 to 4096 in plain Lua: `math.floor` takes 64 of them below n, as the facts' C# probe found; that rule gives
+  4090 of the 4096 and 70 below n, the game's integer root being a step higher for n 181, 362, 724, 1448, 2896 and 2327
+  (m * 2^8 49 and 68 below a square; at 1 + 18 float steps, 25 below, it isn't).
 - `math.sin` and `math.cos` (`numbers-trig`, `numbers-fine-2`), over k/64 for k -64 to 447, 2^-1 to 2^-40, k * 2^-14,
   40 large inputs, and runs of j * 2^-20, 1 + j * 2^-20 and 0.5 + j * 2^-21: the sine of j * 2^-20 stays the same over
-  runs of six or seven inputs (0, then 12918, 25836, 38755, ... in 2^-31), a step of 2^-20 turns. The angle is x times
-  `3e22f983` in the game's arithmetic, cut toward zero to 2^-20 turns; the sine is a table of sin(pi k / 2048) in 2^-31
+  runs of six or seven inputs (0, then 12918, 25836, 38755, ... in 2^-31), a step of 2^-20 turns. A model fits 2,333
+  of the 2,336 and 716 of the facts' 720 whole degrees (decisions D152): the angle is x times `3e22f983` in the game's
+  arithmetic, cut toward zero to 2^-20 turns; the sine is a table of sin(pi k / 2048) in 2^-31
   (cut), each 256 steps of the turn between two values on a straight line divided into 255, negated past half a turn,
   the cosine a quarter turn on. sin(pi) is 2^-31 and sin(2 pi) -2^-31 (the table's last is 1); cos(0) is 1 - 2^-24.
   `sin(-x)` isn't `-sin(x)`, as the angle is cut toward zero. 1e6 is 0.921875 turns past whole ones, so its sine is

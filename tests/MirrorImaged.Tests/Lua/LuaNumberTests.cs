@@ -123,6 +123,7 @@ public sealed class LuaNumberTests : IDisposable
     [InlineData("f(0x3f82d6ea) - f(0x3eabf225)", "0x3f2fb4c1")]
     [InlineData("f(0x3fa72a3f) - f(0x3ef945af)", "0x3f51b1a6")]
     [InlineData("f(0x3fcc62ea) - f(0x3f3491a2)", "0x3f643432")]
+    [InlineData("1 - 0.001", "0x3f7fbe76")]  // W1-7's JASS probe
     [InlineData("0.0 - 0.0", "0x80000000")]
     [InlineData("0.0 + -0.0", "0x80000000")]
     [InlineData("f(0x00800000) - f(0x00800001)", "0xf5000000")]

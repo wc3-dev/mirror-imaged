@@ -201,8 +201,8 @@ public sealed class LuaMathTests : IDisposable
         Assert.Equal(game, _lua.Value($"(function() local c = 0 {loop} return c end)()"));
 
     /// <summary>
-    /// How often a cast of a root goes wrong, with the game's count beside the model's (the probe went through Moonwell's
-    /// maths; the model's roots match every root the probes numbers-sqrt and numbers-fine measured, D152).
+    /// How often a cast of a root goes wrong, with the game's count beside the model's (probe numbers-squares, plain Lua):
+    /// the game's integer root is a step higher for 6 of these squares, by a rule not found (D152).
     /// </summary>
     [Theory]
     [InlineData("for n = 1, 4096 do if math.floor(math.sqrt(n * n)) ~= n then c = c + 1 end end", 64, 70)]
@@ -214,7 +214,8 @@ public sealed class LuaMathTests : IDisposable
 
     /// <summary>
     /// The worst errors in parts in 100,000 over every 64th float of [1, 2) (an even octave) and [2, 4) (odd), with
-    /// the game's from its sweep of 2^-6 to 2^26 beside them (Close).
+    /// the game's from its sweep of 2^-6 to 2^26 beside them (Close). That sweep was coarser: the model, which gives
+    /// 6,156 of the 6,162 roots measured since, finds worse ones, as the probe numbers-fine saw near 1 (D152).
     /// </summary>
     [Theory]
     [InlineData("math.sqrt(x)", 0x3f800000, -0.0773249492, 1.92854142, -0.11549491821181203, 2.0398912033154426)]

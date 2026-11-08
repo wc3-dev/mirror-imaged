@@ -49,8 +49,9 @@ Each item names the wave whose file it goes into when that file is written.
   corpus runs need it; it must live outside the repo and packages (A15) (W2-1).
 - Wave 10 (the number model, W1-10's rest): find the game's `exp`, `log` and `atan` (tables on straight lines, by the
   fine probes; `numbers-fine-2` has runs to start from) and with them `asin`, `acos` and powers that aren't whole; the
-  last 5% of the reciprocal (D151; `numbers-div` and `numbers-fine` hold 2,376 measured); and why `(int)Sqrt(n * n)`
-  goes wrong 64 times in the game's C# probe and 70 here, though every measured root matches (D152).
+  reciprocal between its knots, a step off for about 1 in 5 divisors (D151; `numbers-div` and `numbers-fine` hold 2,376
+  measured); and the game's integer root in `math.sqrt`, a step higher for six of `numbers-squares`' roots (D152), which
+  keeps `(int)Sqrt(n * n)` going wrong 70 times here against the game's 64.
 - Wave 10 (timers, W1-10's rest): the game's clock starts a hair past 0 and timers' ends drop it, so reads come a float
   step past whole times, and a timer paused and resumed at 0.25 for 0.75 ran before those due with it (D153); model the
   clock as the game's floats, or accept the reads against A2. Also W1-9's time of day: the frame effects of a set

@@ -59,9 +59,9 @@ float mi_mul (float x, float y) {
   return pack((a ^ b) >> 31, e, (uint32_t)m);
 }
 
-/* The reciprocal of a divisor's mantissa m (2^23 to 2^24 - 1) in 2^-47, as near the game's as found (Close): 1024
-   knots, the k-th 2^47 / (m - 1), joined by straight lines to 2^47 / m less a little at the next (2^23 at the last),
-   a step up from below. */
+/* The reciprocal of a divisor's mantissa m (2^23 to 2^24 - 1) in 2^-47. Measured at the 1024 knots: the k-th is
+   2^47 / (m - 1), but the first, 1/1, which is 2^24. Between them a fit, not the game's way (Close, a step off for
+   about 1 in 5): straight lines to 2^47 / m less a little at the next knot (2^23 at the last), a step up from below. */
 static uint64_t reciprocal (uint32_t m) {
   uint64_t i = (m >> 13) & 0x3ff, f = m & 0x1fff, knot = (0x400 + i) << 13;
   uint64_t lo = i ? (1ull << 47) / (knot - 1) : 1ull << 24;
@@ -123,9 +123,10 @@ static uint64_t isqrt (uint64_t n) {
   return r;
 }
 
-/* As the game's: one more than the integer root of the mantissa m times 2^8 (so 46341 to 65536), made a number
-   from 1 below 2 by 1 + 46341 (r - 46341) / 2^31, cut toward zero; for an odd exponent, times the float nearest
-   sqrt(2). A zero, subnormal or negative number gives 0. */
+/* One more than the integer root of the mantissa m times 2^8 (so 46341 to 65536), made a number from 1 below 2 by
+   1 + 46341 (r - 46341) / 2^31, cut toward zero; for an odd exponent, times the float nearest sqrt(2). A zero,
+   subnormal or negative number gives 0. Close: 6,156 of the 6,162 roots measured; the game's integer root is a step
+   higher for some m * 2^8 just below a square (49 and 68 below, not 25 or 145), by a rule not found. */
 float mi_sqrtf (float x) {
   uint32_t a = bits(x);
   int32_t e = (int32_t)((a >> 23) & 0xff) - 127;
@@ -168,10 +169,9 @@ static double scale2 (double x, int32_t k) {  /* x * 2^k, k in -1022..1023 */
   return x * p;
 }
 
-static void sincos_d (double x, double *s, double *c) {  /* |x| below 2^31 */
+static double sin_d (double x) {  /* x from 0 to pi */
   double k, r, z, ps, pc;
-  int32_t n;
-  n = (int32_t)(x * (2 / PI) + (x < 0 ? -0.5 : 0.5));
+  int32_t n = (int32_t)(x * (2 / PI) + 0.5);
   k = n;
   r = ((x - k * 1.57079632673412561417e+00) - k * 6.07710050650619224932e-11) - k * 2.02226624879595063154e-21;
   z = r * r;
@@ -180,21 +180,14 @@ static void sincos_d (double x, double *s, double *c) {  /* |x| below 2^31 */
   pc = 1 + z * (-1.0 / 2 + z * (1.0 / 24 + z * (-1.0 / 720 + z * (1.0 / 40320 + z * (-1.0 / 3628800
        + z * (1.0 / 479001600 + z * (-1.0 / 87178291200.0 + z * (1.0 / 20922789888000.0
        + z * (-1.0 / 6402373705728000.0)))))))));
-  switch (n & 3) {
-    case 0: *s = ps; *c = pc; break;
-    case 1: *s = pc; *c = -ps; break;
-    case 2: *s = -ps; *c = -pc; break;
-    default: *s = -pc; *c = ps; break;
-  }
+  return n == 0 ? ps : n == 1 ? pc : -ps;
 }
 
 /* sin(pi k / 2048) in 2^-31, cut toward zero, for k 0 to 2048: the game's table, whose top is 2^31 - 1 and whose
    last is 1. */
 static int64_t sine_at (uint32_t k) {
-  double s, c;
   if (k == 0 || k == 1024 || k == 2048) return k == 1024 ? 2147483647 : k == 2048;
-  sincos_d(k * (PI / 2048), &s, &c);
-  return (int64_t)(s * 2147483648.0);
+  return (int64_t)(sin_d(k * (PI / 2048)) * 2147483648.0);
 }
 
 /* A whole number of 2^-31 as a float, cut toward zero. */
@@ -208,7 +201,8 @@ static float q31 (int64_t v) {
 
 /* The game's sine: the angle in 2^-20 turns, x times the float nearest 1/(2 pi) in its arithmetic and cut toward
    zero, a quarter turn more for the cosine; then the table above for half a turn, the 256 steps between two of its
-   values on a straight line divided into 255, negated for the other half. */
+   values on a straight line divided into 255, negated for the other half. Close: 2,333 of the 2,336 measured; the three
+   near pi and its multiples are a 2^-31 step off. */
 static float sine (float x, uint32_t quarter) {
   uint32_t u = bits(mi_mul(x, flt(0x3e22f983))), p, i, f;
   uint64_t m = (u & 0x7fffff) | 0x800000;
@@ -278,7 +272,8 @@ static float exp_up (float x) {
 float mi_expf (float x) { return x < 0 ? mi_div(1.0f, exp_up(-x)) : exp_up(x); }
 
 /* The logarithm reads a zero or subnormal number as 1.m * 2^-127, as division reads a zero divisor, so log(0)
-   is -88.0296860; below 0 it is 0, as sqrt(-1) is. */
+   is -88.0296860; below 0 it is 0, as sqrt(-1) is. inf and nan go through the double's exponent (log(inf) is 709.78),
+   not measured. */
 static int bad_log (float x) { return (bits(x) >> 31) && (bits(x) & 0x7f800000); }
 static double log_arg (float x) {
   uint32_t a = bits(x);

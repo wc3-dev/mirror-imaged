@@ -3,19 +3,21 @@ using MirrorImaged.Lua;
 namespace MirrorImaged.Natives;
 
 // In the game the maths natives give Lua's math.* numbers (facts, "Groups and performance"; probe strings), so they
-// share its model (native/mifloat.c), Exact where it is (decisions D152) and Close where it isn't, but where the two
-// differ in the game: SquareRoot is 0 below 0.001, and Asin, Acos and Atan2 give 0 outside their domains where
-// math.* gives pi/2, 0 or pi.
+// share its model (native/mifloat.c, decisions D151, D152), Close as it is, but where the two differ in the game:
+// SquareRoot is 0 below 0.001, and Asin, Acos and Atan2 give 0 outside their domains where math.* gives pi/2, 0 or pi.
 public sealed partial class GameNatives
 {
+    const string NumbersFact = "docs/facts.md, The number model's probes (probes numbers-sqrt, numbers-squares, numbers-trig, "
+        + "numbers-fine, numbers-fine-2): 6,156 of 6,162 roots and 2,333 of 2,336 sines and cosines as the game's";
+
     /// <summary>As math.sqrt; 0 below 0.001, as the game gives.</summary>
-    [Native(Level.Exact, Fact = StringsFact)]
+    [Native(Level.Close, Fact = NumbersFact)]
     public float SquareRoot(float x) => x < 0.001f ? 0 : Native.mi_sqrtf(x);
 
-    [Native(Level.Exact, Fact = StringsFact)]
+    [Native(Level.Close, Fact = NumbersFact)]
     public float Sin(float radians) => Native.mi_sinf(radians);
 
-    [Native(Level.Exact, Fact = StringsFact)]
+    [Native(Level.Close, Fact = NumbersFact)]
     public float Cos(float radians) => Native.mi_cosf(radians);
 
     /// <summary>Sin over Cos in the game's division, which the model doesn't hit every time (D151).</summary>
