@@ -107,22 +107,56 @@ public sealed class TimerNativesTests
         Assert.Equal(["10", "20", "30"], _ran);
     }
 
-    // facts: elapsed of a timer started for 604800 s steps by 0.0625 s, of one for 10 s is exact
+    // facts: elapsed of a timer started for 604800 s steps by 0.0625 s, 83 of 100 reads 0.01 s apart unchanged, and
+    // drifts up to 0.05 s, which only cutting toward zero reaches (to nearest stays within 0.03125 s); for 10 s exact
     [Fact]
-    public void Elapsed_is_the_timeout_less_the_remaining_time_in_single_floats()
+    public void Elapsed_is_the_timeout_less_the_remaining_time_cut_toward_zero_to_single_floats()
     {
         var week = Start(604800, false, null);
         var ten = Start(10, false, null);
         var reads = new List<float>();
-        for (int i = 0; i < 100; i++)
+        var drift = 0.0;
+        for (int i = 1; i <= 100; i++)
         {
-            Advance(0.01);
+            _game.Advance(Game.Steps(i * 0.01) - _game.Step);
             reads.Add(_natives.TimerGetElapsed(week));
+            drift = Math.Max(drift, reads[^1] - Seconds);
             Assert.Equal((float)Seconds, _natives.TimerGetElapsed(ten));
         }
 
         Assert.All(reads, read => Assert.Equal(0, read % 0.0625f));
-        Assert.InRange(reads.Zip(reads.Skip(1)).Count(pair => pair.First == pair.Second), 50, 99);
+        Assert.Equal(84, reads.Zip(reads.Skip(1)).Count(pair => pair.First == pair.Second));
+        Assert.InRange(drift, 0.05, 0.0625);
+    }
+
+    [Fact]
+    public void A_timer_paused_in_its_step_before_it_ran_runs_as_soon_as_it_is_resumed()
+    {
+        timer? later = null;
+        Start(1, false, () => _natives.PauseTimer(later));
+        later = Start(1, true, () => _ran.Add(Now));
+
+        Advance(2);
+        Assert.Empty(_ran);
+        Assert.Equal(0f, _natives.TimerGetRemaining(later));
+        _natives.ResumeTimer(later);
+        Advance(2);
+
+        Assert.Equal(["2", "3", "4"], _ran);
+    }
+
+    [Theory]
+    [InlineData(1e30f)]
+    [InlineData(float.PositiveInfinity)]
+    public void A_timer_too_long_for_the_clock_never_runs(float timeout)
+    {
+        Advance(1);
+        var timer = Start(timeout, false, () => _ran.Add(Now));
+        Advance(1000);
+
+        Assert.Empty(_ran);
+        Assert.Equal(timeout, _natives.TimerGetRemaining(timer));
+        Assert.Equal(0f, _natives.TimerGetElapsed(timer));
     }
 
     [Fact]
@@ -183,6 +217,16 @@ public sealed class TimerNativesTests
         Assert.True(second.Disposed);
         Assert.False(second.Ran);
         Assert.Null(_game.Handle(timer.Id));
+    }
+
+    [Fact]
+    public void A_callback_given_with_no_timer_is_let_go_of()
+    {
+        var callback = new Callback();
+
+        _natives.TimerStart(null, 1, false, callback.Run);
+
+        Assert.True(callback.Disposed);
     }
 
     sealed class Callback : IDisposable

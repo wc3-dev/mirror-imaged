@@ -194,6 +194,47 @@ public sealed class LuaInteropTests : IDisposable
         Assert.False(_reached);
     }
 
+    // A C# handler or finalizer is called without a Lua instruction, so the hook can't stop it.
+    [Fact]
+    public void NoCSharpFunctionRunsAfterAHalt()
+    {
+        _lua.Halts = e => e is TimeoutException;
+        _lua.Register("stop", _ => throw new TimeoutException("stopped"));
+
+        Assert.Throws<LuaException>(() => _lua.Run("xpcall(stop, reach)"));
+        Assert.False(_reached);
+    }
+
+    [Theory]
+    [InlineData("pcall(stop)")]
+    [InlineData("xpcall(stop, print)")]
+    [InlineData("coroutine.wrap(stop)()")]
+    [InlineData("coroutine.resume(coroutine.create(stop))")]
+    public void AHaltCalledStraightFromCNamesTheNearestLuaLine(string call)
+    {
+        _lua.Halts = e => e is TimeoutException;
+        _lua.Register("stop", _ => throw new TimeoutException("stopped"));
+
+        Assert.StartsWith("war3map.lua:2: stopped", Assert.Throws<LuaException>(() => _lua.Run($"local x = 1\n{call}", "war3map.lua")).Message);
+    }
+
+    [Fact]
+    public void ACSharpFunctionGetsWhatItCantReadAsItsType()
+    {
+        object?[] given = [];
+        _lua.Register("look", args =>
+        {
+            given = args;
+            return [];
+        });
+        _lua.Run("look({}, coroutine.create(print), 1)");
+        Assert.Equal([new LuaOpaque("table"), new LuaOpaque("thread"), 1], given);
+    }
+
+    [Fact]
+    public void CallingAMissingGlobalNamesIt() =>
+        Assert.StartsWith("attempt to call a nil value (global 'nothing')", Assert.Throws<LuaException>(() => _lua.Call("nothing")).Message);
+
     [Fact]
     public void OtherExceptionsCanStillBeCaught()
     {

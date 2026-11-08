@@ -16,15 +16,17 @@ public sealed class SimulationOptions
 /// <summary>
 /// A map's script running on a simulated game, with no game open. <see cref="Load"/> runs the script, then its
 /// <c>config</c> and <c>main</c>; <see cref="Advance"/> moves the clock on and runs the timers that fall due. A Lua
-/// error goes in the log and the run carries on, as the game drops it. A Missing native stops the run: the call
-/// throws a <see cref="LuaException"/> that starts with the calling line (<c>war3map.lua:3: The native ...</c>), whose
-/// inner exception is the <see cref="MissingNativeException"/>, and the simulation can't run on.
+/// error goes in the log and the run carries on, as the game drops it. A Missing native stops the run:
+/// <see cref="Stopped"/> is then a <see cref="LuaException"/> that starts with the calling line
+/// (<c>war3map.lua:3: The native ...</c>), whose inner exception is the <see cref="MissingNativeException"/>, and
+/// <see cref="Advance"/> throws it. The log keeps what came before.
 /// </summary>
 public sealed partial class Simulation : IDisposable
 {
     readonly Game _game;
     readonly GameNatives _natives;
     readonly LuaState _lua = new() { Halts = e => e is MissingNativeException };
+    TimeSpan _time;
 
     Simulation(byte[] script, SimulationOptions options)
     {
@@ -41,6 +43,10 @@ public sealed partial class Simulation : IDisposable
             Protect(() => _lua.Call("config"));
             Protect(() => _lua.Call("main"));
         }
+        catch (LuaException e) when (_lua.Halted is not null)
+        {
+            Stopped = e;
+        }
         catch
         {
             _lua.Dispose();
@@ -48,21 +54,40 @@ public sealed partial class Simulation : IDisposable
         }
     }
 
-    /// <summary>Loads the map at <paramref name="path"/> and runs its script, <c>config</c> and <c>main</c>.</summary>
+    /// <summary>
+    /// Loads the map at <paramref name="path"/> and runs its script, <c>config</c> and <c>main</c>; if a Missing
+    /// native stops the run there, the simulation comes back <see cref="Stopped"/>.
+    /// </summary>
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>.</exception>
-    /// <exception cref="LuaException">A Missing native stopped the run.</exception>
     public static Simulation Load(string path, SimulationOptions? options = null) =>
         new(MapArchive.ReadLua(path), options ?? new SimulationOptions());
 
     /// <summary>
-    /// What the run showed, a line each: the time in seconds, where the line came from (<c>print</c>,
-    /// <c>player 0</c> for text shown to a player, <c>error</c> for a Lua error) and the text.
+    /// What the run showed, an entry each: the time in seconds, where it came from (<c>print</c>, <c>player 0</c> for
+    /// text shown to a player, <c>error</c> for a Lua error) and the text, every line of it so marked.
     /// </summary>
     public IReadOnlyList<string> Log => _game.Log;
 
-    /// <summary>Moves the clock on by <paramref name="time"/>, in whole steps of 1/1024 s.</summary>
-    /// <exception cref="LuaException">A Missing native stopped the run.</exception>
-    public void Advance(TimeSpan time) => _game.Advance(Game.Steps(time.TotalSeconds));
+    /// <summary>What stopped the run, if something has: no more of it can run.</summary>
+    public LuaException? Stopped { get; private set; }
+
+    /// <summary>
+    /// Moves the clock on by <paramref name="time"/>. The clock moves in whole steps of 1/1024 s, to the step nearest
+    /// all the time asked for so far, so many short advances add up as one long one.
+    /// </summary>
+    /// <exception cref="LuaException">The run has stopped, or a Missing native stopped it now: <see cref="Stopped"/>.</exception>
+    public void Advance(TimeSpan time)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(time, TimeSpan.Zero);
+        if (Stopped is not null) throw Stopped;
+        _time += time;
+        try { _game.Advance(Game.Steps(_time.TotalSeconds) - _game.Step); }
+        catch (LuaException e) when (_lua.Halted is not null)
+        {
+            Stopped = e;
+            throw;
+        }
+    }
 
     public void Dispose() => _lua.Dispose();
 

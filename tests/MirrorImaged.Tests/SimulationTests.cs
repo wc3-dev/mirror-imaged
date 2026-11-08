@@ -93,21 +93,42 @@ public sealed class SimulationTests : IDisposable
     }
 
     [Fact]
-    public void A_missing_native_stops_the_run_with_its_name_and_line()
+    public void A_missing_native_stops_the_run_with_its_name_and_line_and_keeps_the_log()
     {
-        var map = _maps.Build("""
-            function config() end
+        using var simulation = Simulation.Load(_maps.Build("""
+            function config() print("config") end
             function main()
-              print("before")
+              print("main")
               local u = CreateUnit(Player(0), FourCC("hfoo"), 0, 0, 0)
               print("after")
             end
-            """);
+            """));
 
-        var error = Assert.Throws<LuaException>(() => Simulation.Load(map));
+        var stop = simulation.Stopped!;
+        Assert.StartsWith("war3map.lua:4: The native CreateUnit is Missing", stop.Message);
+        Assert.Equal("CreateUnit", Assert.IsType<MissingNativeException>(stop.InnerException).Native);
+        Assert.Equal(["0.000 print: config", "0.000 print: main"], simulation.Log);
+        Assert.Same(stop, Assert.Throws<LuaException>(() => simulation.Advance(TimeSpan.FromSeconds(1))));
+    }
 
-        Assert.StartsWith("war3map.lua:4: The native CreateUnit is Missing", error.Message);
-        Assert.Equal("CreateUnit", Assert.IsType<MissingNativeException>(error.InnerException).Native);
+    [Fact]
+    public void A_missing_native_stops_the_run_before_its_arguments_are_read()
+    {
+        using var simulation = Load("CreateUnit({}, coroutine.create(print), 0, 0, 0)");
+
+        Assert.StartsWith("war3map.lua:3: The native CreateUnit is Missing", simulation.Stopped!.Message);
+    }
+
+    [Theory]
+    [InlineData("pcall(ClearTextMessages)")]
+    [InlineData("xpcall(ClearTextMessages, print)")]
+    [InlineData("coroutine.wrap(ClearTextMessages)()")]
+    public void A_missing_native_called_straight_from_c_names_the_nearest_lua_line(string call)
+    {
+        using var simulation = Load(call);
+
+        Assert.StartsWith("war3map.lua:3: The native ClearTextMessages is Missing", simulation.Stopped!.Message);
+        Assert.Empty(simulation.Log);
     }
 
     [Fact]
@@ -127,8 +148,41 @@ public sealed class SimulationTests : IDisposable
 
         Assert.StartsWith("war3map.lua:5: The native ClearTextMessages is Missing", error.Message);
         Assert.IsType<MissingNativeException>(error.InnerException);
+        Assert.Same(error, simulation.Stopped);
         Assert.Empty(simulation.Log);
-        Assert.Throws<LuaException>(() => simulation.Advance(TimeSpan.FromSeconds(3)));
+        Assert.Same(error, Assert.Throws<LuaException>(() => simulation.Advance(TimeSpan.FromSeconds(3))));
+    }
+
+    [Fact]
+    public void Short_advances_add_up_as_one_long_one()
+    {
+        using var simulation = Load("TimerStart(CreateTimer(), 10, false, function() print('ten') end)");
+
+        for (int i = 0; i < 599; i++) simulation.Advance(TimeSpan.FromSeconds(1 / 60.0));
+        Assert.Empty(simulation.Log);
+        simulation.Advance(TimeSpan.FromSeconds(1 / 60.0));
+
+        Assert.Equal(["10.000 print: ten"], simulation.Log);
+    }
+
+    [Fact]
+    public void A_print_of_several_lines_is_one_entry_with_every_line_marked()
+    {
+        using var simulation = Load("print('one\\ntwo')");
+
+        Assert.Equal(["0.000 print: one\n0.000 print: two"], simulation.Log);
+    }
+
+    [Fact]
+    public void A_map_without_config_or_main_logs_which_is_missing()
+    {
+        using var simulation = Simulation.Load(_maps.Build("print('script')"));
+
+        Assert.Equal([
+            "0.000 print: script",
+            "0.000 error: attempt to call a nil value (global 'config')",
+            "0.000 error: attempt to call a nil value (global 'main')",
+        ], simulation.Log);
     }
 
     [Fact]
@@ -189,6 +243,8 @@ public sealed class SimulationTests : IDisposable
             print(pcall(Player, 1.5))
             print(pcall(Player, "1"))
             print(pcall(TimerStart, CreateTimer(), 1, false, 5))
+            print(pcall(TimerStart, {}, 1, false, nil))
+            print(pcall(TimerGetTimeout, coroutine.create(print)))
             """);
 
         Assert.Equal([
@@ -196,7 +252,30 @@ public sealed class SimulationTests : IDisposable
             "0.000 print: false\tbad argument #1 to 'Player' (number has no integer representation)",
             "0.000 print: false\tbad argument #1 to 'Player' (number expected, got string)",
             "0.000 print: false\tbad argument #4 to 'TimerStart' (function expected, got number)",
+            "0.000 print: false\tbad argument #1 to 'TimerStart' (timer expected, got table)",
+            "0.000 print: false\tbad argument #1 to 'TimerGetTimeout' (timer expected, got thread)",
         ], simulation.Log);
+    }
+
+    // a function a native refuses, or can't keep, is let go of, so Lua collects it
+    [Theory]
+    [InlineData("pcall(TimerStart, {}, 1, false, f)")]
+    [InlineData("TimerStart(nil, 1, false, f)")]
+    [InlineData("local t = CreateTimer() DestroyTimer(t) TimerStart(t, 1, false, f)")]
+    [InlineData("pcall(Player, 0, f)")]
+    public void A_function_a_native_doesnt_keep_is_let_go_of(string call)
+    {
+        using var simulation = Load($$"""
+            local weak = setmetatable({}, {__mode = 'k'})
+            local f = function() end
+            weak[f] = true
+            {{call}}
+            f = nil
+            for i = 1, 300000 do local junk = {i} end
+            print(next(weak) == nil)
+            """);
+
+        Assert.Equal(["0.000 print: true"], simulation.Log);
     }
 
     [Fact]
@@ -262,20 +341,37 @@ public sealed class SimulationTests : IDisposable
             local c = three(GetRandomInt)
             print(a == b, b == c, math.random(5, 5), math.random(1) == 1, math.type(math.random(3)))
             print(pcall(math.random, 2, 1))
+            print(pcall(math.random, -2, 2147483647))
+            print(math.type(math.random(0, 2147483647)), math.random(-1, 2147483646) >= -1)
             """);
 
         Assert.Equal([
             "0.000 print: true\ttrue\t5\ttrue\tinteger",
             "0.000 print: false\tbad argument #1 to 'random' (interval is empty)",
+            "0.000 print: false\tbad argument #1 to 'random' (interval too large)",
+            "0.000 print: integer\ttrue",
         ], simulation.Log);
     }
 
     // facts, "Lua runtime": FourCC is callable
     [Fact]
-    public void FourCC_reads_an_object_id()
+    public void FourCC_reads_an_object_id_from_its_bytes()
     {
-        using var simulation = Load("print(FourCC('hfoo'), FourCC('A000'))");
+        using var simulation = Load("print(FourCC('hfoo'), FourCC('A000'), FourCC('\\255\\0\\0\\1'), pcall(FourCC, 5))");
 
-        Assert.Equal(["0.000 print: 1751543663\t1093677104"], simulation.Log);
+        Assert.Equal(["0.000 print: 1751543663\t1093677104\t-16777215\tfalse\tbad argument #1 to 'FourCC' (string expected, got number)"], simulation.Log);
+    }
+
+    // World Editor writes its array variables as udg_name = __jarray(default)
+    [Fact]
+    public void A_jarray_reads_its_default_where_nothing_is_set()
+    {
+        using var simulation = Load("""
+            local counts, names, flags = __jarray(0), __jarray(""), __jarray(false)
+            counts[2] = 5
+            print(counts[1], counts[2], names[7] == "", flags[3], rawget(counts, 1))
+            """);
+
+        Assert.Equal(["0.000 print: 0\t5\ttrue\tfalse\tnil"], simulation.Log);
     }
 }

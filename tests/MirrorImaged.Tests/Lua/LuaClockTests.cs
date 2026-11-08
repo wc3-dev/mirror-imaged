@@ -21,14 +21,26 @@ public sealed class LuaClockTests : IDisposable
         Assert.Equal(TimeSpan.Zero, _lua.Clock);
     }
 
-    // facts: os.clock counts in 1 ms steps, os.time is whole seconds
+    // facts: os.clock counts in 1 ms steps, os.time is whole seconds; the milliseconds are divided as Lua's / divides
     [Fact]
     public void TheClockIsInWholeMilliseconds()
     {
         _lua.Clock = TimeSpan.FromSeconds(61.2349);
         Assert.Equal(TimeSpan.FromMilliseconds(61234), _lua.Clock);
-        Assert.Equal([61.234f, "integer", Start + 61], _lua.Run("return os.clock(), math.type(os.time()), os.time()"));
+        Assert.Equal([true, "integer", Start + 61], _lua.Run("return os.clock() == 61234 / 1000, math.type(os.time()), os.time()"));
     }
+
+    // Windows's C library gives no date before 1970 (decisions D44)
+    [Theory]
+    [InlineData("os.date, '!%Y', -1")]
+    [InlineData("os.date, '%Y', -86400")]
+    [InlineData("os.time, {year = 1969, month = 12, day = 31, hour = 23}")]
+    public void TimesBefore1970CantBeRepresented(string call) =>
+        Assert.Equal([false, "time result cannot be represented in this installation"], _lua.Run($"return pcall({call})"));
+
+    [Fact]
+    public void TheFirstSecondOf1970CanBe() =>
+        Assert.Equal(["1970-01-01 00:00:00", 0], _lua.Run("return os.date('!%Y-%m-%d %H:%M:%S', 0), os.time({year = 1970, month = 1, day = 1, hour = 0})"));
 
     [Fact]
     public void ACoroutineReadsTheSameClock()

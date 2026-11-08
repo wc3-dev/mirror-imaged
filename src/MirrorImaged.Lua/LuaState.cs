@@ -10,7 +10,8 @@ namespace MirrorImaged.Lua;
 /// Values cross as <see langword="null"/> (nil), <see cref="bool"/>, <see cref="int"/> (integer),
 /// <see cref="float"/> (float), <see cref="string"/> and <see cref="LuaHandle"/> (userdata); a Lua string is read as
 /// UTF-8, so bytes that aren't UTF-8 come back as U+FFFD. A C# function is also given Lua functions, as
-/// <see cref="LuaFunction"/>. Dispose it to free the state. Not thread-safe.
+/// <see cref="LuaFunction"/>, and anything else as <see cref="LuaOpaque"/>. Dispose it to free the state. Not
+/// thread-safe.
 /// </summary>
 public sealed unsafe class LuaState : IDisposable
 {
@@ -146,7 +147,8 @@ public sealed unsafe class LuaState : IDisposable
     }
 
     // Only reads from Lua: what it returns, or its error message, sandbox.c's trampoline pushes. The functions it was
-    // given and didn't keep are let go of before the results are written, since that runs Lua.
+    // given and didn't keep are let go of before the results are written, since that runs Lua. Once the state has
+    // halted, no C# function runs: a finalizer or an xpcall handler can still call one without a Lua instruction.
     [UnmanagedCallersOnly]
     static int Dispatch(nint l, Value** results)
     {
@@ -154,9 +156,14 @@ public sealed unsafe class LuaState : IDisposable
         try
         {
             state = (LuaState)GCHandle.FromIntPtr(lua_touserdata(l, RegistryIndex - 1)).Target!;
+            if (state.Halted is not null)
+            {
+                *results = state._handle.Write([state.Halted.Message]);
+                return Native.Halts;
+            }
             var function = state._functions[lua_tointegerx(l, RegistryIndex - 2, null)];
             var args = new object?[lua_gettop(l)];
-            for (int i = 0; i < args.Length; i++) args[i] = state.Read(l, i + 1);
+            for (int i = 0; i < args.Length; i++) args[i] = state.Read(l, i + 1, argument: true);
             object?[] values;
             try { values = function(args); }
             finally
@@ -180,7 +187,8 @@ public sealed unsafe class LuaState : IDisposable
         }
     }
 
-    object? Read(nint l, int index) => lua_type(l, index) switch
+    // An argument C# can't read comes as its type, so the C# function can refuse it and every function is let go of.
+    object? Read(nint l, int index, bool argument = false) => lua_type(l, index) switch
     {
         0 => null,
         1 => lua_toboolean(l, index) != 0,
@@ -189,6 +197,7 @@ public sealed unsafe class LuaState : IDisposable
         3 => lua_tonumberx(l, index, null),
         4 => ReadString(l, index),
         7 => ReadHandle((Native.Handle*)lua_touserdata(l, index)),
+        var type when argument => new LuaOpaque(TypeNames[type]),
         var type => throw new InvalidOperationException($"A Lua {TypeNames[type]} can't be read in C#."),
     };
 

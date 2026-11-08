@@ -18,6 +18,23 @@ public sealed class GameTests
     }
 
     [Fact]
+    public void A_time_past_the_clocks_range_is_its_end()
+    {
+        Assert.Equal(1L << 60, Game.Steps(1e30));
+        Assert.Equal(1L << 60, Game.Steps(double.PositiveInfinity));
+        Assert.Equal(-(1L << 60), Game.Steps(double.NegativeInfinity));
+        Assert.Equal(0, Game.Steps(double.NaN));
+    }
+
+    [Fact]
+    public void Text_of_several_lines_is_one_entry_with_every_line_marked()
+    {
+        _game.Write("print", "one\ntwo");
+
+        Assert.Equal(["0.000 print: one\n0.000 print: two"], _game.Log);
+    }
+
+    [Fact]
     public void What_falls_due_runs_at_its_step_in_the_order_it_was_scheduled()
     {
         _game.At(10, () => _ran.Add($"b {_game.Step}"));

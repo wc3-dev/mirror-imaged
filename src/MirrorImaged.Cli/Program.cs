@@ -1,5 +1,6 @@
 using System.Globalization;
 using MirrorImaged;
+using MirrorImaged.Lua;
 using MirrorImaged.Natives;
 
 if (args is ["coverage"])
@@ -28,11 +29,11 @@ if (args is ["run", var map, .. var options])
     {
         using var simulation = Simulation.Load(map, new SimulationOptions { Seed = seed });
         try { simulation.Advance(TimeSpan.FromSeconds(seconds)); }
-        finally
-        {
-            foreach (var line in simulation.Log) Console.Write(line + "\n");
-        }
-        return 0;
+        catch (LuaException) when (simulation.Stopped is not null) { }
+        foreach (var line in simulation.Log) Console.Write(line + "\n");
+        if (simulation.Stopped is null) return 0;
+        Console.Error.Write(simulation.Stopped.Message + "\n");
+        return 1;
     }
     catch (Exception e)
     {

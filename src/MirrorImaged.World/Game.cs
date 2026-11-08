@@ -26,12 +26,24 @@ public sealed class Game
     /// <summary>What the run showed, a line each: the time in seconds, where it came from, and the text.</summary>
     public IReadOnlyList<string> Log => _log;
 
-    /// <summary>The whole number of steps nearest to <paramref name="seconds"/>.</summary>
-    public static long Steps(double seconds) => (long)Math.Round(seconds * StepsPerSecond);
+    /// <summary>
+    /// The whole number of steps nearest to <paramref name="seconds"/>, at most 2^60 either way (35 million years),
+    /// so a step added to the clock stays in range; NaN is 0.
+    /// </summary>
+    public static long Steps(double seconds) =>
+        double.IsNaN(seconds) ? 0 : (long)Math.Clamp(Math.Round(seconds * StepsPerSecond), -Limit, Limit);
 
-    /// <summary>Adds a line to the log at the clock's time: <c>1.500 print: hello</c>.</summary>
-    public void Write(string source, string text) =>
-        _log.Add($"{(Step / (double)StepsPerSecond).ToString("0.000", CultureInfo.InvariantCulture)} {source}: {text}");
+    const double Limit = 1L << 60;
+
+    /// <summary>
+    /// Adds an entry to the log at the clock's time: <c>1.500 print: hello</c>. Text of several lines stays one entry,
+    /// each line with the time and source before it.
+    /// </summary>
+    public void Write(string source, string text)
+    {
+        var prefix = $"{(Step / (double)StepsPerSecond).ToString("0.000", CultureInfo.InvariantCulture)} {source}: ";
+        _log.Add(prefix + text.Replace("\n", "\n" + prefix));
+    }
 
     /// <summary>
     /// Runs <paramref name="action"/> when the clock reaches <paramref name="step"/>, or in this step if that has

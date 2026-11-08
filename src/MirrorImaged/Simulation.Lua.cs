@@ -61,11 +61,13 @@ public sealed partial class Simulation
         string => "string",
         LuaFunction => "function",
         LuaHandle h => h.Type,
+        LuaOpaque o => o.Type,
         _ => value.GetType().Name,
     };
 
-    // print writes to the log; FourCC; math.random and math.randomseed on the game's generator, which
-    // GetRandomInt shares (facts, "Lua runtime").
+    // The game's own Lua functions (decisions D49): print writes to the log; FourCC reads a string's bytes, as C# can't
+    // when they aren't UTF-8; __jarray, which World Editor's scripts make their array variables with; math.random and
+    // math.randomseed on the game's generator, which GetRandomInt shares (facts, "Lua runtime").
     void AddLuaExtras()
     {
         _lua.Register("print", args =>
@@ -73,7 +75,6 @@ public sealed partial class Simulation
             _game.Write("print", (string)args[0]!);
             return [];
         });
-        _lua.Register("FourCC", args => [args is [string id, ..] ? id.Aggregate(0, (n, c) => n * 256 + c) : throw BadArgument(1, "FourCC", $"string expected, got {TypeName(args.FirstOrDefault())}")]);
         _lua.Register("random", Random);
         _lua.Register("randomseed", args =>
         {
@@ -86,11 +87,20 @@ public sealed partial class Simulation
             return [];
         });
         _lua.Run("""
-            local write, select, concat = print, select, table.concat
+            local write, select, concat, type, error, byte, setmetatable = print, select, table.concat, type, error, string.byte, setmetatable
             function print(...)
               local parts = {}
               for i = 1, select('#', ...) do parts[i] = tostring((select(i, ...))) end
               write(concat(parts, '\t'))
+            end
+            function FourCC(id)
+              if type(id) ~= 'string' then error("bad argument #1 to 'FourCC' (string expected, got " .. type(id) .. ")", 2) end
+              local n = 0
+              for i = 1, #id do n = n * 256 + byte(id, i) end
+              return n
+            end
+            function __jarray(default)
+              return setmetatable({}, {__index = function() return default end})
             end
             math.random, math.randomseed, random, randomseed = random, randomseed, nil, nil
             """, "mirror");
@@ -103,6 +113,7 @@ public sealed partial class Simulation
         if (args.Length > 2) throw new ArgumentException("wrong number of arguments");
         int low = args.Length == 1 ? 1 : Integer(args[0], 1, "random"), high = Integer(args[^1], args.Length, "random");
         if (low > high) throw BadArgument(1, "random", "interval is empty");
+        if (low < 0 && high > int.MaxValue + low) throw BadArgument(1, "random", "interval too large");
         return [_game.RandomInt(low, high)];
     }
 }

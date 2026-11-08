@@ -22,8 +22,9 @@ LUALIB_API long long *mirror_clockms (lua_State *L) {
   return (long long *)lua_getextraspace(G(L)->mainthread);
 }
 
+/* divided in the game's float arithmetic (decisions D44) */
 lua_Number mirror_clock (lua_State *L) {
-  return (lua_Number)*mirror_clockms(L) / (lua_Number)1000;
+  return mi_div((lua_Number)*mirror_clockms(L), 1000);
 }
 
 time_t mirror_time (lua_State *L) {
@@ -39,17 +40,14 @@ static long long daysfrom (long long y, long long m, long long d) {
   return era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + (153 * (m > 2 ? m - 3 : m + 9) + 2) / 5 + d - 1 - 719468;
 }
 
-/* (Howard Hinnant's civil_from_days) */
+/* (Howard Hinnant's civil_from_days) NULL before 1970, as Windows's C library gives */
 struct tm *mirror_gmtime (time_t t, struct tm *r) {
   long long days = (long long)t / 86400, secs = (long long)t % 86400, era, doe, yoe, doy, mp, y, m;
-  if (secs < 0) {
-    secs += 86400;
-    days--;
-  }
+  if (t < 0) return NULL;
   r->tm_hour = (int)(secs / 3600);
   r->tm_min = (int)(secs / 60 % 60);
   r->tm_sec = (int)(secs % 60);
-  r->tm_wday = (int)((days % 7 + 11) % 7);  /* 1970-01-01 was a Thursday */
+  r->tm_wday = (int)((days + 4) % 7);  /* 1970-01-01 was a Thursday */
   days += 719468;
   era = (days >= 0 ? days : days - 146096) / 146097;
   doe = days - era * 146097;
@@ -66,7 +64,7 @@ struct tm *mirror_gmtime (time_t t, struct tm *r) {
   return r;
 }
 
-/* as mktime in UTC: fields out of range carry over, and come back put right */
+/* as mktime in UTC: fields out of range carry over, and come back put right; -1 before 1970, as on Windows */
 time_t mirror_mktime (struct tm *ts) {
   long long y = ts->tm_year + 1900LL + ts->tm_mon / 12, m = ts->tm_mon % 12, t;
   if (m < 0) {
@@ -74,6 +72,7 @@ time_t mirror_mktime (struct tm *ts) {
     y--;
   }
   t = (daysfrom(y, m + 1, 1) + ts->tm_mday - 1) * 86400 + ts->tm_hour * 3600LL + ts->tm_min * 60LL + ts->tm_sec;
+  if (t < 0) return (time_t)-1;
   mirror_gmtime((time_t)t, ts);
   return (time_t)t;
 }

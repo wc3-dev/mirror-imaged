@@ -217,6 +217,26 @@ static int halt (lua_State *L) {
   return lua_error(L);
 }
 
+/* The position of the nearest Lua function calling in, in this thread or else the main thread, so a halt called
+   straight from pcall or a coroutine still names its line */
+static void pushwhere (lua_State *L) {
+  lua_State *threads[2];
+  lua_Debug ar;
+  int t, level;
+  threads[0] = L;
+  threads[1] = G(L)->mainthread;
+  for (t = 0; t < 2; t++) {
+    for (level = t == 0; lua_getstack(threads[t], level, &ar); level++) {
+      lua_getinfo(threads[t], "Sl", &ar);
+      if (ar.currentline > 0) {
+        lua_pushfstring(L, "%s:%d: ", ar.short_src, ar.currentline);
+        return;
+      }
+    }
+  }
+  lua_pushliteral(L, "");
+}
+
 /* Calls back into C#, which only reads the arguments and returns its results (or its error message, as a
    negative count) for this to push, before anything else can call C#. A function argument reaches C# as a
    reference in the registry, a light userdata holding its number, which C# owns. */
@@ -236,14 +256,18 @@ static int trampoline (lua_State *L) {
     return n;
   }
   pushcsharp(L, results, 1);
-  luaL_where(L, 1);
+  if (n == HALTS) pushwhere(L);
+  else luaL_where(L, 1);
   lua_insert(L, -2);
   lua_concat(L, 2);
   return n == HALTS ? halt(L) : lua_error(L);
 }
 
 static int traceback (lua_State *L) {
-  const char *msg = lua_tostring(L, 1);
+  const char *msg;
+  if (lua_getfield(L, LUA_REGISTRYINDEX, HALT) == LUA_TNIL) lua_pop(L, 1);
+  else lua_replace(L, 1);  /* a halted run reports its first error, which coroutine.wrap may have prefixed again */
+  msg = lua_tostring(L, 1);
   if (msg == NULL) msg = lua_pushfstring(L, "(error object is a %s value)", luaL_typename(L, 1));
   luaL_traceback(L, L, msg, 1);
   return 1;
@@ -272,8 +296,9 @@ static int docall (lua_State *L) {
   const Request *r = (const Request *)lua_touserdata(L, 1);
   lua_settop(L, 0);
   pushcsharp(L, r->values, r->n);  /* before anything that can run Lua, and so C# */
-  if (r->name != NULL) lua_getglobal(L, r->name);
-  else lua_rawgeti(L, LUA_REGISTRYINDEX, r->ref);
+  if (r->name == NULL) lua_rawgeti(L, LUA_REGISTRYINDEX, r->ref);
+  else if (lua_getglobal(L, r->name) == LUA_TNIL)
+    return luaL_error(L, "attempt to call a nil value (global '%s')", r->name);
   lua_insert(L, 1);
   lua_call(L, r->n, LUA_MULTRET);
   return lua_gettop(L);
