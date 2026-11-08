@@ -399,51 +399,169 @@ is the result. A float is read in the IEEE layout throughout: the game's `string
 
 ### Triggers and threads (W1-2)
 
-The measurements are three probes, `probes/triggers*.lua`, in `docs/facts.md`, "Triggers and threads".
+The measurements are four probes, `probes/triggers*.lua`, in `docs/facts.md`, "Triggers and threads", with their lines
+in `probes/expected`.
 
 - **D70. The script's callbacks run in Lua threads of their own,** as the game's do (not the main thread,
   `coroutine.isyieldable()` false): a timer's callback, a condition or filter, a trigger's action and `ExecuteFunc`'s
   function each start a thread (`LuaFunction.Start`, sandbox.c's `mirror_start` and `mirror_resume`). The script can't
   yield one: there sandbox.c's `coroutine.yield` raises "attempt to yield across a C-call boundary" and
-  `coroutine.isyieldable` is false, while a coroutine the script makes yields as usual. A wait is the only yield: a C#
-  function asks for it (`LuaState.Yield`), and the trampoline yields the calling thread once C# has returned, so `pcall`
-  and `xpcall` across it keep working (facts). A trigger's actions and `ExecuteFunc`'s function are run on after their
-  wait; a timer's callback or a condition that waits is let go of, so it never goes on, as measured. The natives know no
-  Lua: the simulation gives them `IScriptThreads`, which starts and runs on threads. Not matched, as the game's threads
-  are stacks of their own rather than Lua coroutines: a wait past a C function (a `table.sort` comparator in an action)
-  raises here and waits in the game, and a wait in a coroutine the script made inside an action yields that coroutine
-  here and ends the action in the game. A wait in `main` raises Lua's "attempt to yield from outside a coroutine" (not
-  measured). The state now makes a table for its threads, which moves the addresses `LuaDeterminismTests` pins.
+  `coroutine.isyieldable` is false, while a coroutine the script makes yields as usual. Nor can it run one on:
+  `coroutine.resume` of one answers false, "cannot resume non-suspended coroutine" (not measured; the game's threads
+  aren't Lua's to resume). A wait is the only yield: a C# function asks for it (`LuaState.Yield`), and the trampoline
+  yields the calling thread once C# has returned, so `pcall` and `xpcall` across it keep working (facts). A trigger's
+  actions and `ExecuteFunc`'s function are run on after their wait; a timer's callback or a condition that waits is let
+  go of, so it never goes on, as measured. The natives know no Lua: a function the script gave them is the target of
+  their delegate, an `IScriptFunction` that starts it in a thread; `IScriptThreads` starts a global by name and makes
+  the caller wait; an `IScriptThread` waiting is run on or let go of. Not matched, as the game's threads are stacks of
+  their own rather than Lua coroutines: a wait past a C function (a `table.sort` comparator in an action) raises here
+  and waits in the game, and a wait in a coroutine the script made inside an action yields that coroutine here and ends
+  the action in the game. A wait in `main` raises Lua's "attempt to yield from outside a coroutine" (not measured). The
+  state now makes a table for its threads and wraps `coroutine.resume`, which moves the addresses `LuaDeterminismTests`
+  pins. Left to wave 2 (W2-6, `docs/tasks/wave-2.md`): `ForGroup`, `ForForce`, `Enum*` and filter callbacks, measured
+  only as far as timers, conditions, actions and `ExecuteFunc` go; and to wave 7 (`docs/tasks/later.md`): `common.ai`'s
+  threads.
 - **D71. A wait ends at the first tenth of a second of game time after its timeout has passed,** counted in steps from
-  the start; a timeout of 0 or less takes 0.1 s. Close: the game's waits end mostly on that grid, at or one tenth after
-  the timeout, but differ between runs (facts); the rule matches 19 of the 28 measured, as well as any rule tried
-  (rounding the timeout to tenths and adding one matched 20), and is the simplest to state. A wait never ends in the
-  step it started in, so `PolledWait`'s loop always moves the clock. `PolledWait(1)` takes 1.1 s, as twice in the game.
+  the start; a timeout of 0 or less takes 0.1 s, and one past the clock's range never ends. Close: the game's waits end
+  mostly on that grid, at or one tenth after the timeout, but differ between runs (facts). Of the 28 waits measured in
+  `triggers` and `triggers-2`'s first run, as call + timeout = the game's end, the rule matches 19: 0.6 + 1 = 1.7, 1.7 +
+  0 = 1.8, 2.0 + 0.33 = 2.4, 2.4 + (-1) = 2.5, 2.5 + 0.5 = 3.1, 2.0 + 0.1 = 2.2, 2.2 + 0.1 = 2.4, 2.8 + 0.2 = 3.1, 3.1 +
+  0.25 = 3.4, 3.4 + 0.5 = 4.0, 4.0 + 0.55 = 4.6, 4.6 + 0.01 = 4.7, 2.033 + 0.1 = 2.2, 2.2 + 0.2 = 2.5, 2.5 + 0 = 2.6,
+  2.6 + 0.5 = 3.2, 2.4 + 0.3 = 2.8, 2.8 + 1 = 3.9, 0.8 + 0.2 = 1.1; and misses 9, the rule's end in brackets: 1.8 + 0.05
+  = 2.0 (1.9), 0.8 + 0.5 = 1.3 (1.4), 0.9 + 0.25 = 1.3 (1.2), 2.4 + 0.1 = 2.5 (2.6), 2.5 + 0.15 = 2.8 (2.7), 4.7 + 0.09
+  = 4.9 (4.8), 4.9 + 0.11 = 5.125 (5.1), 2.25 + 0 = 2.4 (2.3), 0.6 + 0.5 = 1.1 (1.2). Rounding the timeout to tenths and
+  adding one matched 20; the rule is the simplest to state. A wait never ends in the step it started in, so
+  `PolledWait`'s loop always moves the clock; `PolledWait(1)` takes 1.1 s, as twice in the game. W1-8 compares the
+  probes with the varying lines marked (`docs/tasks/wave-1.md`).
 - **D72. `==` holds for the same handle seen as two types:** each handle type's metatable has an `__eq` comparing the
   handles' keys (D63), so `GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED` and a widget equal to its unit, as the game
-  measures; `rawequal` stays false (D41). The game's `==` also holds between different handles with the same id
-  (`GetTriggerEventId()` with id 4 `==` `ConvertPlayerColor(4)`; `Condition(nil) == Filter(nil)`), which needs the id in
-  the userdata: left to W1-6 (handle ids), so `GetTriggerEventId`, `Condition` and `Filter` are Close until then.
+  measures; `rawequal` stays false (D41). Called straight from the metatable with anything but two handles, it answers
+  false. The game's `==` also holds between different handles with the same id (`GetTriggerEventId()` with id 4 `==`
+  `ConvertPlayerColor(4)`; `Condition(nil) == Filter(nil)`), which needs the id in the userdata: left to W1-6
+  (`docs/tasks/wave-1.md`), so `GetTriggerEventId`, `Condition` and `Filter` are Close until then.
 - **D73. Boolexprs:** `And` and `Or` run their second operand only when needed; a nil operand, `Not(nil)` and a nil
   condition are false; a destroyed `Condition` or `Filter` fails without running, while a destroyed `And`, `Or` or `Not`
   still runs. `Condition(nil)` and `Filter(nil)` each give one handle every call, which passes as a trigger's own
   condition and is false in an `And`, `Or` or `Not`: this matches every measured case but one, `And(true,
-  Condition(nil))`, true in the game. In the game the two are one handle; here, as C# types, two.
+  Condition(nil))`, true in the game. In the game the two are one handle; here, as C# types, two. In `triggers` a
+  condition destroyed while a trigger had it, then a new one added and removed, still ran the new one through the old
+  one's place (`ran removed`; handle id reuse inferred), which isn't modelled: `TriggerAddCondition`,
+  `TriggerRemoveCondition`, `DestroyCondition` and `TriggerEvaluate` are Close for it, left to W1-6 with the ids.
 - **D74. A run takes the trigger's actions as it starts** (facts), so an action removed while a run goes on, by
   `TriggerRemoveAction`, `TriggerClearActions` or `DestroyTrigger`, is let go of only once the trigger's last running
-  thread has ended. `DestroyTrigger` stops its events and lets a waiting run go on: the claim that it breaks the game's
-  handle stack isn't modelled.
+  thread has ended. `DestroyTrigger` lets go of its events too and lets a waiting run go on: the claim that it breaks
+  the game's handle stack isn't modelled.
 - **D75. The event responses read the running thread's firing:** its trigger, its event id and its game state, kept
   across its waits. An event sets all three; `TriggerExecute` keeps the caller's event and names its trigger;
-  `TriggerEvaluate` names the trigger for its conditions; `ExecuteFunc` keeps the caller's. Outside an event the event
-  id is `ConvertGameEvent(0)` seen as `eventid` (the game's has id 0). Units, players and the other responses join it
-  in their tasks.
+  `TriggerEvaluate` names the trigger for its conditions; `ExecuteFunc` keeps the caller's (after its wait the game read
+  only the trigger: the event kept there too is the model). Outside an event the event id is `ConvertGameEvent(0)` seen
+  as `eventid` (the game's has id 0). Units, players and the other responses join it in their tasks.
 - **D76. Events here:** timer events schedule themselves, not through a timer handle, so `GetExpiredTimer` is nil in
-  them, as measured; a timeout under 0.01 s is 0.01 s. Two expiries due in one step keep the queue's order (D45), though
-  the game ran a periodic event's expiry before a timer started later that fell due at the same moment: for W1-8's probe
-  of timer order. Variable events never fire, as in the game for a Lua global. Integer game states (divine intervention,
-  disconnected) are kept by `SetIntegerGameState`, which fires their events as measured, with the event id the
-  comparison's value less 255 (`ConvertGameEvent(-253)` for `EQUAL`). The time of day's events are W1-9's, with
-  W1-4's clock: their registrations are kept in `_stateEvents`, for the clock to fire with `Fire` and the id 3, by the
-  rules in the facts; until then `TriggerRegisterGameStateEvent` is Close. After W1-2: 32 Exact, 116 Close, 2
-  Recorded, 1,685 Missing.
+  them, as measured; a timeout under 0.01 s is 0.01 s. Among what falls due in one step, a timer event keeps the place
+  it got when registered, every time (`Game.At` with a place), which both measured ties fit: a periodic event registered
+  before a timer started later ran first when both fell due (`triggers`, at 3.0), and a periodic 0 s event fired 10
+  times in 0.1 s, before the 0.1 s timer started after it (`triggers-2`); so it is Exact. Whether timers keep such a
+  place too, against D45's queue order, is W1-8's to probe. Variable events never fire, as in the game for a Lua global.
+  Integer game states (divine intervention, disconnected; W1-4's `GameState.cs`) fire their events on a change as
+  measured, with the event id the comparison's value less 255 (`ConvertGameEvent(-253)` for `EQUAL`). The time of day's
+  events are W1-9's, with W1-4's clock: their registrations are kept in `_stateEvents`, for the clock to fire with
+  `Fire` and the id 3; until then `TriggerRegisterGameStateEvent` is Close. `TriggerRegisterGameEvent` is W1-9's too.
+- **D77. `BlzTriggerIsRunning` and `BlzTriggerInterrupt`** (probe `triggers-4`): a trigger is running while a run of its
+  actions hasn't ended, waiting or not; `TriggerEvaluate`'s conditions are no run. An interrupt stops the runs started
+  before it: the action running goes on to its end, but no other action runs, and a run that waits stops at its wait's
+  end, so it reads running until then. A run started after the interrupt runs as usual (not measured). After W1-2: 53
+  Exact, 179 Close, 7 Recorded, 1,596 Missing.
+
+### Players, forces and the game (W1-4)
+
+The players probe (`probes/players.lua`, its game lines in `probes/expected/players.txt`, `docs/facts.md` "Players and
+the game") measured what a one-player `-loadfile` game starts with; the choices below follow it where it measured and
+say so where not. What W1-4 left is in W1-9 (`docs/tasks/wave-1.md`), W2-1, W2-6 and W2-7 (`wave-2.md`) and
+`docs/tasks/later.md`.
+
+- **D90. A player's colour, race, controller and slot state are kept as values** on the `player` handle and given out
+  through the Convert handles (D64), so `GetPlayerColor(p) == ConvertPlayerColor(n)` and `GetPlayerRace(p) ==
+  RACE_HUMAN` hold with Lua's `==` (facts); `ConvertPlayerColor` and `ConvertRace` are Exact with them. A player's data
+  (name, team, start location, alliances, states, handicaps, tech) lives on its handle, as later waves' unit data will.
+- **D91. Who plays is seated after `config`, before `main`,** as the lobby does once `config` has run
+  (`GameNatives.Seat`). The test chooses with `SimulationOptions.Users` (the slots people play, the first the local
+  player) and `Computers`; without them it is a single-player game in the map's first user slot of `war3map.w3i`, with
+  the map's computer slots. The options are checked against `war3map.w3i` before any of the map's Lua runs, each
+  refusal an `ArgumentException` saying which slot and why: a person only in a slot the map gives a user, a computer in
+  one it gives a user or a computer (the lobby lets a computer take an open slot), never a slot the map doesn't have,
+  and no person, a slot given twice or one outside 0 to 23 neither. The map's neutral and rescuable slots always play,
+  with the controller `config` gave them (inferred: the lobby offers them to no one). The chosen slots play with their
+  controller set; the other slots of 0 to 23 are Empty and keep the controller `config` gave them. The one user of a
+  single-player game is "Local Player" (facts); with several users each keeps "Player N", as the game's account names
+  aren't known. Before seating, in the script's top level and in `config`, the local player is slot 0, the game type
+  melee and no map flag set, while the players probe saw `InitGenericPlayerSlots` read melee inside `config`; the lobby
+  before `config` is W1-9's. Two options, not three: the first user is the local player, so a test choosing whose game
+  the run is orders `Users`. Choosing a selectable slot's race or a computer's difficulty is in `later.md`.
+- **D92. Races come from the lobby:** a playing slot whose race is fixed (its preference names a race, and it isn't
+  selectable) has that race; a selectable one gets `RACE_PREF_RANDOM` and, like a random preference, a random race, as
+  do the unused slots of 0 to 23 (probe); the neutral slots have race 0. The random races come from a generator of
+  their own, seeded from the run's seed (`Game.RunSeed`), with a draw for every slot from 0 to 23 in order, used or not,
+  so a slot's race doesn't depend on who else plays and the map's own `GetRandomInt` and `math.random` don't depend on
+  the seating at all. Whether the game's lobby draws from the generator the script shares is not known (D46).
+- **D93. The starting state is the probe's:** names "Player N", slots 1 to 23 Empty with `MAP_CONTROL_NONE`, team -1
+  and start location -1, the neutral slots Playing as `MAP_CONTROL_CREEP` on team 0, colour the slot, races
+  selectable; each player giving itself alliance types 0 to 7, neutral passive and every player passive to each other
+  (26 to 27 inferred), nothing else; game result 3, food cap ceiling 100, bounty from the neutral slots (26 inferred),
+  `PLACED` 1 for a seated slot; handicaps 1; speed normal, difficulty easy, placement the map's settings, game type
+  melee. A seated computer's and a named slot's defaults are inferred from these, to be settled by W1-9's probe. Gold
+  below 0 reads 0 (measured) and so does lumber (inferred); other states keep any value. A tech maximum below 0 reads
+  2147483647; `SetPlayerTechResearched` sets the level, also lower, but not below 0 (inferred), and an addition stops at
+  2147483647. An upgrade's level count, which the game's `AddPlayerTechResearched` stops at and its maximum reads, needs
+  the game's data (W2-1), so those natives are Close; so is `SetPlayerTechResearched` (setting above that count isn't
+  measured) and `GetPlayerTechCount` (a unit type counts the player's units, W2-2, and `specificonly` is ignored until
+  then). `SetGameSpeed` refuses `MAP_SPEED_FASTEST` (measured); the speed changes nothing else, as game time is
+  simulated. `GetGameTypeSelected` is the map's settings for a map with custom forces (inferred from the lobby, which
+  offers no other there), and custom forces with fixed player settings set `MAP_LOCK_ALLIANCE_CHANGES` (facts);
+  `SetMapFlag` is Close, as only that flag set false was measured. `war3map.w3i` is read with War3Net's `ReadMapInfo`
+  from `War3Net.Build.Core`, now a package of `MirrorImaged.Data` too. Player names from `war3map.w3i` aren't used yet:
+  they are `TRIGSTR_n` until the strings file is read (W2-1), so `GetPlayerName` is Close.
+- **D94. Forces are a mask of slots,** so `ForForce` goes in slot order (measured). It runs over the players the force
+  holds as it starts: one the callback adds isn't visited and one it removes still is (not measured; the simplest
+  reading of a mask copied at the start). The enumerations clear the force first and take the playing players of slots
+  0 to 23, not the neutral ones (measured with one user; computers inferred). `ForceEnumAllies` takes the players the
+  given player is passive to, itself among them, and `ForceEnumEnemies` the others (the direction isn't measured). A
+  filter stops the run as the native being Missing until the boolexprs can be evaluated (W1-9), so a map never gets a
+  wrong answer; `GetFilterPlayer` waits with them. `ForForce` lets go of its callback (D42) and gives the outer enum
+  player back after a nested one. It is Close: besides the copy, the facts' wait that never ends after a force was
+  looped with `ForForce` and destroyed isn't modelled (W1-9).
+- **D95. Pausing stops the clock** (`Game.Paused`): what is due in the step the game paused in still runs, so a pause
+  from one callback doesn't hold back the others of its frame, and then the clock stays; `Simulation.Advance` counts no
+  paused time, so once the game goes on the clock moves from where it stopped. `Simulation.Paused` shows it; only the
+  map can go on, as in the game, so the API has no way to resume. Not measured; the facts say only that the victory and
+  defeat boxes pause the game. Until dialogs and input exist (waves 5 and 6), only a callback in the same step can go
+  on.
+- **D96. The time of day is worked out from the clock,** from where it was last set, at 0.05 hours a second times the
+  scale, kept from 0 below 24 (by `%` on doubles, which is exact, so even a huge scale gives an hour of the day) and
+  read cut toward zero to a float, so it reads under 24 (from 23.9, 2 s later 23.999998, where the game read
+  23.9999962). An infinite or NaN scale is refused and the scale stays (not measured). Setting reads back as set; below
+  0 and above 23.99 read 0 (measured: 23.99 kept, 23.995 not). Close: the game adds each frame's share and loses a
+  little (0.0999975 for 0.1 after 2 s), reads a set 0.1 a float step lower, and its event at 12 reads a float step
+  under 12; the scale and suspending are Exact. The workspace's facts saw a 7 read 6.999999 (11-05, a Moonwell check
+  map) where the probe read 7 back exactly; the facts' read may have come later than the set, and W1-9's probe is to
+  separate them. A day is the standard 24 hours of 480 s until the game's data (W2-1) gives a map's own (the facts'
+  `DayHours=30` cases).
+- **D97. Events wait for the triggers (W1-9):** `TriggerRegisterPlayerEvent` (victory, defeat, leave),
+  `TriggerRegisterPlayerStateEvent`, `TriggerRegisterPlayerAllianceChange` and `TriggerRegisterGameStateEvent` stay
+  Missing, and with them the events the facts measure inside `RemovePlayer`, `SetPlayerAlliance` and `SetPlayerState`
+  and as the time of day passes an hour, so those three natives are Close. `RemovePlayer` sets the slot, Left for
+  defeat and Playing for any other result (victory measured), and the player's `PLAYER_STATE_GAME_RESULT` to the
+  result given (inferred: the state starts at the neutral result, 3, and is named for it). `EndGame`, which ends the
+  game for `CustomVictorySkipBJ`, stays Missing (W1-9); `CustomVictoryBJ` and `CustomDefeatBJ` also need dialogs (wave
+  5). `DefineStartLocationLoc` and `GetStartLocationLoc` wait for locations (W2-6), `SetPlayerAbilityAvailable` for
+  abilities (W2-7).
+- **D98. What only the lobby reads is Recorded:** `SetMapName`, `SetMapDescription`, `SetEnemyStartLocPrio`,
+  `SetEnemyStartLocPrioCount` and `SetPlayerRaceSkin` change nothing a native reads back, so they are Recorded, each
+  with its reason. Their calls aren't written to the run's log: D48's log is what the map shows, and none of these
+  shows anything during a run; how tests read Recorded calls in general is the test tools' (wave 8).
+  `SetStartLocPrioCount` stays Close: whether `GetStartLocPrio` and `GetStartLocPrioSlot` read the slots past the count
+  differently isn't measured, and here they read what was set. The lobby's placement of players on start locations
+  isn't simulated, so a player's start location is the one `config` set, or -1.
+- **D99. After W1-4:** 25 Exact, 169 Close, 7 Recorded, 1,634 Missing. `config` of the four maps in
+  `Maps\lua-reference` runs through, and each stops at the first line of `main`, `GetCameraMargin` (wave 5); `main`'s
+  player setup (`InitBlizzard`) comes after the cameras, sounds, regions and units, and its first player function,
+  `InitBlizzardGlobals`, needs `Filter` (W1-2) and sounds first.

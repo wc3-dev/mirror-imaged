@@ -1,0 +1,23 @@
+# probes/triggers-3.lua on 3.0.1.24371, single player, 11-08: the game's lines. One run, and the same in the test run after.
+# A line "~ label | line" varies from run to run (a wait's length, decisions D71): a run is compared without the
+# lines that start with a label, and must give one such line for each. Lines starting "# " are notes.
+start 0 0
+divine LESS_THAN 0:-255,1:-255,1:-255,0:-255
+divine LESS_THAN_OR_EQUAL 0:-254,1:-254,2:-254,2:-254,1:-254,0:-254
+divine EQUAL 2:-253,2:-253
+divine GREATER_THAN_OR_EQUAL 5:-252,2:-252,3:-252,2:-252,4:-252
+divine GREATER_THAN 5:-251,3:-251,4:-251
+divine NOT_EQUAL 5:-250,0:-250,1:-250,2:-250,3:-250,2:-250,1:-250,0:-250,4:-250
+disconnected LESS_THAN -1:-255
+disconnected LESS_THAN_OR_EQUAL 0:-254,-1:-254,0:-254
+disconnected EQUAL 0:-253,0:-253
+disconnected GREATER_THAN_OR_EQUAL 2:-252,0:-252,0:-252
+disconnected GREATER_THAN 2:-251
+disconnected NOT_EQUAL 2:-250,0:-250,-1:-250,0:-250
+time LESS_THAN 10.0:3,12.0:3
+time LESS_THAN_OR_EQUAL 10.0:3,12.0:3
+time EQUAL 12.0:3,12.0:3
+time GREATER_THAN_OR_EQUAL 12.0:3,13.0:3,14.0:3
+time GREATER_THAN 12.0:3,13.0:3,14.0:3
+time NOT_EQUAL 
+nil condition 1048743 1048744 false false false true false true

@@ -11,12 +11,13 @@ public sealed class TestMaps : IDisposable
 {
     readonly string _folder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())).FullName;
 
-    /// <summary>A 32 by 32 map whose script is <paramref name="script"/>, in Lua or JASS.</summary>
-    public string Build(string script, ScriptLanguage language = ScriptLanguage.Lua)
+    /// <summary>A 32 by 32 map whose script is <paramref name="script"/>, in Lua or JASS, its info changed by <paramref name="change"/>.</summary>
+    public string Build(string script, ScriptLanguage language = ScriptLanguage.Lua, Action<MapInfo>? change = null)
     {
         var path = Path.Combine(_folder, Path.GetRandomFileName() + ".w3x");
         var info = MapFactory.Info(32, 32);
         info.ScriptLanguage = language;
+        change?.Invoke(info);
         new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info), Script = script }).Build(path);
         return path;
     }

@@ -84,6 +84,26 @@ static int coisyieldable (lua_State *L) {
   return 1;
 }
 
+/* coroutine.resume, which refuses a thread of the natives' own: only they run it on after its wait (not measured) */
+static int coresume (lua_State *L) {
+  int own = 0;
+  if (lua_type(L, 1) == LUA_TTHREAD) {
+    lua_getfield(L, LUA_REGISTRYINDEX, THREADS);
+    lua_pushvalue(L, 1);
+    own = lua_rawget(L, -2) != LUA_TNIL;
+    lua_pop(L, 2);
+  }
+  if (own) {
+    lua_pushboolean(L, 0);
+    lua_pushliteral(L, "cannot resume non-suspended coroutine");
+    return 2;
+  }
+  lua_pushvalue(L, lua_upvalueindex(1));
+  lua_insert(L, 1);
+  lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);
+  return lua_gettop(L);
+}
+
 /* No io, debug or package; no dofile, loadfile or collectgarbage; os with only clock, date, difftime and
    time. math.random and math.randomseed are the game's generator, which the world provides. */
 static int openlibs (lua_State *L) {
@@ -103,6 +123,9 @@ static int openlibs (lua_State *L) {
   drop(L, "randomseed");
   lua_pop(L, 1);
   lua_getfield(L, -1, LUA_COLIBNAME);
+  lua_getfield(L, -1, "resume");
+  lua_pushcclosure(L, coresume, 1);
+  lua_setfield(L, -2, "resume");
   lua_pushcfunction(L, coyield);
   lua_setfield(L, -2, "yield");
   lua_pushcfunction(L, coisyieldable);
@@ -155,10 +178,15 @@ LUALIB_API void mirror_close (lua_State *L) {
   mirror_arena_free(arena);
 }
 
+static int ishandle (lua_State *L, int index) {
+  return lua_type(L, index) == LUA_TUSERDATA && lua_rawlen(L, index) == sizeof(Handle);
+}
+
 /* == holds for the same handle seen as two types, as the game's does: GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED.
-   Handles are the only full userdata in the sandbox, so both are one. */
+   Called straight from its metatable, it may be given anything else, which is never equal. */
 static int handleeq (lua_State *L) {
-  lua_pushboolean(L, ((Handle *)lua_touserdata(L, 1))->id == ((Handle *)lua_touserdata(L, 2))->id);
+  lua_pushboolean(L, ishandle(L, 1) && ishandle(L, 2)
+                     && ((Handle *)lua_touserdata(L, 1))->id == ((Handle *)lua_touserdata(L, 2))->id);
   return 1;
 }
 
@@ -342,13 +370,12 @@ typedef struct Request {
   int ref;
 } Request;
 
-/* calls the global name, or the function ref when there is no name */
+/* calls the global name */
 static int docall (lua_State *L) {
   const Request *r = (const Request *)lua_touserdata(L, 1);
   lua_settop(L, 0);
   pushcsharp(L, r->values, r->n);  /* before anything that can run Lua, and so C# */
-  if (r->name == NULL) lua_rawgeti(L, LUA_REGISTRYINDEX, r->ref);
-  else if (lua_getglobal(L, r->name) == LUA_TNIL)
+  if (lua_getglobal(L, r->name) == LUA_TNIL)
     return luaL_error(L, "attempt to call a nil value (global '%s')", r->name);
   lua_insert(L, 1);
   lua_call(L, r->n, LUA_MULTRET);
@@ -391,12 +418,6 @@ static int protect (lua_State *L, lua_CFunction f, const Request *r, int nresult
 /* name(args...), leaving its results */
 LUALIB_API int mirror_call (lua_State *L, const char *name, const ManagedValue *args, int n) {
   Request r = {name, args, n, NULL, LUA_NOREF};
-  return protect(L, docall, &r, LUA_MULTRET);
-}
-
-/* the function a C# function was given as ref, called with args, leaving its results */
-LUALIB_API int mirror_callref (lua_State *L, int ref, const ManagedValue *args, int n) {
-  Request r = {NULL, args, n, NULL, ref};
   return protect(L, docall, &r, LUA_MULTRET);
 }
 

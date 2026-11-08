@@ -1,0 +1,62 @@
+# probes/triggers-2.lua on 3.0.1.24371, single player, 11-08: the game's lines. Two runs.
+# A line "~ label | line" varies from run to run (a wait's length, decisions D71): a run is compared without the
+# lines that start with a label, and must give one such line for each. Lines starting "# " are notes.
+removal
+removed only true
+ran 
+removed first true
+ran second
+removed second true
+ran c1
+cleared true
+ran 
+destroyed only false
+ran 
+destroyed filter false
+ran 
+destroyed and true
+ran and1,and2
+destroyed operand true
+ran 
+nil boolexprs
+nil handles 1048732 1048732 1048732 conditionfunc filterfunc true true
+nil values true true false false true false true
+ran t,v,w,x
+values true true false
+ran a,b,c,d,e
+returns false false true false true false
+counts
+evaluate counts 0 0 0 0
+ran y,n
+event counts 1 0 1 0
+ran gated
+execute wait
+waiter start 0.6000 true
+waiter after 0.6000
+waiter after execute 0.6000
+waiter left 0.6000
+event ids
+timer callback 0 eventid true true true
+event 4 eventid gameevent true false true true true
+nested inner 4 true,func 4 true
+game states
+divine 2 -251 false gamestate true,3 -251 false gamestate true,5 -251 false gamestate true
+disconnected now 0
+ran disconnected 2,disconnected 0
+time of day time 3 true 2 true
+~ slow done | slow done 1.0999
+~ slow done | slow done 1.0999
+timer events
+periodic zero in 0.1 s 10
+~ timer events func after | timer events func after 1.0999 true,0.01@1.5100,0.005@1.5100,0.001@1.5100,0@1.5100,0.02@1.5200,b,a,b,x2,x1,x2,callback
+wait lengths
+changes while running
+ran first,second,third
+same unit as widget
+widget widget unit true false true 1048875 true
+~ off grid | off grid 2.0330 2.2000 2.4999 2.5999 3.1999
+~ quarter | quarter 2.2501 2.3999 2.7999 3.8999
+~ tenths | tenths 2.0001 2.2000 2.3999 2.4999 2.7999 3.0999 3.3999 3.9999 4.5999 4.6998 4.8998 5.1248
+~ polled | polled 2.5001 3.5999 4.1999 7.2247
+late s1,s1 after,s2
+# Run 2, the same but for its varying lines: slow done 1.0999; slow done 1.0999; timer events func after 1.0999 true,0.01@1.5100,0.005@1.5100,0.001@1.5100,0@1.5100,0.02@1.5200,b,a,b,x2,x1,x2,callback; off grid 2.0330 2.2000 2.3999 2.4999 2.9999; quarter 2.2501 2.3999 2.7999 3.7999; tenths 2.0001 2.2000 2.3999 2.5999 2.7999 2.9999 3.3999 3.9999 4.6248 4.7249 4.9248 5.1248; polled 2.5001 3.5999 4.1999 7.3246.

@@ -59,7 +59,6 @@ internal static unsafe partial class Native
     [LibraryImport(Lib)] public static partial long* mirror_clockms(nint l);
     [LibraryImport(Lib)] public static partial void mirror_setcallback(delegate* unmanaged<nint, Value**, int> f);
     [LibraryImport(Lib)] public static partial int mirror_pcall(nint l, int args, int results);
-    [LibraryImport(Lib)] public static partial int mirror_callref(nint l, int reference, Value* args, int n);
     [LibraryImport(Lib)] public static partial int mirror_unref(nint l, int reference);
     [LibraryImport(Lib)] public static partial int mirror_resume(nint l, int thread, int* yielded);
 

@@ -68,9 +68,6 @@ public sealed unsafe class LuaState : IDisposable
     public object?[] Call(string name, params object?[] args) =>
         Use(l => Results(l, lua_gettop(l), mirror_call(l, name, _handle.Write(args), args.Length)));
 
-    internal object?[] Call(LuaFunction function, object?[] args) =>
-        Use(l => Results(l, lua_gettop(l), mirror_callref(l, function.Reference, _handle.Write(args), args.Length)));
-
     /// <summary>
     /// Calls the global function <paramref name="name"/> in a new Lua thread, as <see cref="LuaFunction.Start"/> does.
     /// </summary>

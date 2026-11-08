@@ -3,23 +3,35 @@ using MirrorImaged.World;
 namespace MirrorImaged.Natives;
 
 /// <summary>
-/// Runs the script's functions in threads that can wait, as the game runs a trigger's actions (decisions D70). A
-/// simulation gives its natives one; without one, a function runs straight through and nothing can wait.
+/// The script's threads, which can wait, as the game runs a trigger's actions (decisions D70). A simulation gives its
+/// natives them; without them, a function runs straight through and nothing can wait.
 /// </summary>
 public interface IScriptThreads
 {
     /// <summary>
-    /// Runs <paramref name="code"/>, a function the script gave a native, in a new thread. Null once it has ended (an
-    /// error in it is logged); else the thread, waiting: calling it runs the thread on, and answers whether it waits
-    /// again.
+    /// Runs the script's global function <paramref name="name"/> in a new thread: null once it has ended (an error in it
+    /// is logged), else the thread, waiting.
     /// </summary>
-    Func<bool>? Start(Action code);
-
-    /// <summary>As <see cref="Start(Action)"/>, with the script's global function <paramref name="name"/>.</summary>
-    Func<bool>? Start(string name);
+    IScriptThread? Start(string name);
 
     /// <summary>Makes the thread calling the running native wait once the native returns.</summary>
     void Yield();
+}
+
+/// <summary>
+/// A function the script gave a native: the target of the delegate the native holds, which runs it straight through.
+/// </summary>
+public interface IScriptFunction
+{
+    /// <summary>Runs it in a new thread: null once it has ended (an error in it is logged), else the thread, waiting.</summary>
+    IScriptThread? Start();
+}
+
+/// <summary>A thread of the script's, waiting; disposing of it lets it go without running on.</summary>
+public interface IScriptThread : IDisposable
+{
+    /// <summary>Runs it on from its wait: true when it waits again, false once it has ended.</summary>
+    bool Resume();
 }
 
 public partial class trigger
@@ -29,7 +41,9 @@ public partial class trigger
     internal readonly List<triggercondition> Conditions = [];
     internal readonly List<triggeraction> Actions = [];
     internal int Running;  // its threads that haven't ended, which may still run an action it no longer has
+    internal int Interrupts;  // BlzTriggerInterrupt's calls: a thread started before the last one stops
     internal readonly List<triggeraction> Removed = [];  // let go of once none is running
+    internal readonly List<@event> Events = [];
 }
 
 public partial class triggeraction
@@ -55,6 +69,7 @@ public partial class boolexpr
 public partial class @event
 {
     internal trigger? Trigger;
+    internal timer? Timer;  // an expiry event's
 }
 
 public partial class timer
@@ -62,20 +77,20 @@ public partial class timer
     internal List<@event>? ExpireEvents;
 }
 
-// Triggers, conditions, threads and waits, as the probes triggers, triggers-2 and triggers-3 measure them (docs/facts.md,
-// "Triggers and threads"). Events that need units, players or regions come with them.
+// Triggers, conditions, threads and waits, as the probes triggers to triggers-4 measure them (docs/facts.md, "Triggers and
+// threads"). Events that need units, players or regions come with them.
 public sealed partial class GameNatives
 {
     const string Probe1 = "facts.md, Triggers and threads: probe triggers (11-08)";
     const string Probe2 = "facts.md, Triggers and threads: probe triggers-2 (11-08)";
     const string Probe3 = "facts.md, Triggers and threads: probe triggers-3 (11-08)";
+    const string Probe4 = "facts.md, Triggers and threads: probe triggers-4 (11-08)";
     const int TimerExpired = 4;  // EVENT_GAME_TIMER_EXPIRED
 
     // What the event responses read in a thread: the trigger it runs for and the event that started it (decisions D75)
     sealed record Firing(trigger? Trigger, eventid Event, gamestate? State = null);
 
     readonly List<(gamestate State, limitop Op, float Limit, @event Event)> _stateEvents = [];
-    readonly Dictionary<igamestate, int> _integerStates = [];
     Firing? _firing, _outside;
     conditionfunc? _noCondition;
     filterfunc? _noFilter;
@@ -91,8 +106,8 @@ public sealed partial class GameNatives
     public trigger? CreateTrigger() => Make(new trigger());
 
     /// <summary>
-    /// Its events stop and its actions and conditions are let go of; a thread already running its actions runs on (the
-    /// game's handle stack may break: a claim, not measured).
+    /// Its events stop and they, its actions and its conditions are let go of; a thread already running its actions runs
+    /// on (the game's handle stack may break: a claim, not measured).
     /// </summary>
     [Native(Level.Close)]
     public void DestroyTrigger(trigger? whichTrigger)
@@ -101,7 +116,31 @@ public sealed partial class GameNatives
         whichTrigger.Destroyed = true;
         TriggerClearActions(whichTrigger);
         TriggerClearConditions(whichTrigger);
+        foreach (var registered in whichTrigger.Events)
+        {
+            _game.Remove(registered.Key);
+            registered.Timer?.ExpireEvents?.Remove(registered);
+        }
+        whichTrigger.Events.Clear();
+        _stateEvents.RemoveAll(state => state.Event.Trigger == whichTrigger);
         _game.Remove(whichTrigger.Key);
+    }
+
+    /// <summary>
+    /// Whether a run of its actions hasn't ended, waiting or not, also one interrupted that hasn't reached its end yet;
+    /// its conditions in TriggerEvaluate are no run.
+    /// </summary>
+    [Native(Level.Exact, Fact = Probe4)]
+    public bool BlzTriggerIsRunning(trigger? whichTrigger) => whichTrigger?.Running > 0;
+
+    /// <summary>
+    /// Stops its runs: the action running goes on to its end, but no other action runs, and a run that waits never goes
+    /// on after its wait.
+    /// </summary>
+    [Native(Level.Exact, Fact = Probe4)]
+    public void BlzTriggerInterrupt(trigger? whichTrigger)
+    {
+        if (whichTrigger is not null) whichTrigger.Interrupts++;
     }
 
     /// <summary>A disabled trigger's events are counted but run nothing; TriggerExecute and TriggerEvaluate still run it.</summary>
@@ -180,8 +219,11 @@ public sealed partial class GameNatives
         whichTrigger.Actions.Clear();
     }
 
-    /// <summary>A nil condition makes the trigger's conditions fail.</summary>
-    [Native(Level.Exact, Fact = Probe2)]
+    /// <summary>
+    /// A nil condition makes the trigger's conditions fail. Close: in the game a destroyed condition's place ran a
+    /// condition made after it (decisions D73).
+    /// </summary>
+    [Native(Level.Close)]
     public triggercondition? TriggerAddCondition(trigger? whichTrigger, boolexpr? condition)
     {
         if (whichTrigger is null) return null;
@@ -190,7 +232,8 @@ public sealed partial class GameNatives
         return added;
     }
 
-    [Native(Level.Exact, Fact = Probe2)]
+    /// <summary>Close as TriggerAddCondition (decisions D73).</summary>
+    [Native(Level.Close)]
     public void TriggerRemoveCondition(trigger? whichTrigger, triggercondition? whichCondition)
     {
         if (whichCondition is not null && whichTrigger?.Conditions.Remove(whichCondition) == true) _game.Remove(whichCondition.Key);
@@ -206,9 +249,10 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Runs every condition in order, also after one has failed, and answers whether all passed: true with none. A
-    /// condition that raises, or waits, fails. Counts nothing; a disabled trigger's conditions run too.
+    /// condition that raises, or waits, fails. Counts nothing; a disabled trigger's conditions run too. Close as
+    /// TriggerAddCondition (decisions D73).
     /// </summary>
-    [Native(Level.Exact, Fact = Probe1)]
+    [Native(Level.Close)]
     public bool TriggerEvaluate(trigger? whichTrigger) =>
         whichTrigger is not null && In(Current with { Trigger = whichTrigger }, () => Passes(whichTrigger));
 
@@ -297,8 +341,11 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = Probe2)]
     public void DestroyBoolExpr(boolexpr? e) => Destroy(e);
 
-    /// <summary>A destroyed condition no longer runs, and fails where it was added.</summary>
-    [Native(Level.Exact, Fact = Probe2)]
+    /// <summary>
+    /// A destroyed condition no longer runs, and fails where it was added. Close: in the game a condition made after it
+    /// ran in its place (decisions D73).
+    /// </summary>
+    [Native(Level.Close)]
     public void DestroyCondition(conditionfunc? c) => Destroy(c);
 
     /// <summary>As DestroyCondition.</summary>
@@ -307,20 +354,28 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Fires after the timeout, at least 0.01 s, and again every timeout when periodic, without drifting. Its event is
-    /// EVENT_GAME_TIMER_EXPIRED, and GetExpiredTimer is nil in it. Events due together fire in the order registered.
+    /// EVENT_GAME_TIMER_EXPIRED, and GetExpiredTimer is nil in it. Among what falls due together it keeps the place it
+    /// got when registered, every time (decisions D76).
     /// </summary>
-    [Native(Level.Exact, Fact = Probe2)]
+    [Native(Level.Exact, Fact = Probe1 + "; " + Probe2)]
     public @event? TriggerRegisterTimerEvent(trigger? whichTrigger, float timeout, bool periodic)
     {
         if (whichTrigger is null) return null;
         var registered = Register(whichTrigger);
         double period = timeout >= 0.01 ? timeout : 0.01, start = Seconds;
-        void Queue(long lap) => _game.At(Game.Steps(start + lap * period), () =>
+        long place = 0;
+        void Queue(long lap)
         {
-            if (whichTrigger.Destroyed) return;
-            if (periodic) Queue(lap + 1);
-            Fire(registered, Convert<gameevent>(TimerExpired));
-        });
+            var step = Game.Steps(start + lap * period);
+            if (lap == 1) place = _game.At(step, Expire);
+            else _game.At(step, place, Expire);
+            void Expire()
+            {
+                if (whichTrigger.Destroyed) return;
+                if (periodic) Queue(lap + 1);
+                Fire(registered, Convert<gameevent>(TimerExpired));
+            }
+        }
         Queue(1);
         return registered;
     }
@@ -334,6 +389,7 @@ public sealed partial class GameNatives
     {
         if (whichTrigger is null || t is null) return null;
         var registered = Register(whichTrigger);
+        registered.Timer = t;
         (t.ExpireEvents ??= []).Add(registered);
         return registered;
     }
@@ -345,7 +401,7 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// An integer game state's event fires inside SetIntegerGameState when the value changes to one that passes the
-    /// comparison, and NOT_EQUAL's on every change. The time of day's comes with its clock (decisions D76).
+    /// comparison, and NOT_EQUAL's on every change. The time of day's comes with its clock, in W1-9 (decisions D76).
     /// </summary>
     [Native(Level.Close)]
     public @event? TriggerRegisterGameStateEvent(trigger? whichTrigger, gamestate? whichState, limitop? opcode, float limitval)
@@ -360,20 +416,10 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = Probe2)]
     public gamestate? GetEventGameState() => Current.State;
 
-    /// <summary>0 at the start.</summary>
-    [Native(Level.Exact, Fact = Probe3)]
-    public int GetIntegerGameState(igamestate? whichIntegerGameState) =>
-        whichIntegerGameState is null ? 0 : _integerStates.GetValueOrDefault(whichIntegerGameState);
-
-    /// <summary>
-    /// Kept and read back, firing the state's events as TriggerRegisterGameStateEvent says; what the game does with
-    /// divine intervention or the disconnected state isn't simulated.
-    /// </summary>
-    [Native(Level.Exact, Fact = Probe3)]
-    public void SetIntegerGameState(igamestate? whichIntegerGameState, int value)
+    // SetIntegerGameState changed the state: its events whose comparison passes fire, with the comparison less 255 as
+    // their event id (probe triggers-3)
+    void IntegerStateChanged(igamestate whichIntegerGameState, int value)
     {
-        if (whichIntegerGameState is null || GetIntegerGameState(whichIntegerGameState) == value) return;
-        _integerStates[whichIntegerGameState] = value;
         foreach (var (state, op, limit, registered) in _stateEvents.ToArray())
             if (state == whichIntegerGameState && op.Id switch
                 {
@@ -388,7 +434,12 @@ public sealed partial class GameNatives
                 Fire(registered, Convert<gameevent>(op.Id - 255), state);
     }
 
-    @event Register(trigger t) => Make(new @event { Trigger = t });
+    @event Register(trigger t)
+    {
+        var registered = Make(new @event { Trigger = t });
+        t.Events.Add(registered);
+        return registered;
+    }
 
     // An event: counted; then, when the trigger is enabled and its conditions pass, its actions run (probe triggers-2)
     void Fire(@event registered, eventid id, gamestate? state = null)
@@ -430,22 +481,22 @@ public sealed partial class GameNatives
     }
 
     void Execute(trigger t, Firing firing) =>
-        RunThread(firing, t, [.. t.Actions.Select(action => (Func<Func<bool>?>)(() => Start(action.Code)))]);
+        RunThread(firing, t, [.. t.Actions.Select(action => (Func<IScriptThread?>)(() => Start(action.Code)))]);
 
-    Func<bool>? Start(Action? code)
+    static IScriptThread? Start(Action? code)
     {
-        if (code is null) return null;
-        if (Threads is not null) return Threads.Start(code);
-        code();
+        if (code?.Target is IScriptFunction function) return function.Start();
+        code?.Invoke();
         return null;
     }
 
-    // A thread: its steps in turn, each until it ends or waits; a wait goes on at the step WaitEnd gives
-    void RunThread(Firing firing, trigger? owner, Func<Func<bool>?>[] steps)
+    // A thread: its steps in turn, each until it ends or waits; a wait goes on at the step WaitEnd gives. Interrupted, it
+    // stops after the step it is in, or at its wait's end (probe triggers-4)
+    void RunThread(Firing firing, trigger? owner, Func<IScriptThread?>[] steps)
     {
         if (owner is not null) owner.Running++;
-        int next = 0;
-        Func<bool>? waiting = null;
+        int next = 0, interrupts = owner?.Interrupts ?? 0;
+        IScriptThread? waiting = null;
         void Go()
         {
             var outer = _firing;
@@ -455,9 +506,14 @@ public sealed partial class GameNatives
                 while (true)
                 {
                     _sleep = 0;
+                    if (owner is not null && owner.Interrupts != interrupts)
+                    {
+                        waiting?.Dispose();
+                        break;
+                    }
                     if (waiting is not null)
                     {
-                        if (!waiting()) waiting = null;
+                        if (!waiting.Resume()) waiting = null;
                     }
                     else if (next < steps.Length) waiting = steps[next++]();
                     else break;
@@ -478,14 +534,15 @@ public sealed partial class GameNatives
         Go();
     }
 
-    // The first tenth of a second of game time after the timeout has passed (decisions D71)
+    // The first tenth of a second of game time after the timeout has passed (decisions D71); one past the clock's range
+    // never comes
     long WaitEnd(float timeout)
     {
         var end = _game.Step + Game.Steps(Math.Max(timeout, 0));
         if (end >= Game.Steps(double.PositiveInfinity)) return end;
-        var tick = Math.Floor(end * 10.0 / Game.StepsPerSecond);
-        while (Game.Steps(tick / 10) <= end) tick++;
-        return Game.Steps(tick / 10);
+        var tick = end / Game.StepsPerSecond * 10 + end % Game.StepsPerSecond * 10 / Game.StepsPerSecond;
+        while (Game.Steps(tick / 10.0) <= end) tick++;
+        return Game.Steps(tick / 10.0);
     }
 
     // An action's function is let go of once no thread of its trigger can still run it

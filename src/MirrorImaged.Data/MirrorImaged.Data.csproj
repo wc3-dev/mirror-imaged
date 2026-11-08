@@ -5,6 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="War3Net.Build.Core" />
     <PackageReference Include="War3Net.IO.Mpq" />
   </ItemGroup>
 

@@ -3,6 +3,7 @@ using MirrorImaged.Data;
 using MirrorImaged.Lua;
 using MirrorImaged.Natives;
 using MirrorImaged.World;
+using War3Net.Build.Info;
 
 namespace MirrorImaged;
 
@@ -11,6 +12,15 @@ public sealed class SimulationOptions
 {
     /// <summary>The seed of the game's random numbers: the same map, seed and input give the same run.</summary>
     public int Seed { get; init; }
+
+    /// <summary>
+    /// The slots people play, 0 to 23, the first of them the local player, whose game the run is; null for a
+    /// single-player game in the map's first user slot.
+    /// </summary>
+    public IReadOnlyList<int>? Users { get; init; }
+
+    /// <summary>The slots computers play; null for the map's computer slots that aren't among <see cref="Users"/>.</summary>
+    public IReadOnlyList<int>? Computers { get; init; }
 }
 
 /// <summary>
@@ -29,12 +39,13 @@ public sealed partial class Simulation : IDisposable
     readonly LuaState _lua = new() { Halts = e => e is MissingNativeException };
     TimeSpan _time;
 
-    Simulation(byte[] script, string blizzard, SimulationOptions options)
+    Simulation(byte[] script, MapInfo? info, string blizzard, SimulationOptions options)
     {
         _game = new Game(options.Seed);
         _natives = new GameNatives(_game) { Threads = new ScriptThreads(this) };
         try
         {
+            var (users, computers, others) = Lineup(info, options);
             foreach (var native in typeof(GameNatives).GetMethods()
                          .Where(method => method.GetCustomAttribute<NativeAttribute>() is not null)
                          .OrderBy(method => method.Name, StringComparer.Ordinal))
@@ -45,6 +56,8 @@ public sealed partial class Simulation : IDisposable
             _lua.Run(blizzard, "blizzard.lua");
             Protect(() => _lua.Run(script, "war3map.lua"));
             Protect(() => _lua.Call("config"));
+            var flags = info?.MapFlags ?? 0;
+            _natives.Seat(users, computers, others, flags.HasFlag(MapFlags.UseCustomForces), flags.HasFlag(MapFlags.FixedPlayerSettingsForCustomForces));
             Protect(() => _lua.Call("main"));
         }
         catch (LuaException e) when (_lua.Halted is not null)
@@ -59,16 +72,22 @@ public sealed partial class Simulation : IDisposable
     }
 
     /// <summary>
-    /// Loads the map at <paramref name="path"/> and runs <c>blizzard.j</c>, its script, <c>config</c> and
-    /// <c>main</c>; if a Missing native stops the run there, the simulation comes back <see cref="Stopped"/>.
+    /// Loads the map at <paramref name="path"/> and runs <c>blizzard.j</c>, its script and <c>config</c>, seats the
+    /// players as the lobby does (<see cref="SimulationOptions.Users"/>, from the map's <c>war3map.w3i</c> unless the
+    /// options say), and runs <c>main</c>; if a Missing native stops the run there, the simulation comes back
+    /// <see cref="Stopped"/>.
     /// </summary>
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c>.</exception>
     /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> every run needs.</exception>
     /// <exception cref="LuaException"><c>blizzard.j</c>'s Lua doesn't load or run (<c>blizzard.lua:N: ...</c>), so no map can.</exception>
+    /// <exception cref="ArgumentException">
+    /// The options seat no person, a slot twice, a slot the map's <c>war3map.w3i</c> doesn't have, a person in a slot
+    /// the map gives a computer, or anyone in its neutral or rescuable slots; checked before any of the map's Lua runs.
+    /// </exception>
     public static Simulation Load(string path, SimulationOptions? options = null)
     {
         var script = MapArchive.ReadLua(path); // first, so a missing map says so whether or not the game is installed
-        return new(script, Blizzard.Lua(), options ?? new SimulationOptions());
+        return new(script, MapArchive.ReadInfo(path), Blizzard.Lua(), options ?? new SimulationOptions());
     }
 
     /// <summary>
@@ -76,7 +95,34 @@ public sealed partial class Simulation : IDisposable
     /// installed game's <c>blizzard.j</c>: <c>""</c> for the tests of the runtime itself, which run without the game.
     /// </summary>
     internal static Simulation Load(string path, string blizzard, SimulationOptions? options = null) =>
-        new(MapArchive.ReadLua(path), blizzard, options ?? new SimulationOptions());
+        new(MapArchive.ReadLua(path), MapArchive.ReadInfo(path), blizzard, options ?? new SimulationOptions());
+
+    // Who the lobby seats: the people and computers the options name, else the map's first user and its computers, and
+    // the map's neutral and rescuable slots, which always play. Checked against war3map.w3i's slots before any Lua runs:
+    // a person only where the map has a user, a computer where it has a user or a computer.
+    static (IReadOnlyList<int> Users, IReadOnlyList<int> Computers, IReadOnlyList<int> Others) Lineup(MapInfo? info, SimulationOptions options)
+    {
+        var players = info?.Players ?? [];
+        var users = options.Users ?? [players.FirstOrDefault(p => p.Controller == PlayerController.User)?.Id ?? 0];
+        var computers = options.Computers ?? [.. players.Where(p => p.Controller == PlayerController.Computer).Select(p => p.Id).Except(users)];
+        GameNatives.CheckSeats(users, computers);
+        if (info is not null)
+            foreach (var (slot, person) in users.Select(slot => (slot, true)).Concat(computers.Select(slot => (slot, false))))
+            {
+                var controller = players.FirstOrDefault(p => p.Id == slot)?.Controller;
+                if (controller is null or PlayerController.None)
+                    throw new ArgumentException($"Slot {slot} isn't one of the map's players in war3map.w3i ({string.Join(", ", players.Select(p => p.Id))})");
+                if (controller != PlayerController.User && (person || controller != PlayerController.Computer))
+                    throw new ArgumentException($"A {(person ? "person" : "computer")} can't play slot {slot}: the map gives it to a {controller.ToString()!.ToLowerInvariant()} player");
+            }
+        return (users, computers, [.. players.Where(p => p.Controller is PlayerController.Neutral or PlayerController.Rescuable).Select(p => p.Id)]);
+    }
+
+    /// <summary>
+    /// Whether the map has paused the game (<c>PauseGame</c>): its clock doesn't move, and only the map can go on, as in
+    /// the game; until dialogs and input exist (waves 5 and 6), only what was due in the step it paused in still runs.
+    /// </summary>
+    public bool Paused => _game.Paused;
 
     /// <summary>The natives the run's script calls.</summary>
     internal GameNatives Natives => _natives;
@@ -92,7 +138,8 @@ public sealed partial class Simulation : IDisposable
 
     /// <summary>
     /// Moves the clock on by <paramref name="time"/>. The clock moves in whole steps of 1/1024 s, to the step nearest
-    /// all the time asked for so far, so many short advances add up as one long one.
+    /// all the time asked for so far, so many short advances add up as one long one. A paused game's clock doesn't
+    /// move, and once the game goes on it moves from where it stopped.
     /// </summary>
     /// <exception cref="LuaException">The run has stopped, or a Missing native stopped it now: <see cref="Stopped"/>.</exception>
     public void Advance(TimeSpan time)
@@ -106,6 +153,8 @@ public sealed partial class Simulation : IDisposable
             Stopped = e;
             throw;
         }
+        // Paused time isn't the game's, so the next advance goes on from where it stopped.
+        if (_game.Paused) _time = TimeSpan.FromSeconds((double)_game.Step / Game.StepsPerSecond);
     }
 
     public void Dispose() => _lua.Dispose();
@@ -129,23 +178,12 @@ public sealed partial class Simulation : IDisposable
         return thread;
     }
 
-    // While the thread waits: a function that runs it on and answers whether it waits again
-    Func<bool>? Waiting(LuaThread? thread) => thread is { Waiting: true }
-        ? () =>
-        {
-            Protect(thread.Resume);
-            return thread.Waiting;
-        }
-        : null;
-
     /// <summary>
     /// A Lua function a native keeps, such as a timer's or a condition's. It runs in a thread of its own, as the game
-    /// runs a callback, where a wait never ends (decisions D70).
+    /// runs a callback, where a wait never ends, unless a native starts it to run it on (decisions D70).
     /// </summary>
-    sealed class LuaCode(Simulation simulation, LuaFunction function) : IDisposable
+    sealed class LuaCode(Simulation simulation, LuaFunction function) : IScriptFunction, IDisposable
     {
-        public LuaFunction Function => function;
-
         public void Run() => simulation.Started(function.Start)?.Dispose();
 
         // A condition passes on true or a number other than 0, and fails on anything else (probes triggers, triggers-2)
@@ -155,15 +193,29 @@ public sealed partial class Simulation : IDisposable
             return thread is { Waiting: false, Results: [true or int and not 0 or float and not 0f, ..] };
         }
 
+        public IScriptThread? Start() => Waiting.Of(simulation, simulation.Started(function.Start));
+
         public void Dispose() => function.Dispose();
     }
 
-    /// <summary>The threads a trigger's actions and ExecuteFunc's function run in, so they can wait.</summary>
+    /// <summary>A Lua thread waiting, which runs on as Protect runs Lua.</summary>
+    sealed class Waiting(Simulation simulation, LuaThread thread) : IScriptThread
+    {
+        public static Waiting? Of(Simulation simulation, LuaThread? thread) => thread is { Waiting: true } ? new(simulation, thread) : null;
+
+        public bool Resume()
+        {
+            simulation.Protect(thread.Resume);
+            return thread.Waiting;
+        }
+
+        public void Dispose() => thread.Dispose();
+    }
+
+    /// <summary>The threads ExecuteFunc's function runs in, and the wait of any of the script's threads.</summary>
     sealed class ScriptThreads(Simulation simulation) : IScriptThreads
     {
-        public Func<bool>? Start(Action code) => simulation.Waiting(simulation.Started(((LuaCode)code.Target!).Function.Start));
-
-        public Func<bool>? Start(string name) => simulation.Waiting(simulation.Started(() => simulation._lua.Start(name)));
+        public IScriptThread? Start(string name) => Waiting.Of(simulation, simulation.Started(() => simulation._lua.Start(name)));
 
         public void Yield() => simulation._lua.Yield();
     }

@@ -68,6 +68,23 @@ public sealed class LuaThreadTests : IDisposable
         Assert.Equal([false, false, true, false, "attempt to yield across a C-call boundary"], _lua.Start("f").Results);
     }
 
+    // not measured: the game's own threads aren't Lua's, so only the natives run one on after its wait
+    [Fact]
+    public void The_script_cant_resume_a_thread_the_natives_run_but_resumes_its_own()
+    {
+        _lua.Run("function f() waiting = coroutine.running() wait() return 'ran on' end");
+
+        var thread = _lua.Start("f");
+
+        Assert.Equal([false, "cannot resume non-suspended coroutine", true, 2], _lua.Run("""
+            local ok, problem = coroutine.resume(waiting)
+            return ok, problem, coroutine.resume(coroutine.create(function(a) return a + 1 end), 1)
+            """));
+        Assert.True(thread.Waiting);
+        thread.Resume();
+        Assert.Equal(["ran on"], thread.Results);
+    }
+
     [Fact]
     public void A_wait_in_the_main_thread_raises_luas_error()
     {

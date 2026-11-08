@@ -26,13 +26,6 @@ public sealed class LuaFunction : IDisposable
         return this;
     }
 
-    /// <summary>Calls the function and returns its results.</summary>
-    public object?[] Call(params object?[] args)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return _state.Call(this, args);
-    }
-
     /// <summary>
     /// Calls the function in a new Lua thread, as the game runs a callback, until it returns or a C# function it calls
     /// makes it yield (<see cref="LuaState.Yield"/>). The script can't yield the thread itself: in it

@@ -42,6 +42,18 @@ public sealed class LuaInteropTests : IDisposable
         Assert.StartsWith("agent: ", (string)_lua.Run("return tostring(agent(1))")[0]!);
     }
 
+    // the metatable's __eq, called straight with anything but two handles, answers false rather than reading them
+    [Fact]
+    public void AHandlesEqualityIsFalseForAnythingButHandles()
+    {
+        _lua.Register("timer", args => [new LuaHandle("timer", (int)args[0]!)]);
+        Assert.Equal([true, false, false, false, true], _lua.Run("""
+            local eq = getmetatable(timer(1)).__eq
+            local ok, equal = pcall(eq, 1, 2)
+            return ok, equal, eq(timer(1), {}), eq("a", timer(1)), eq(timer(1), timer(1))
+            """));
+    }
+
     [Fact]
     public void ACSharpFunctionReadsTheHandleItIsGiven()
     {
@@ -83,11 +95,11 @@ public sealed class LuaInteropTests : IDisposable
             kept = ((LuaFunction)args[0]!).Keep();
             return [];
         });
-        _lua.Run("local n = 40 keep(function(x) n = n + x return n end)");
-        Assert.Equal([41], kept!.Call(1));
-        Assert.Equal([43], kept.Call(2));
+        _lua.Run("local n = 40 keep(function() n = n + 1 return n end)");
+        Assert.Equal([41], kept!.Start().Results);
+        Assert.Equal([42], kept.Start().Results);
         kept.Dispose();
-        Assert.Throws<ObjectDisposedException>(() => kept.Call(1));
+        Assert.Throws<ObjectDisposedException>(() => kept.Start());
     }
 
     [Fact]
@@ -97,10 +109,10 @@ public sealed class LuaInteropTests : IDisposable
         _lua.Register("look", args =>
         {
             given = (LuaFunction)args[0]!;
-            return [given.Call()[0]];
+            return [given.Start().Results[0]];
         });
         Assert.Equal([5], _lua.Run("return look(function() return 5 end)"));
-        Assert.Throws<ObjectDisposedException>(() => given!.Call());
+        Assert.Throws<ObjectDisposedException>(() => given!.Start());
     }
 
     [Fact]

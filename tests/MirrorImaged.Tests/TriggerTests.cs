@@ -1,3 +1,6 @@
+using MirrorImaged.Lua;
+using MirrorImaged.Natives;
+
 namespace MirrorImaged.Tests;
 
 /// <summary>
@@ -262,7 +265,8 @@ public sealed class TriggerTests : IDisposable
         ], Printed(simulation));
     }
 
-    // probe triggers-2: TriggerExecute keeps the event and names the trigger it runs; ExecuteFunc keeps both
+    // probe triggers-2: TriggerExecute keeps the event and names the trigger it runs; ExecuteFunc keeps both. After
+    // ExecuteFunc's wait the game read only the trigger: that the event is kept there too is the model (decisions D75)
     [Fact]
     public void An_event_is_kept_through_TriggerExecute_and_ExecuteFunc_and_across_a_wait()
     {
@@ -454,7 +458,8 @@ public sealed class TriggerTests : IDisposable
         ], Printed(simulation));
     }
 
-    // probe triggers-2: a timeout below 0.01 s is 0.01 s, and events due together fire in the order registered
+    // probe triggers-2: a timeout below 0.01 s is 0.01 s, events due together fire in the order registered, and a
+    // periodic 0 s event fires 10 times in 0.1 s, keeping its place before the 0.1 s timer started after it (D76)
     [Fact]
     public void A_timer_event_fires_after_its_timeout_and_at_least_0_01_s()
     {
@@ -473,7 +478,7 @@ public sealed class TriggerTests : IDisposable
             local z, count = CreateTrigger(), 0
             TriggerRegisterTimerEvent(z, 0, true)
             TriggerAddAction(z, function() count = count + 1 end)
-            TimerStart(CreateTimer(), 0.105, false, function() DestroyTrigger(z) print("periodic zero", count) end)
+            TimerStart(CreateTimer(), 0.1, false, function() DestroyTrigger(z) print("periodic zero", count) end)
             """);
 
         simulation.Advance(TimeSpan.FromSeconds(1));
@@ -486,11 +491,12 @@ public sealed class TriggerTests : IDisposable
             "0.050 b",
             "0.050 a",
             "0.050 b",
-            "0.105 periodic zero\t10",
+            "0.100 periodic zero\t10",
         ], Printed(simulation));
     }
 
-    // probe triggers: a disabled trigger's events are counted, run no condition and no action, and GetExpiredTimer is nil
+    // probe triggers: a disabled trigger's events are counted, run no condition and no action, and GetExpiredTimer is
+    // nil; the event due with the timer that enables it again fires first, still disabled (D76)
     [Fact]
     public void A_periodic_timer_event_is_counted_while_disabled_and_runs_again_when_enabled()
     {
@@ -503,7 +509,7 @@ public sealed class TriggerTests : IDisposable
               print(GetTriggerEventId() == EVENT_GAME_TIMER_EXPIRED, GetExpiredTimer(), GetTriggerEvalCount(p), GetTriggerExecCount(p))
               if count == 2 then
                 DisableTrigger(p)
-                TimerStart(CreateTimer(), 1.1, false, function() EnableTrigger(p) end)
+                TimerStart(CreateTimer(), 1.0, false, function() EnableTrigger(p) end)
               end
             end)
             """);
@@ -676,6 +682,96 @@ public sealed class TriggerTests : IDisposable
         simulation.Advance(TimeSpan.FromSeconds(1));
 
         Assert.Equal(["0.700 slept\t2"], Printed(simulation));
+    }
+
+    // a wait whose end is past the clock's range never ends, and nothing hangs working it out
+    [Theory]
+    [InlineData("1e15")]
+    [InlineData("1e30")]
+    [InlineData("math.huge")]
+    public void A_wait_past_the_clocks_range_never_ends(string timeout)
+    {
+        using var simulation = Load($$"""
+            local t = CreateTrigger()
+            TriggerAddAction(t, function() TriggerSleepAction({{timeout}}) print("never") end)
+            TriggerExecute(t)
+            print("main goes on")
+            """);
+
+        simulation.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(["0.000 main goes on"], Printed(simulation));
+    }
+
+    // probe triggers-4: running while a run's action runs or waits, not in TriggerEvaluate's conditions; an interrupt
+    // lets the running action end, runs no other action and stops a run that waits at its wait's end
+    [Fact]
+    public void BlzTriggerInterrupt_stops_a_triggers_runs_and_BlzTriggerIsRunning_tells_one_hasnt_ended()
+    {
+        using var simulation = Load("""
+            local log = {}
+            local function running(t) return tostring(BlzTriggerIsRunning(t)) end
+            local t = CreateTrigger()
+            print("new", running(t))
+            TriggerAddAction(t, function()
+              log[#log + 1] = "t in action " .. running(t)
+              TriggerSleepAction(0.5)
+              print("t after wait", running(t))
+            end)
+            TriggerExecute(t)
+            print("t waiting", running(t), table.concat(log, ","))
+            log = {}
+            local u = CreateTrigger()
+            TriggerAddAction(u, function() log[#log + 1] = "u start" TriggerSleepAction(0.3) log[#log + 1] = "u after wait" end)
+            TriggerAddAction(u, function() log[#log + 1] = "u second" end)
+            TriggerExecute(u)
+            BlzTriggerInterrupt(u)
+            print("u interrupted", running(u))
+            local v = CreateTrigger()
+            TriggerAddAction(v, function()
+              log[#log + 1] = "v start"
+              BlzTriggerInterrupt(v)
+              log[#log + 1] = "v after interrupt " .. running(v)
+            end)
+            TriggerAddAction(v, function() log[#log + 1] = "v second" end)
+            TriggerExecute(v)
+            print("v", running(v))
+            local c = CreateTrigger()
+            TriggerAddCondition(c, Condition(function() log[#log + 1] = "c condition " .. running(c) return true end))
+            TriggerEvaluate(c)
+            print("c", running(c))
+            TimerStart(CreateTimer(), 1, false, function() print("after", running(t), running(u), table.concat(log, ",")) end)
+            """);
+
+        simulation.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Equal([
+            "0.000 new\tfalse",
+            "0.000 t waiting\ttrue\tt in action true",
+            "0.000 u interrupted\ttrue",
+            "0.000 v\tfalse",
+            "0.000 c\tfalse",
+            "0.600 t after wait\ttrue",
+            "1.000 after\tfalse\tfalse\tu start,v start,v after interrupt true,c condition false",
+        ], Printed(simulation));
+    }
+
+    [Fact]
+    public void A_destroyed_triggers_events_are_let_go_of()
+    {
+        using var simulation = Load("");
+        var natives = simulation.Natives;
+        var t = natives.CreateTrigger();
+        @event?[] events = [
+            natives.TriggerRegisterTimerExpireEvent(t, natives.CreateTimer()),
+            natives.TriggerRegisterGameStateEvent(t, natives.ConvertIGameState(0), natives.ConvertLimitOp(2), 1),
+            natives.TriggerRegisterTimerEvent(t, 1, true),
+            natives.TriggerRegisterVariableEvent(t, "x", null, 0),
+        ];
+
+        natives.DestroyTrigger(t);
+
+        Assert.All(events, e => Assert.Null(simulation.ToCSharp(new LuaHandle("event", e!.Key), typeof(@event), 1, "F")));
     }
 
     // a function a trigger no longer has is let go of, so Lua collects it, once no running thread can still run it
