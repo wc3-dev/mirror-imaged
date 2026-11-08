@@ -4,10 +4,10 @@ Plan sections: 4 (A1, A2, A6), 6 (map and game data, units and heroes, items and
 wave 1. Facts are in `C:\Users\mdlsvensson\Repo\wc3-cs\docs\game-facts.md`; the sections named below are the source
 of the tests, and every native a fact measures is Exact.
 
-Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time; W2-8 after W2-7.
+Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time; W2-8 after W2-7; W2-9 any time after W2-1.
 
 Parallel lanes: decision numbers by range: W2-1 D200-D219, W2-2 D220-D239, W2-3 D240-D249, W2-4 D250-D259,
-W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289, W2-8 D290-D299. Generated-file conflicts are resolved by re-running the generator.
+W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289, W2-8 D290-D299, W2-9 D300-D309. Generated-file conflicts are resolved by re-running the generator.
 W2-1 started before wave 1 finished (11-08): it touches the data loading, which wave 1's open lanes don't.
 
 ## W2-1 Map files and the game's standard data
@@ -124,3 +124,13 @@ Needs W2-1 and W2-7. Decisions D290-D299. From W2-1's review:
 - Map changes stored by column, not by field id: ability ids share columns (`Hbz1` read on AHhb gives Holy Light's
   DataA), so a change written under one id must be visible through another id of the same column.
 - Which ability fields apply to which ability (D205's `useSpecific`).
+
+## W2-9 Every shipped map loads
+
+Needs W2-1. Decisions D300-D309. From W1-7's plan review:
+
+- 131 of the install's 193 campaign maps fail in `MapArchive.Read`: in 130, War3Net refuses a `PlayerFlags` value in
+  `war3map.w3i`; in one, `war3map.w3s`. W2-1 counted only `Maps/` (273). Fix the readers (our own handling of the
+  unknown enum values, or the fork's fix; a draft for War3Net in `docs/upstream.md`), and add a `Needs=Game` test that
+  every map in the install's `Maps/` and `Campaign/` (and the campaigns' `.w3n` files) reads and runs to its first
+  Missing native (A4, A5).

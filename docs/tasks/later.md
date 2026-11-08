@@ -47,6 +47,7 @@ Each item names the wave whose file it goes into when that file is written.
   `Scripts/human.ai` etc. and `*Melee.pld`); take them from the set `StandardData.Sets` picks (W2-1).
 - Wave 10 (speed): a cross-process cache of the standard data (about 1.2-1.7 s a process) if the benchmark or the
   corpus runs need it; it must live outside the repo and packages (A15) (W2-1).
+<<<<<<< HEAD
 - Wave 10 (the number model, W1-10's rest): find the game's `exp`, `log` and `atan` (tables on straight lines, by the
   fine probes; `numbers-fine-2` has runs to start from) and with them `asin`, `acos` and powers that aren't whole; the
   reciprocal between its knots, a step off for about 1 in 5 divisors (D151; `numbers-div` and `numbers-fine` hold 2,376
@@ -56,3 +57,8 @@ Each item names the wave whose file it goes into when that file is written.
   step past whole times, and a timer paused and resumed at 0.25 for 0.75 ran before those due with it (D153); model the
   clock as the game's floats, or accept the reads against A2. Also W1-9's time of day: the frame effects of a set
   (D144) and the read-back drift with the day stopped (D149), not started here.
+=======
+- Wave 10 (JASS): functions with more than 200 locals don't load (D139; Lua's limit). No shipped map has one (most
+  is 24); two maps in Sven's Documents do (Gaia's ORPG, Survival Chaos Reborn) (W1-7).
+- Wave 10 (JASS): a rawcode with a backslash (`'ac'`) loads here but the game refuses the map (D137) (W1-7).
+>>>>>>> origin/release/1.0.0
