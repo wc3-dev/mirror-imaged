@@ -154,6 +154,30 @@ public sealed class CameraNativesTests
         Assert.Equal(0.1745, Math.Round(Get(5), 4));
     }
 
+    // review: a quarter turn at a time over a time goes a quarter of the way round each time, set or adjusted, through
+    // any number of turns
+    [Fact]
+    public void Quarter_turns_over_a_time_keep_going_the_same_way()
+    {
+        for (var turn = 1; turn <= 12; turn++)
+        {
+            Set(5, 90 + 90 * turn, 1);
+            Advance(0.5);
+            Assert.Equal(Turn(45 + 90 * turn), Degrees(Get(5)), 0.01);
+            Advance(0.5);
+        }
+        for (var turn = 1; turn <= 12; turn++)
+        {
+            _natives.AdjustCameraField(Field(5), 90, 1);
+            Advance(0.5);
+            Assert.Equal(Turn(45 + 90 * turn), Degrees(Get(5)), 0.01);
+            Advance(0.5);
+        }
+
+        static double Turn(double degrees) => (degrees % 360 + 360) % 360;
+        static double Degrees(float radians) => radians * 180 / Math.PI % 360;
+    }
+
     // cameras-4: the rotate mode takes the target round the point, the view turning with it while the rotation field
     // reads as it was, without the z offset until the game camera is put back
     [Fact]
@@ -170,6 +194,29 @@ public sealed class CameraNativesTests
         _natives.ResetToGameCamera(0);
         Advance(0.5);
         Assert.Equal((500f, -500f, 10f), (_natives.GetCameraTargetPositionX(), _natives.GetCameraTargetPositionY(), _natives.GetCameraTargetPositionZ()), Within(0.01f));
+    }
+
+    // units-camera-2: in the rotate mode a position set or StopCamera stops the sweep and the mode holds the target; a
+    // pan ends it
+    [Fact]
+    public void The_rotate_mode_holds_the_target_until_a_pan()
+    {
+        _natives.SetCameraRotateMode(500, 0, MathF.PI / 2, 1);
+        Advance(0.5);
+        _natives.SetCameraPosition(-300, 200);
+        var stopped = Target;
+        Advance(1);
+        Assert.Equal(stopped, Target);
+        Assert.Equal(0f, _natives.GetCameraTargetPositionZ());
+
+        _natives.StopCamera();
+        _natives.SetCameraPosition(-300, 200);
+        Advance(0.5);
+        Assert.Equal(stopped, Target);
+
+        _natives.PanCameraToTimed(300, 300, 0);
+        Advance(0.5);
+        Assert.Equal((300f, 300f, 10f), (_natives.GetCameraTargetPositionX(), _natives.GetCameraTargetPositionY(), _natives.GetCameraTargetPositionZ()));
     }
 
     // units-camera: the target follows a unit at the offsets from the next step, stays where it was once the unit is
@@ -196,6 +243,66 @@ public sealed class CameraNativesTests
         natives.PanCameraToTimed(0, 0, 0);
         Advance(0.5);
         Assert.Equal((0f, 0f), Target());
+
+        // units-camera-2: a unit controller in the rotate mode is dropped
+        natives.SetCameraRotateMode(500, 0, MathF.PI / 2, 1);
+        Advance(0.5);
+        natives.SetCameraTargetController(footman, 0, 0, false);
+        Advance(1);
+        Assert.Equal((500f, -500f), Target(), Near);
+    }
+
+    // units-camera-2: StopCamera and ResetToGameCamera drop a pan's height from the next step; a follow keeps it
+    [Fact]
+    public void A_pans_height_ends_on_a_stop_or_a_reset()
+    {
+        float Z() => _natives.GetCameraTargetPositionZ();
+
+        _natives.PanCameraToTimedWithZ(1000, 0, 410, 2);
+        Advance(1);
+        _natives.StopCamera();
+        Assert.Equal(210f, Z(), 1f);
+        _game.Advance(1);
+        Assert.Equal(10f, Z());
+
+        _natives.PanCameraToTimedWithZ(500, 500, 300, 0.5f);
+        Advance(1);
+        _natives.ResetToGameCamera(0);
+        Advance(0.5);
+        Assert.Equal(10f, Z());
+    }
+
+    // units-camera-2: a blocker stops a pan where it enters it, a position set inside it lands past it, and off it lets
+    // the target in
+    [Fact]
+    public void A_camera_blocker_keeps_the_target_out()
+    {
+        var blocker = _natives.Rect(200, -200, 600, 200);
+        _natives.AddCameraBlocker(blocker);
+
+        _natives.SetCameraPosition(400, 0);
+        Advance(0.5);
+        Assert.Equal((600f, 0f), Target);
+        _natives.SetCameraPosition(0, 0);
+        Advance(0.5);
+        _natives.PanCameraToTimed(1000, 0, 1);
+        Advance(1.5);
+        Assert.Equal((200f, 0f), Target);
+
+        _natives.EnableCameraBlocker(blocker, false);
+        _natives.SetCameraPosition(400, 0);
+        Advance(0.5);
+        Assert.Equal((400f, 0f), Target);
+    }
+
+    // units-camera-2: the focal distance and depth of field scale are the depth of field fields
+    [Fact]
+    public void The_depth_of_field_natives_set_their_fields()
+    {
+        _natives.CameraSetFocalDistance(500);
+        _natives.CameraSetDepthOfFieldScale(2);
+
+        Assert.Equal((500f, 2f), (Get(11), Get(12)));
     }
 
     // cameras, cameras-2: AdjustCameraField adds to the field, and ResetToGameCamera puts back all but ZABSOLUTE
@@ -324,29 +431,29 @@ public sealed class CameraNativesTests
         _natives.CameraSetupApply(setup, false, false);
         Assert.Equal(2000f, Get(0));
         Advance(1);
-        Assert.Equal((2500f, 0f, (0f, 0f)), (Get(0), _natives.GetCameraTargetPositionZ(), Target), Approximately);
+        Assert.Equal(2500f, Get(0), 2f);
+        Assert.Equal((0f, (0f, 0f)), (_natives.GetCameraTargetPositionZ(), Target));
 
         Set(0, 2000);
         _natives.CameraSetupApply(setup, true, true);
         Advance(1);
-        Assert.Equal((2500f, 0f, (-400f, 300f)), (Get(0), 0f, Target), Approximately);
+        Assert.Equal(2500f, Get(0), 2f);
+        Assert.Equal((-400f, 300f), Target, Near);
 
         _natives.SetCameraPosition(0, 0);
         Advance(1);
         _natives.CameraSetupApply(setup, true, false);
         Advance(0.2);
-        Assert.Equal((0f, 0f, (-480f, 360f)), (0f, 0f, Target), Approximately);
+        Assert.Equal((-480f, 360f), Target, Near);
 
         _natives.SetCameraPosition(0, 0);
         Set(0, 2000);
         Advance(1);
         _natives.CameraSetupApplyForceDuration(setup, true, 4);
         Advance(1);
-        Assert.Equal((2250f, 0f, (-200f, 150f)), (Get(0), 0f, Target), Approximately);
+        Assert.Equal(2250f, Get(0), 2f);
+        Assert.Equal((-200f, 150f), Target, Near);
     }
-
-    static readonly IEqualityComparer<(float, float, (float, float))> Approximately =
-        EqualityComparer<(float, float, (float, float))>.Create((a, b) => Math.Abs(a.Item1 - b.Item1) < 2 && a.Item2 == b.Item2 && Near.Equals(a.Item3, b.Item3));
 
     // cameras: which fields input controls, the camera type and the hotkey lock read back what was set
     [Fact]

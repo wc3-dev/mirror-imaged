@@ -1,0 +1,8 @@
+# Where MirrorImaged differs from the game's lines in expected/units-camera-2.txt, in order, with why (decisions D121): a
+# line starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts
+# "# ".
+
+# A cinematic camera: the game's target and eye read the model's camera as it plays, here the game camera's, as the
+# models' cameras aren't read (D505, Close).
+- cinematic now 0.0242 0.0000 109.3960 eye 203.9340 0.0000 116.2530
++ cinematic now 0.0000 0.0000 10.0000 eye 0.0000 -1118.3857 1668.0752

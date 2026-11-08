@@ -1125,11 +1125,12 @@ same. The two closing probes each closed the game once, as the units probe's run
 
 ## Cameras
 
-Probes `probes/cameras.lua`, `cameras-2.lua`, `cameras-3.lua`, `cameras-4.lua` and `units-camera.lua`, on
-3.0.1.24371, 11-08 (W5-1): MirrorImaged's probe map (D51: 32 by 32, flat ground at height 0, a start location at (0,
-0), and a `main` that sets no camera bounds), started with `-loadfile` on a hidden desktop, single player. Each ran
-twice (`units-camera` first as `cameras-units`); their lines are in `probes/expected`, where the numbers
-that varied, or that a pan or a change over a time reads part way, are marked. Angles are read with `%.4f`, in radians.
+Probes `probes/cameras.lua`, `cameras-2.lua`, `cameras-3.lua`, `cameras-4.lua`, `units-camera.lua` and
+`units-camera-2.lua`, on 3.0.1.24371, 11-08 (W5-1): MirrorImaged's probe map (D51: 32 by 32, flat ground at height 0, a
+start location at (0, 0), and a `main` that sets no camera bounds), started with `-loadfile` on a hidden desktop,
+single player. Each ran at least twice (`units-camera` first as `cameras-units`), the first four probes three or four
+times; their lines are in `probes/expected`, where the numbers that varied, or that a pan or a change over a time reads
+part way, are marked. Angles are read with `%.4f`, in radians.
 
 - The margins: `GetCameraMargin` reads 512 for `CAMERA_MARGIN_LEFT` and `RIGHT`, 256 for `TOP` and `BOTTOM`, and 0 for
   4 and -1. All 466 shipped maps' `main` sets bounds that, with these margins, are the camera bounds of their
@@ -1165,8 +1166,12 @@ that varied, or that a pan or a change over a time reads part way, are marked. A
   field reads 10; inside bounds of 0, where the target can't move, `PanCameraToWithZ` left its height alone.
 - The bounds hold the target in their box: a position outside bounds of 200 each way read (200, 200), (-200, -200),
   (0, 200), (200, 0) at rotations 0, 45, 90 and 120 and distances 1000 to 3000, and a diamond held (900, 900) where its
-  box allows it. Once, after pans with a z made inside bounds of 0 and at rotation 120, it read (100, 373.2051), 200
-  along the view past the corner (the cameras probe; not repeated in cameras-2 or cameras-3).
+  box allows it. One case reads otherwise in every run of the cameras probe: after pans with a z made while the
+  bounds were 0, then bounds of 200 each way and a position at (1000, 1000) at rotation 120, it read (100, 373.2051),
+  200 along the view past the corner; cameras-2 and cameras-3, without the earlier pans, didn't repeat it.
+- A camera blocker (`AddCameraBlocker` of a rect from (200, -200) to (600, 200)) keeps the target out: a position set
+  at (400, 0) from (0, 0) read (600, 0), past it along the move, and a pan from (0, 0) to (1000, 0) over 1 s stopped
+  at (200, 0), where it entered. `EnableCameraBlocker(r, false)` let a position at (400, 0) in.
 - Camera setups: a new one reads distance 3000, far z 5400, angle of attack 304, field of view 70, roll 0, rotation
   90, z offset 0, near z 16 and 0 for the rest, in degrees as set; its place (0, 0) and label "". A field reads back as
   set, angles as given (400, -30, 720), the distance, far z, near z and depth of field fields below 0 as 0 (near z 0,
@@ -1180,9 +1185,23 @@ that varied, or that a pan or a change over a time reads part way, are marked. A
 - `SetCameraRotateMode(500, 0, π/2, 2)` with the target at (0, 0): the target goes round (500, 0) counterclockwise to
   (500, -500) in 2 s, at a height of 0 (no z offset), while the rotation field reads 90 degrees; the eye turns with it,
   (1618.3857, -499.9999, 1658.0752) at the end. A position set then and `ResetToGameCamera` in the same instant left
-  the target there, at height 10 again.
-- `CameraSetSourceNoise` and `CameraSetTargetNoise` of 50 move the target a little (800.12, 399.71, 249.73 for (800,
-  400, 250)) and the eye a lot (its z 2736.58); `SetCameraQuickPosition` changes nothing read.
+  the target there, at height 10 again. Over 1 s (units-camera-2): a position set after the sweep left the target
+  where the turn had it, at height 0; one set half way through stopped the turn there (it moved 0.06 more) and held it;
+  `StopCamera` half way did the same, the height staying 0; a unit controller given half way was dropped, the turn
+  going on to (500, -500); a timed pan after the sweep moved the target, at height 10 again, and a setup's timed pan
+  moved it, at the setup's z offset of 0.
+- `CameraSetSourceNoise` and `CameraSetTargetNoise` of 50 move the target and the eye a little and at random: in one
+  run the target read 0.1 to 0.3 off (800.12, 399.71, 249.73 for (800, 400, 250)) and the eye 0.3 to 0.6, in the other
+  two the target up to 2.8 and the eye up to 5.6. `SetCameraQuickPosition` changes nothing read.
+- `CameraSetFocalDistance(500)` and `CameraSetDepthOfFieldScale(2)` read back at once as the depth of field fields,
+  500 and 2. `CameraSetSmoothingFactor(1)` left `PanCameraTo`'s target as without it (300 at 0.1 s, 903 at 0.3 s).
+- `SetCinematicCamera("Objects\\CinematicCameras\\CameraZoomOut.mdx")` moves the target and the eye to the model's
+  camera at once: the target (0.0242, 0, 109.40), the eye (203.93, 0, 116.25), then, moving, the target about
+  (0, 0.0242, 119.40) and the eye (0, 213.38, 131.21) at 0.5 s and (0, 251.09, 151.02) at 2.5 s; the fields read as
+  they were. `ResetToGameCamera` ends it: the target (0, 0.0242, 10), the eye as the game camera's.
+- A pan's height: `PanCameraToTimedWithZ(.., 300, 0.5)`'s target read 300 a second later, and 10 after
+  `ResetToGameCamera`; following a unit after such a pan kept it (-600, -600, 300); `StopCamera` half way through one
+  to 410 read 210.57 in the same instant and 10 a second later.
 - `SetCameraTargetController(u, 100, 50, false)` puts the target at the unit and the offsets from the next frame, and
   it follows the unit's moves a frame later; after `RemoveUnit` it stays where the unit was. `PanCameraToTimed`,
   `ResetToGameCamera` and `SetCameraPosition` at the target end it. `SetCameraOrientController(u, 0, 0)` moved the

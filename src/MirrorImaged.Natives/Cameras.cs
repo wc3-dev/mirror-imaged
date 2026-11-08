@@ -11,14 +11,15 @@ public partial class camerasetup
     internal string? Label = "";
 }
 
-// The local player's camera (probes cameras to cameras-4 and units-camera; decisions D500 to D505): its fields, kept
-// as set (angles in degrees) and read at once, its target and the bounds that hold it, and its eye, which the game
-// works out as it draws, so the target and the eye read as the step before left them. A change over a time moves in
-// a straight line from where the value is. The view itself isn't simulated. Every player's camera is the local
-// player's (multiplayer: wave 6).
+// The local player's camera (probes cameras to cameras-4, units-camera and units-camera-2; decisions D500 to D505):
+// its fields, kept as set (angles in degrees) and read at once, its target and the bounds that hold it, and its eye,
+// which the game works out as it draws, so the target and the eye read as the step before left them. A change over a
+// time moves in a straight line from where the value is. The view itself isn't simulated. Every player's camera is
+// the local player's (multiplayer: wave 6).
 public sealed partial class GameNatives
 {
     const string Cameras = "docs/facts.md, Cameras: probes cameras, cameras-2 and cameras-3 (11-08)";
+    const string Cameras5 = "docs/facts.md, Cameras: probe units-camera-2 (11-08)";
     const int CameraFields = 14;
     const float PanSpeed = 3000; // PanCameraTo's, and a setup's pan that isn't timed, a second (cameras-3)
 
@@ -27,15 +28,22 @@ public sealed partial class GameNatives
 
     readonly Motion[] _camera = [.. GameCamera.Select((value, field) => new Motion(Limit(field, value)))];
     Motion _cameraX, _cameraY;
-    Motion? _panZ; // a pan's height, in place of the z offset, until the target moves again (cameras-2, cameras-4)
+    // A pan's height, in place of the z offset, until the target moves again or, from the step after _panZUntil,
+    // StopCamera or ResetToGameCamera drops it; following a unit keeps it (cameras-2, cameras-4, units-camera-2)
+    Motion? _panZ;
+    long _panZUntil = long.MaxValue;
 
-    // SetCameraRotateMode's turn about a point (cameras-4): the target goes round it by the sweep over the time, the
-    // view turning with it while the rotation field reads as it was, and without the z offset, until the game camera is
-    // put back; the angles are in radians.
+    // SetCameraRotateMode's turn about a point (cameras-4, units-camera-2): the target goes round it by the sweep over the
+    // time, the view turning with it while the rotation field reads as it was, and without the z offset, until a pan or
+    // ResetToGameCamera ends it; the angles are in radians.
     (float X, float Y, double Radius, double Start, Motion Swept)? _orbit;
 
     // A unit the target follows at offsets from the step after Start (units-camera)
     (unit Unit, float X, float Y, long Start)? _follow;
+
+    // AddCameraBlocker's rects, and those EnableCameraBlocker turned off (units-camera-2)
+    readonly List<rect> _blockers = [];
+    readonly HashSet<rect> _blockersOff = [];
     readonly float[] _bounds = new float[8];
     readonly bool[] _byInput = [.. Enumerable.Repeat(true, CameraFields)];
     int _cameraType;
@@ -85,7 +93,7 @@ public sealed partial class GameNatives
     void SetCameraField(int field, float value, float duration)
     {
         var (to, from, steps) = (Limit(field, value), _camera[field].At(_game.Step), CameraSteps(duration));
-        if (Turns(field) && steps > 0) to = from + ((to - from + 540) % 360 - 180);
+        if (Turns(field) && steps > 0) to = from + (((to - from) % 360 + 540) % 360 - 180); // a half turn goes clockwise
         _camera[field] = _camera[field].Toward(to, _game.Step, steps);
     }
 
@@ -110,9 +118,9 @@ public sealed partial class GameNatives
         : _cameraY.At(_game.Step - 1),
         Bound(1, false), Bound(1, true));
 
-    float TargetZ => (Data.Terrain?.Height(TargetX, TargetY) ?? 0) + (_orbit is null ? ZOffset : 0);
+    float TargetZ => Height(TargetX, TargetY) + (_orbit is null ? ZOffset : 0);
 
-    float ZOffset => _panZ?.At(_game.Step - 1) ?? _camera[6].At(_game.Step - 1);
+    float ZOffset => _panZ is { } z && _game.Step - 1 < _panZUntil ? z.At(_game.Step - 1) : _camera[6].At(_game.Step - 1);
 
     // Ends a turn about a point or a follow, the target staying where it reads.
     void Settle()
@@ -120,21 +128,57 @@ public sealed partial class GameNatives
         if (_orbit is not null || _follow is not null) (_cameraX, _cameraY, _orbit, _follow) = (new Motion(TargetX), new Motion(TargetY), null, null);
     }
 
-    // Moves the target to (x, y), held in the bounds, over the steps given; 0 lands in the next step. A pan's z moves
-    // with it. A move that leaves the target where it is keeps its height (cameras: PanCameraToWithZ inside bounds of 0),
-    // and the rotate mode holds the target (cameras-4: a position set in it didn't move it).
+    // Stops the rotate mode's sweep where it is; the mode goes on (units-camera-2).
+    void StopSweep()
+    {
+        if (_orbit is { } o) _orbit = o with { Swept = o.Swept.Toward(o.Swept.At(_game.Step - 1), _game.Step, 0) };
+    }
+
+    // Moves the target to (x, y), held in the bounds and kept out of the camera blockers, over the steps given; 0 lands
+    // in the next step. A pan's z moves with it. A move that leaves the target where it is keeps its height (cameras:
+    // PanCameraToWithZ inside bounds of 0). It ends the rotate mode and a follow.
     void MoveCamera(float x, float y, long steps, float? z = null)
     {
-        if (_orbit is not null) return;
         Settle();
-        var (toX, toY) = (Math.Clamp(x, Bound(0, false), Bound(0, true)), Math.Clamp(y, Bound(1, false), Bound(1, true)));
-        if ((toX, toY) != (TargetX, TargetY)) _panZ = z is { } height ? new Motion(ZOffset).Toward(height, _game.Step, steps) : null;
+        var (fromX, fromY) = (TargetX, TargetY);
+        var (toX, toY) = Blocked(fromX, fromY, Math.Clamp(x, Bound(0, false), Bound(0, true)), Math.Clamp(y, Bound(1, false), Bound(1, true)), steps > 0);
+        if ((toX, toY) != (fromX, fromY)) (_panZ, _panZUntil) = (z is { } height ? new Motion(ZOffset).Toward(height, _game.Step, steps) : null, long.MaxValue);
         _cameraX = _cameraX.Toward(toX, _game.Step, steps);
         _cameraY = _cameraY.Toward(toY, _game.Step, steps);
     }
 
-    long PanSteps(float x, float y) =>
-        Game.Steps(Math.Sqrt(Math.Pow(Math.Clamp(x, Bound(0, false), Bound(0, true)) - TargetX, 2) + Math.Pow(Math.Clamp(y, Bound(1, false), Bound(1, true)) - TargetY, 2)) / PanSpeed);
+    // Where a move from (fromX, fromY) to (toX, toY) ends for the blockers on (units-camera-2): a pan stops where its
+    // path enters one, a position set inside one lands past it along the move. Each blocker in the order added.
+    (float X, float Y) Blocked(float fromX, float fromY, float toX, float toY, bool pan)
+    {
+        if ((toX, toY) == (fromX, fromY)) return (toX, toY);
+        foreach (var r in _blockers)
+        {
+            if (_blockersOff.Contains(r)) continue;
+            var (dx, dy) = ((double)toX - fromX, (double)toY - fromY);
+            var (enter, leave) = (double.NegativeInfinity, double.PositiveInfinity);
+            foreach (var (from, d, min, max) in new[] { (fromX, dx, r.MinX, r.MaxX), (fromY, dy, r.MinY, r.MaxY) })
+            {
+                if (d == 0)
+                {
+                    if (from < min || from > max) (enter, leave) = (1, 0);
+                    continue;
+                }
+                var (a, b) = ((min - from) / d, (max - from) / d);
+                (enter, leave) = (Math.Max(enter, Math.Min(a, b)), Math.Min(leave, Math.Max(a, b)));
+            }
+            if (enter > leave) continue;
+            if (pan && enter is >= 0 and <= 1) (toX, toY) = ((float)(fromX + dx * enter), (float)(fromY + dy * enter));
+            else if (!pan && enter <= 1 && leave >= 1) (toX, toY) = ((float)(fromX + dx * leave), (float)(fromY + dy * leave));
+        }
+        return (toX, toY);
+    }
+
+    long PanSteps(float x, float y)
+    {
+        var (dx, dy) = (Math.Clamp(x, Bound(0, false), Bound(0, true)) - TargetX, Math.Clamp(y, Bound(1, false), Bound(1, true)) - TargetY);
+        return Game.Steps(Math.Sqrt((double)dx * dx + (double)dy * dy) / PanSpeed);
+    }
 
     // The eye: the distance back from the target along the angle of attack and the rotation, as the step before saw
     // them, in floats as the game's: 5 of the 6 eyes the probes read match to the last digit, the sixth by its cos(300).
@@ -206,20 +250,29 @@ public sealed partial class GameNatives
         if (whichField is { Id: >= 0 and < CameraFields }) SetCameraField(whichField.Id, Field(whichField.Id, _game.Step) + offset, duration);
     }
 
-    /// <summary>Puts the game camera's fields back but CAMERA_FIELD_ZABSOLUTE; the target stays, and a turn about a point ends.</summary>
+    /// <summary>
+    /// Puts the game camera's fields back but CAMERA_FIELD_ZABSOLUTE; the target stays, and the rotate mode, a follow and a
+    /// pan's height end (units-camera, units-camera-2).
+    /// </summary>
     [Native(Level.Close)]
     public void ResetToGameCamera(float duration)
     {
         Settle();
+        _panZUntil = Math.Min(_panZUntil, _game.Step);
         for (var field = 0; field < CameraFields - 1; field++) SetCameraField(field, GameCamera[field], duration);
     }
 
     /// <summary>
-    /// Moves the target there, held in the bounds' box, read from the next step. Close: the game's lands after a frame,
-    /// and at the game's start 0.2 to 0.25 s later (cameras-3); its bounds' hold isn't always the box (cameras).
+    /// Moves the target there, held in the bounds' box, read from the next step; in the rotate mode it only stops the
+    /// sweep (units-camera-2). Close: the game's lands after a frame, and at the game's start 0.2 to 0.25 s later
+    /// (cameras-3); its bounds' hold isn't always the box (cameras).
     /// </summary>
     [Native(Level.Close)]
-    public void SetCameraPosition(float x, float y) => MoveCamera(x, y, 0);
+    public void SetCameraPosition(float x, float y)
+    {
+        if (_orbit is not null) StopSweep();
+        else MoveCamera(x, y, 0);
+    }
 
     /// <summary>A pan at 3000 a second, as the game's, measured to a frame or so (cameras-3).</summary>
     [Native(Level.Close)]
@@ -235,18 +288,24 @@ public sealed partial class GameNatives
     [Native(Level.Close)]
     public void PanCameraToTimedWithZ(float x, float y, float zOffsetDest, float duration) => MoveCamera(x, y, CameraSteps(duration), zOffsetDest);
 
-    /// <summary>Stops a pan where it is (cameras-2); a field's change goes on, and a turn about a point stops (not measured).</summary>
+    /// <summary>
+    /// Stops a pan where it is (cameras-2), its height going back to the z offset from the next step, and the rotate
+    /// mode's sweep, the mode going on (units-camera-2); a field's change goes on (not measured).
+    /// </summary>
     [Native(Level.Close)]
     public void StopCamera()
     {
-        Settle();
-        (_cameraX, _cameraY) = (_cameraX.Toward(_cameraX.At(_game.Step - 1), _game.Step, 0), _cameraY.Toward(_cameraY.At(_game.Step - 1), _game.Step, 0));
+        _panZUntil = Math.Min(_panZUntil, _game.Step);
+        if (_orbit is not null) StopSweep();
+        else (_cameraX, _cameraY) = (_cameraX.Toward(_cameraX.At(_game.Step - 1), _game.Step, 0), _cameraY.Toward(_cameraY.At(_game.Step - 1), _game.Step, 0));
     }
 
     /// <summary>
     /// The target goes round the point by the sweep, counterclockwise, over the time, the view turning with it while
-    /// the rotation field reads as it was, without the z offset; it holds the target, positions and pans dropped, until
-    /// ResetToGameCamera (cameras-4). Close: the game's turn is a frame or so ahead; StopCamera ending it is the model's.
+    /// the rotation field reads as it was, without the z offset (cameras-4). The mode holds the target until a pan, a
+    /// setup's pan or ResetToGameCamera: a position set or StopCamera only stops the sweep, and a unit controller is
+    /// dropped (units-camera-2). Close: the game's turn is a frame or so ahead; a new rotate mode in one starting from
+    /// where the target is is the model's.
     /// </summary>
     [Native(Level.Close)]
     public void SetCameraRotateMode(float x, float y, float radiansToSweep, float duration)
@@ -258,9 +317,10 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// The target follows the unit at the offsets from the next step, and stays where it was once it is removed, until a
-    /// position, a pan or ResetToGameCamera (units-camera). Close: the game follows a move a frame later. Neither
-    /// inheritOrientation nor the unit's facing changes the rotation field (units-camera); what they turn in the view
-    /// isn't simulated.
+    /// position, a pan or ResetToGameCamera (units-camera), keeping a pan's height (units-camera-2); in the rotate mode
+    /// it is dropped (units-camera-2), and a nil unit ends a follow (the model's). Close: the game follows a move a frame
+    /// later. Neither inheritOrientation nor the unit's facing changes the rotation field (units-camera); what they turn
+    /// in the view isn't simulated.
     /// </summary>
     [Native(Level.Close)]
     public void SetCameraTargetController(unit? whichUnit, float xoffset, float yoffset, bool inheritOrientation) => Follow(whichUnit, xoffset, yoffset);
@@ -271,6 +331,7 @@ public sealed partial class GameNatives
 
     void Follow(unit? whichUnit, float x, float y)
     {
+        if (_orbit is not null) return;
         Settle();
         if (whichUnit is not null) _follow = (whichUnit, x, y, _game.Step);
     }
@@ -394,33 +455,60 @@ public sealed partial class GameNatives
     [Native(Level.Recorded, Reason = "Where the space key takes the camera; no native reads it back")]
     public void SetCameraQuickPosition(float x, float y) { }
 
-    [Native(Level.Recorded, Reason = "Shakes the view: in the game the target and the eye read shaken (cameras-4), here as they would be still")]
+    /// <summary>
+    /// Shakes the view. Close: the game's target and eye read shaken, here as they would be still: at a magnitude of 50,
+    /// in three runs, the target read 0.1 to 2.8 off and the eye 0.3 to 5.6 (cameras-4).
+    /// </summary>
+    [Native(Level.Close)]
     public void CameraSetSourceNoise(float mag, float velocity) { }
 
-    [Native(Level.Recorded, Reason = "Shakes the view: in the game the target and the eye read shaken (cameras-4), here as they would be still")]
+    /// <summary>As CameraSetSourceNoise (not measured apart).</summary>
+    [Native(Level.Close)]
     public void CameraSetSourceNoiseEx(float mag, float velocity, bool vertOnly) { }
 
-    [Native(Level.Recorded, Reason = "Shakes the view: in the game the target and the eye read shaken (cameras-4), here as they would be still")]
+    /// <summary>As CameraSetSourceNoise.</summary>
+    [Native(Level.Close)]
     public void CameraSetTargetNoise(float mag, float velocity) { }
 
-    [Native(Level.Recorded, Reason = "Shakes the view: in the game the target and the eye read shaken (cameras-4), here as they would be still")]
+    /// <summary>As CameraSetSourceNoise (not measured apart).</summary>
+    [Native(Level.Close)]
     public void CameraSetTargetNoiseEx(float mag, float velocity, bool vertOnly) { }
 
-    [Native(Level.Recorded, Reason = "Smooths the view's moves; no native reads it back")]
+    [Native(Level.Recorded, Reason = "Smooths the view's moves: at a factor of 1 a pan's target read as without it (units-camera-2)")]
     public void CameraSetSmoothingFactor(float factor) { }
 
-    [Native(Level.Recorded, Reason = "The view's depth of field; no native reads it back")]
-    public void CameraSetFocalDistance(float distance) { }
+    /// <summary>Sets CAMERA_FIELD_DEPTH_OF_FIELD_DISTANCE at once; below 0 it is held at 0 as the field is (inferred).</summary>
+    [Native(Level.Exact, Fact = Cameras5)]
+    public void CameraSetFocalDistance(float distance) => SetCameraField(11, distance, 0);
 
-    [Native(Level.Recorded, Reason = "The view's depth of field; no native reads it back")]
-    public void CameraSetDepthOfFieldScale(float scale) { }
+    /// <summary>Sets CAMERA_FIELD_DEPTH_OF_FIELD_SCALE at once; below 0 it is held at 0 as the field is (inferred).</summary>
+    [Native(Level.Exact, Fact = Cameras5)]
+    public void CameraSetDepthOfFieldScale(float scale) => SetCameraField(12, scale, 0);
 
-    [Native(Level.Recorded, Reason = "Plays a camera model in the view; no native reads it back")]
+    /// <summary>
+    /// Close: while a cinematic camera plays, the game's target and eye read the model's camera (CameraZoomOut: the
+    /// target about 110 to 120 up, the eye 200 to 250 from it), here the game camera's; the fields read as they were and
+    /// ResetToGameCamera ends it, in both (units-camera-2). Reading the models' cameras is later.md's.
+    /// </summary>
+    [Native(Level.Close)]
     public void SetCinematicCamera(string? cameraModelFile) { }
 
-    [Native(Level.Recorded, Reason = "Stops the view at a rect's edge; no native reads it back")]
-    public void AddCameraBlocker(rect? where) { }
+    /// <summary>
+    /// The rect keeps the target out: a pan stops where its path enters it, a position set inside it lands past it along
+    /// the move (units-camera-2). Close: the two cases measured, with the rect as it is when the target moves.
+    /// </summary>
+    [Native(Level.Close)]
+    public void AddCameraBlocker(rect? where)
+    {
+        if (where is not null && !_blockers.Contains(where)) _blockers.Add(where);
+    }
 
-    [Native(Level.Recorded, Reason = "Stops the view at a rect's edge; no native reads it back")]
-    public void EnableCameraBlocker(rect? r, bool flag) { }
+    /// <summary>Turns an added blocker off and on again; off, the target goes in (units-camera-2).</summary>
+    [Native(Level.Close)]
+    public void EnableCameraBlocker(rect? r, bool flag)
+    {
+        if (r is null) return;
+        if (flag) _blockersOff.Remove(r);
+        else _blockersOff.Add(r);
+    }
 }

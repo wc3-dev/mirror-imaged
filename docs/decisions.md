@@ -1643,36 +1643,47 @@ is in W2-3, W2-5, W2-6 and W2-7 (`docs/tasks/wave-2.md`) and `docs/tasks/later.m
 
 ### Cameras, and the rest of what main needs first (W5-1)
 
-The measurements are five probes, `probes/cameras.lua`, `cameras-2.lua`, `cameras-3.lua`, `cameras-4.lua` and
-`units-camera.lua`, in `docs/facts.md`, "Cameras", with their lines in `probes/expected`. The natives are in
-`Cameras.cs` and `Presentation.cs`.
+The measurements are six probes, `probes/cameras.lua`, `cameras-2.lua`, `cameras-3.lua`, `cameras-4.lua`,
+`units-camera.lua` and `units-camera-2.lua`, in `docs/facts.md`, "Cameras", with their lines in `probes/expected`. The
+natives are in `Cameras.cs` and `Presentation.cs`.
 
 - **D500. One camera, the local player's,** as the task says (multiplayer: wave 6). Its fields are kept as set, angles
   in degrees, and read at once, the angles in radians; its target and eye read as the step before left them, as the
   game reads them as it last drew (the eye kept its place in the instant a rotation was set, and in a 0 s timer, and
   moved by 0.05 s). A change over a time goes in a straight line from where the value reads, an angle the shorter way
-  round (`Motion`, which keeps what the step before saw when a value is set again in the same step, as a probe sets a
-  field several times in one instant). The levels: Exact where a probe reads the native back to the digit (the
-  margins, the bounds, the setups' fields, places and labels, the flags), Close where the reads hang on the game's
-  frames or a model (the fields, target and eye, the pans, the applies, following a unit, the rotate mode), and
-  Recorded for what only the view shows.
+  round, however many turns it has made (an exact half turn goes clockwise: not measured); `Motion` keeps what the
+  step before saw when a value is set again in the same step, as a probe sets a field several times in one instant.
+  The levels: Exact where a probe reads the native back to the digit (the margins, the bounds, the setups' fields,
+  places and labels, the flags, the depth of field natives), Close where the reads hang on the game's frames or a
+  model (the fields, target and eye, the pans, the applies, following a unit, the rotate mode, the noise, the cinematic
+  camera, the blockers), and Recorded for what only the view shows (the quick position, the smoothing factor). The
+  probes that make a footman are named `units-camera`, so `ProbeComparison.ReadsData`'s prefix rule (D232) runs them
+  with the install's data, without which `CreateUnit` gives nil.
 - **D501. The fields' limits** are the measured ones (distance 0.5 to 10000, far z from 100, field of view 5 to 120
   degrees after coming round, z offset ±4096, near z 16 to 9500, depth of field from 0, z absolute as set), and an
   angle comes round to a turn with the game's whole turns: 2π above 0 and -0 at 0 and below (`Turn`), which also
   gives the start's roll and local angles as -0. Near z's 9500 is a constant: the same at a distance of 3000 and a far
   z of 2000. A setup keeps its fields as given, the lengths below 0 as 0 and the angles not turned; the camera holds
-  them when the setup is applied.
+  them when the setup is applied. `CameraSetFocalDistance` and `CameraSetDepthOfFieldScale` set the two depth of
+  field fields at once (measured), held as those fields are (inferred).
 - **D502. The target.** The bounds start at 0, not the map's `war3map.w3i` bounds, as measured; every shipped map sets
-  them in `main`. Their box holds the target, at every rotation and distance measured, and for a diamond; the
-  cameras probe's one read 200 along the view past the corner, after pans with a z made inside bounds of 0, is not
-  modelled (`probes/differences/cameras.txt`). A position lands in the next step: mid-game the game's lands within
-  0.05 s, but as the game starts 0.2 to 0.25 s later, which isn't modelled (`probes/differences/cameras-2.txt`).
-  `PanCameraTo` and a setup's pan that isn't timed go at 3000 a second (the game's 2970 to 3060 measured at 1100 and
-  2000 away). A pan with a z moves the target's height to it in place of the z offset, until the target moves again;
-  a move that leaves the target where it is changes nothing, as `PanCameraToWithZ` inside bounds of 0 left the height.
-  `CameraSetupApplyWithZ` and `CameraSetupApplyForceDurationWithZ` over 0 s leave the height (measured), and the
-  latter over a time takes it (measured). The height is the ground's (`Terrain.Height`, inferred: measured only on
-  flat ground) and the z offset.
+  them in `main`. Their box holds the target, at every rotation and distance measured, and for a diamond. One case
+  reads otherwise in every run (all three of the cameras probe): after pans with a z made while the bounds were 0, then
+  bounds of 200 each way and a position at (1000, 1000) at rotation 120, the game held the target 200 along the view
+  past the corner, (100, 373.2051); cameras-2 and cameras-3 didn't repeat it without the earlier pans. A rule, then,
+  but not found; here the box holds it (`probes/differences/cameras.txt`, `later.md`). A position lands in the next
+  step: mid-game the game's lands within 0.05 s, but as the game starts 0.2 to 0.25 s later, which isn't modelled
+  (`probes/differences/cameras-2.txt`). `PanCameraTo` and a setup's pan that isn't timed go at 3000 a second (the
+  game's 2970 to 3060 measured at 1100 and 2000 away). A pan with a z moves the target's height to it in place of the
+  z offset, until the target moves again, and from the next step after `StopCamera` or `ResetToGameCamera`; following
+  a unit keeps it (all measured). A move that leaves the target where it is changes nothing, as `PanCameraToWithZ`
+  inside bounds of 0 left the height. `CameraSetupApplyWithZ` and `CameraSetupApplyForceDurationWithZ` over 0 s leave
+  the height (measured), and the latter over a time takes it (measured). The height is the ground's, with the bridges'
+  decks (`Height`, as `GetLocationZ` reads it; inferred: measured only on flat ground), and the z offset. A camera
+  blocker keeps the target out of its rect: a timed pan stopped where its path entered it, and a position set inside it
+  landed past it along the move (from (0, 0) to (400, 0) in a blocker from 200 to 600, at 600); here each move is cut
+  so, in the order the blockers were added, with the rect as it is then (the rest the model's). Turned off, the target
+  goes in (measured).
 - **D503. The eye is worked out in floats,** as the game does: the distance times the cosine of the angle of attack
   times that of the rotation, each a float of the double's, gives 5 of the 6 eyes the probes read to the last digit,
   where doubles gave none. The sixth is at an angle of attack of 300 degrees, whose cosine the game reads 0.5000004
@@ -1682,16 +1693,26 @@ The measurements are five probes, `probes/cameras.lua`, `cameras-2.lua`, `camera
   the unit at the offsets from the next step, also once it is removed, from where it was, until a position, a pan, a
   setup's pan or `ResetToGameCamera` (measured, but for the setup's pan); the game follows a move a frame later
   (`probes/differences/units-camera.txt`), and neither the orient controller nor `inheritOrientation` changed the
-  rotation field. `SetCameraRotateMode` takes the target round the point by the sweep over the time, the view turning
-  with it while the rotation field reads as it was, without the z offset, and holds the target: a position set in the
-  same instant as `ResetToGameCamera` was dropped, which here every position and pan in the mode is, until
-  `ResetToGameCamera` (measured) or `StopCamera` (the model's).
-- **D505. Left out or Recorded.** The noise natives are Recorded, as the plan names camera shake: in the game they shake
-  the target a little and the eye a lot, which a seeded copy couldn't match. So are the quick position, the smoothing
-  factor, the depth of field natives, `SetCinematicCamera`, the camera blockers and `BlzCameraSetupSetCameraType`,
-  whose getter in the game reads a number of its own each run, whatever was set: here `BlzCameraSetupGetCameraType`
-  reads 0 (Close). The three location natives (`GetCameraTargetPositionLoc`, `GetCameraEyePositionLoc`,
-  `CameraSetupGetDestPositionLoc`) wait for W2-6's locations (`docs/tasks/wave-2.md`).
+  rotation field. A controller given nil ends a follow (the model's). `SetCameraRotateMode` takes the target round the
+  point by the sweep over the time, the view turning with it while the rotation field reads as it was, without the z
+  offset. The mode holds the target (units-camera-2): a position set, during the sweep or after it, and `StopCamera`
+  only stop the sweep where it is, and a unit controller is dropped, the sweep going on; a timed pan ends the mode (the
+  target moved, at the z offset again), and so does `ResetToGameCamera` (cameras-4). Inferred: `PanCameraTo` and the
+  pans with a z end it as the timed pan does; a setup's pan ends it (the target moved, but the setup's z offset of 0
+  can't tell the mode's height from the end of the mode); a new rotate mode in one starts from where the target is;
+  and a controller given in the mode is dropped rather than kept for its end (the target hadn't followed 1 s after the
+  sweep).
+- **D505. The view's own natives.** The noise natives are Close, a model without the shake: at a magnitude of 50 the
+  game's target read 0.1 to 0.3 off in one run and up to 2.8 in the other two, its eye 0.3 to 0.6 and up to
+  5.6 (cameras-4), random as the game's, which a seeded copy couldn't match. `SetCinematicCamera` is Close too: while its
+  camera plays, the game's target and eye read the model's camera (CameraZoomOut: the target 110 to 120 up, the eye
+  200 to 250 from it, moving), here the game camera's, as the models' cameras aren't read
+  (`probes/differences/units-camera-2.txt`, `later.md`); the fields read as they were, and `ResetToGameCamera` ends it
+  in both. The smoothing factor stays Recorded: at 1 a pan read the same as without it. So does the quick position,
+  which changed nothing read (cameras-4). `BlzCameraSetupSetCameraType` is Recorded: the game's getter reads a number
+  of its own each run, whatever was set, and here `BlzCameraSetupGetCameraType` reads 0 (Close). The three location
+  natives (`GetCameraTargetPositionLoc`, `GetCameraEyePositionLoc`, `CameraSetupGetDestPositionLoc`) are W2-6's, with
+  the locations it takes over from W2-4 (`docs/tasks/wave-2.md`).
 - **D506. What main sets for the view** (`Presentation.cs`): `SetDayNightModels`, the terrain fog natives
   (`SetTerrainFog`, `SetTerrainFogEx`, `SetTerrainFogExV`, `ResetTerrainFog`, `SetUnitFog`, the `BlzSetTerrainFog*`
   ones, `EnableWorldFogBoundary`), the water natives (`SetWaterBaseColor`, `SetWaterDeforms`, `SetHDWaterParams`,
@@ -1702,14 +1723,16 @@ The measurements are five probes, `probes/cameras.lua`, `cameras-2.lua`, `camera
   way (`NewSoundEnvironment`, the ambient sounds, `SetMapMusic`, `InitSounds`' `CreateSound` and `SetSound*`, and the
   dialogue keys of a sound) are W5-2's, which runs beside this task, and `SetResourceAmount`, whose gold mine's start
   amount comes from the data, is the units' (W2-10 or wave 3's harvesting).
-- **D507. Where the shipped maps stop after W5-1** (`ShippedMapTests`, with W2-2 and W2-9 merged first): 410 at
-  `NewSoundEnvironment` (W5-2), the line after `SetDayNightModels` and the terrain fog and water lines; 55 at `Rect`
-  (W2-6) in the map-wide weather their `main` makes before its sounds (`AddWeatherEffect(Rect(...), 'RLhr')`, then
-  W5-3's weather; Classic's Night Elf X05 and X06, Reforged's prologue and others); and `ForsakenKingdom/Scenario/(1)ForgottenHollow.w3x` at `Location` (W2-6) before `main`, as before. Run
-  with every sound and music native stubbed out (a file not committed), the maps go on to 292 at `Rect` (W2-6, in
-  `CreateRegions`, the campaigns and the custom maps), 173 at `SetResourceAmount` (the melee maps' gold mines in
-  `CreateAllUnits`) and the one at `Location`, none at a native of this wave's presentation area: so no map reaches the
-  World Editor's camera setups (`CreateCameras`, after `CreateRegions`) or `InitBlizzard`, whose next natives past the
-  sounds are `Rect` too (`InitMapRects`); the probes and `CameraNativesTests` test those. None logs a script error. This
-  replaces D302's `GetCameraMargin`. After W5-1: 226 Exact, 314 Close, 62 Recorded, 1,233 Missing (from D234's 204,
-  287, 15 and 1,329).
+- **D507. Where the shipped maps stop after W5-1** (`ShippedMapTests`, with W2-2, W2-4 and W2-9 merged first): 411 at
+  `NewSoundEnvironment` (W5-2), the line after `SetDayNightModels` and the terrain fog and water lines, ForgottenHollow
+  among them now that W2-4's `Location` is in; and 55 at `AddWeatherEffect` (W5-3), the map-wide weather their `main`
+  makes before its sounds (Classic's Night Elf X05 and X06, Reforged's prologue and others). None logs a script error.
+  With every sound, music and dialogue native stubbed out in a file never committed (so not reproducible from the
+  repository until W5-2's pull request merges, when the test is to be run again for real), the maps went on to 206 at
+  `SetResourceAmount` (gold mines; units, W2-10 or wave 3), 138 at `AddWeatherEffect` (W5-3), 46 at
+  `BlzCreateItemWithSkin` (W2-3), 30 at `SetPlayerAbilityAvailable` (W2-7), 26 at `SetAllItemTypeSlots`
+  (`InitBlizzard`'s `InitNeutralBuildings`, W2-3), 10 at `SetHeroLevel` (W2-3), 5 at `GetRectCenterX` (W2-6), 2 at
+  `IssueImmediateOrder` (wave 3), 2 at `UnitAddItemToSlotById` (W2-3) and 1 at `CreateBlightedGoldmine` (Reforged's
+  Undead07, W2-11), none at a native of this task's area. So no map reaches the World Editor's camera setups
+  (`CreateCameras`) yet; the probes and `CameraNativesTests` test those. This replaces D302's `GetCameraMargin`. After
+  W5-1: 245 Exact, 363 Close, 63 Recorded, 1,164 Missing (from W2-4's 221, 329, 25 and 1,260).
