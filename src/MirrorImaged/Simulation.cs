@@ -57,6 +57,7 @@ public sealed partial class Simulation : IDisposable
         {
             var (users, computers, others) = Lineup(info, options);
             foreach (var file in data.Map.Unread) _game.Write("map", "left out, as it can't be read: " + file);
+            _natives.Place();
             foreach (var native in NativeMethods.OrderBy(method => method.Name, StringComparer.Ordinal))
                 _lua.Register(native.Name, Bind(native));
             foreach (var (name, value) in _natives.Globals())
@@ -218,7 +219,16 @@ public sealed partial class Simulation : IDisposable
     LuaThread? Started(Func<LuaThread> start)
     {
         LuaThread? thread = null;
-        Protect(() => thread = start());
+        Protect(() =>
+        {
+            try { thread = start(); }
+            // A thread nested past Lua's limit of C calls doesn't start: a Lua map's game drops it, but a JASS map's
+            // closed (probes destructables-remove and destructables-remove-jass; the JASS machine's depth not measured)
+            catch (LuaException e) when (_jass && e.Message.Contains("C stack overflow"))
+            {
+                throw new GameClosedException("The game closes: JASS threads nested too deep, each started inside the one before");
+            }
+        });
         return thread;
     }
 

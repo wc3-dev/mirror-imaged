@@ -9,4 +9,8 @@
     <PackageReference Include="War3Net.IO.Mpq" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Decks.txt" LogicalName="Decks.txt" />
+  </ItemGroup>
+
 </Project>

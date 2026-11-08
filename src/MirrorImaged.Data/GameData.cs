@@ -13,6 +13,7 @@ public sealed class GameData
 {
     readonly Dictionary<(ObjectKind, int), GameObject> _objects = [];
     readonly Dictionary<string, string> _constants;
+    readonly Dictionary<string, (int, int)?> _pathing = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The standard data with the map's changes: a change to a standard object changes it; a new object starts from
@@ -86,6 +87,20 @@ public sealed class GameData
 
     /// <summary>The hotkey of <c>ui/miscui.txt</c> for <paramref name="key"/> (any case), as written (<c>C</c>); null when it has none.</summary>
     public string? Hotkey(string key) => Standard.Hotkeys.GetValueOrDefault(key);
+
+    /// <summary>The World Editor string the game keeps for <paramref name="key"/> (any case); null when it has none.</summary>
+    public string? EditorString(string key) => Standard.EditorStrings.GetValueOrDefault(key);
+
+    /// <summary>
+    /// A pathing texture's size in cells, across and up: the map's own file of that path (a TGA) first, then the
+    /// game's; null for none.
+    /// </summary>
+    public (int Across, int Up)? PathingSize(string path)
+    {
+        if (!_pathing.TryGetValue(path, out var size))
+            _pathing[path] = size = StandardData.PathingSize(Map?.File(path)) ?? (Standard.PathingSizes.TryGetValue(path, out var standard) ? standard : null);
+        return size;
+    }
 
     // A number as its invariant text, a real as the shortest that reads back the same float, without an exponent, which
     // Integer would read as atoi does (1E-05 as 1).

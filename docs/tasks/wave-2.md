@@ -116,6 +116,9 @@ Needs W2-2.
   selected later), `ForGroup`, `FirstOfGroup` with removed units, rects, regions with their 32-cell rule, enter and
   leave events (including `SetUnitX`/`SetUnitY`), locations and `GetLocationZ` (facts, "Units", "Groups and
   performance").
+- Left by W2-4 (D259): its smallest locations and rects (`Locations.cs`: `Location`, `MoveLocation`, `RemoveLocation`,
+  `GetLocationX/Y/Z`, `Rect`, `RemoveRect`) are this task's to take over, and so is `GetLocationZ`, which reads the
+  terrain and the bridges' decks (`GameNatives.Height`, D255): keep the deck part as it is.
 - Left by W1-4: `DefineStartLocationLoc` and `GetStartLocationLoc`.
 - Left by W2-2 (D223, D225): `GetFilterUnit` for the enumerations (a player-unit event's filter never runs), the map's
   playable area for `SetUnitPosition` and for `CreateUnit` off the map (the game put one asked at (5000, -5000) on the

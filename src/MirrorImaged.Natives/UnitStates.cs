@@ -5,21 +5,9 @@ public sealed partial class GameNatives
 {
     const int LifeState = 0, MaxLifeState = 1, ManaState = 2, MaxManaState = 3; // UNIT_STATE_*
 
-    /// <summary>A unit's life; 0 for nil.</summary>
-    [Native(Level.Exact, Fact = UnitsProbe)]
-    public float GetWidgetLife(widget? whichWidget) => whichWidget is unit u ? u.Life : 0;
-
-    /// <summary>
-    /// Kept up to the most life, as the most life less the damage that leaves, in floats (0.41 reads 0.4100037 on a
-    /// footman of 420, 0.4099731 on a Paladin of 650); below 0.405 the unit dies, the death event inside the call
-    /// reading life 0 (facts, Units; probe units). A dead unit stays dead, its life kept from 0 to its most.
-    /// </summary>
-    [Native(Level.Exact, Fact = "game-facts.md, Units: SetWidgetLife clamps and 0.3, 0 and -5 kill (10-21); " + UnitsProbe)]
-    public void SetWidgetLife(widget? whichWidget, float newLife)
-    {
-        if (whichWidget is unit u) SetLife(u, newLife);
-    }
-
+    // A unit's life is kept up to the most life, as the most life less the damage that leaves, in floats (0.41 reads
+    // 0.4100037 on a footman of 420, 0.4099731 on a Paladin of 650); below 0.405 the unit dies, the death event inside
+    // the call reading life 0 (facts, Units; probe units). A dead unit stays dead, its life kept from 0 to its most.
     void SetLife(unit u, float life)
     {
         var max = u.MaxLife;
@@ -27,12 +15,6 @@ public sealed partial class GameNatives
         if (u.Dead) u.Life = Math.Max(u.Life, 0);
         else if (u.Life < Dying) Kill(u);
     }
-
-    [Native(Level.Exact, Fact = UnitsProbe)]
-    public float GetWidgetX(widget? whichWidget) => whichWidget is unit u ? u.X : 0;
-
-    [Native(Level.Exact, Fact = UnitsProbe)]
-    public float GetWidgetY(widget? whichWidget) => whichWidget is unit u ? u.Y : 0;
 
     /// <summary>Life, most life, mana and most mana; 0 for any other state.</summary>
     [Native(Level.Exact, Fact = UnitsProbe)]

@@ -24,6 +24,7 @@ public sealed unsafe class LuaState : IDisposable
     readonly StateHandle _handle;
     bool _yield;
     int _limit;
+    nint _calling; // the Lua thread calling the C# function running now, if one is, which a thread it runs nests in
 
     public LuaState()
     {
@@ -110,8 +111,9 @@ public sealed unsafe class LuaState : IDisposable
 
     internal LuaThread Start(string? name, int reference)
     {
-        var thread = new LuaThread(this, Use(l =>
+        var thread = new LuaThread(this, Use(main =>
         {
+            var l = Nesting(main);
             int top = lua_gettop(l), made, status = mirror_start(l, name, reference, &made);
             if (status != 0) throw Error(l, top);
             return made;
@@ -120,13 +122,19 @@ public sealed unsafe class LuaState : IDisposable
         return thread;
     }
 
+    // A thread is run on from the thread calling the C# function running now, if one is, so its nesting counts in
+    // Lua's limit of 200 C calls as the game's does: a native starting a callback that calls the native again goes 98
+    // deep there, 65 with a pcall around the call (probe destructables-remove), before the start fails.
     internal (object?[] Results, bool Yielded) Resume(int thread) =>
-        Use(l =>
+        Use(main =>
         {
+            var l = Nesting(main);
             if (_limit > 0) Limit(l, thread);
             int top = lua_gettop(l), yielded, status = mirror_resume(l, thread, &yielded);
             return yielded != 0 ? ([], true) : (Results(l, top, status, argument: true), false);
         });
+
+    nint Nesting(nint main) => _calling != 0 ? _calling : main;
 
     /// <summary>
     /// Makes the Lua thread calling the C# function now running yield when that function returns, until it is resumed
@@ -231,9 +239,12 @@ public sealed unsafe class LuaState : IDisposable
             for (int i = 0; i < args.Length; i++) args[i] = state.Read(l, i + 1, argument: true);
             object?[] values;
             state._yield = false;
+            var outer = state._calling;
+            state._calling = l;
             try { values = function(args); }
             finally
             {
+                state._calling = outer;
                 foreach (var arg in args)
                     if (arg is LuaFunction { Kept: false } given) given.Dispose();
             }
