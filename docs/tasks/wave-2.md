@@ -132,6 +132,10 @@ Needs W2-2.
 - From W2-2's review: `SetUnitX`/`SetUnitY` write X and Y directly, so enter and leave events need a move hook;
   W2-2 keeps no list of the game's units (its O(n) one was dropped), so the enumerations bring one, in the order made,
   with a removal that isn't O(n). Also `CreateUnitAtLoc`/`SetUnitPositionLoc`, `BlzGetUnitCollisionSize`.
+- From W2-4's review (D250, D70): every callback a native starts now nests in the calling Lua thread. Probe the
+  nesting depth of `ForForce`, enumeration and filter callbacks in a Lua map (MirrorImaged stops at about 99), and in
+  a JASS map `ExecuteFunc` recursion guarded at 120 and at 1000: MirrorImaged closes the game at about 98 (Lua's 200
+  C calls), which the game's JASS machine may not; match what the game does.
 
 ## W2-7 Abilities on units, without casting
 
