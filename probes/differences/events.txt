@@ -1,0 +1,15 @@
+# Where MirrorImaged differs from the game's lines in expected/events.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# The time of day's events (D144, Close; W1-10): the game's order among one moment's events, and the events it fires
+# again in the frames after a set with the day stopped, aren't modelled; the moving lines' times differ too.
++ forward from 11.9 at 0.0000: inside ; then EQ@2.0010:12,GE@2.0010:12,GT@2.0010:12
++ backward from 12.1 at 2.5000: inside ; then LT@4.5010:12,LE@4.5010:12,EQ@4.5010:12
++ stopped at 12 at 5.0000: inside EQ@5.0000:12,GE@5.0000:12,GT@5.0000:12; then 
++ stopped, 12 to 13 at 7.5000: inside GE@7.5000:13,GT@7.5000:13; then 
++ running, set 12 at 10.0000: inside LT@10.0000:12,LE@10.0000:12; then EQ@10.0010:12,GE@10.0010:12,GT@10.0010:12
+- ~ forward from 11.9 at {t}: inside ; then GT@{t}:12,GE@{t}:12,EQ@{t}:12
+- ~ backward from 12.1 at {t}: inside ; then EQ@{t}:12,LE@{t}:12,LT@{t}:12
+- ~ stopped at 12 at {t}: inside EQ@{t}:12,GT@{t}:12,GE@{t}:12; then EQ@{t}:12,GT@{t}:12,GE@{t}:12,LE@{t}:12,LT@{t}:12
+- ~ stopped, 12 to 13 at {t}: inside ; then 
+- ~ running, set 12 at {t}: inside LE@{t}:12,LT@{t}:12; then EQ@{t}:12,GT@{t}:12,GE@{t}:12

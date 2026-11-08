@@ -19,6 +19,7 @@ public sealed class LuaSandboxTests : IDisposable
     [InlineData("collectgarbage")]
     [InlineData("math.random")]
     [InlineData("math.randomseed")]
+    [InlineData("string.dump")]
     public void Missing(string name) => Assert.Null(_lua.Run($"return {name}")[0]);
 
     // plain Lua 5.3's: the facts list only what the game is missing
@@ -46,10 +47,13 @@ public sealed class LuaSandboxTests : IDisposable
     [Fact]
     public void OsTimeIsAnInteger() => Assert.Equal("integer", _lua.Run("return math.type(os.time())")[0]);
 
-    /// <summary>Bytecode is never checked by Lua 5.3; what the game does with it isn't measured.</summary>
+    /// <summary>
+    /// Bytecode is never checked by Lua 5.3, so it is refused, while the game seems to read it (inferred, probe
+    /// lua-config: the start of a binary chunk reached its reader, "truncated precompiled chunk"; decisions D126).
+    /// </summary>
     [Theory]
-    [InlineData("load(string.dump(function() return 1 end))")]
-    [InlineData("load(string.dump(function() return 1 end), 'dumped', 'b')")]
+    [InlineData(@"load('\27Lua\83\0')")]
+    [InlineData(@"load('\27Lua\83\0', 'binary', 'b')")]
     public void BinaryChunksAreRefused(string load)
     {
         var result = _lua.Run($"return {load}");

@@ -1,0 +1,6 @@
+# Where MirrorImaged differs from the game's lines in expected/triggers-3.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# Ids (D110, D120) and Condition(nil) inside Not, as D114 has it (Close; docs/tasks/later.md, wave 10).
+- nil condition 1048743 1048744 false false false true false true
++ nil condition 1048659 1048660 false false false false false true
