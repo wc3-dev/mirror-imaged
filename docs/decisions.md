@@ -1715,7 +1715,10 @@ where not.
   living unit's food used and made go to its owner's `PLAYER_STATE_RESOURCE_FOOD_USED` and `FOOD_CAP` at the same
   moments (a corpse adds and takes back), firing the state events inside the call, and `SetUnitUseFood` moves only the
   food used. The counts and food are kept before any of those events fires, and a death's before its life state
-  event, so a handler that gives the unit away finds them whole (from the code review). `UnitId` reads `unitui.slk`'s `name`, which the text files' `Name` would
+  event, so a handler that gives the unit away finds them whole (from the code review). Not measured, the model's (from
+  the re-review): an old owner's food event that kills the unit or gives it away ends `SetUnitOwner` there, with no
+  owner change event, and one that stops its food use leaves the new owner's food used unannounced; a corpse's
+  count and food are taken back from the owner they were counted for, also when its food event gives it away. `UnitId` reads `unitui.slk`'s `name`, which the text files' `Name` would
   replace in the data's rows: `StandardData` keeps it as the unit field `name` (a test gives it so too), and
   `GameData.Objects` lists a kind's objects in the order of its first table (unitdata.slk for units; each object keeps
   its row), then the map's new ones by id, so a name two types share is the first's (paladin is `Hpal`; archmage

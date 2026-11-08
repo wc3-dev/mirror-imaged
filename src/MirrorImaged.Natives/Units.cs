@@ -75,10 +75,11 @@ public sealed partial class GameNatives
         u.Dead = corpse;
         FallAsleep(u);
         // A corpse counts its food and gives it back (two food events), and gets its undefend, with no death event
-        // (probes units-more and units-bones)
-        Counting(u, 1);
+        // (probes units-more and units-bones); taken back from the owner it was counted for, as a food event may give it away
+        var (counter, counted) = (u.Owner, Count(u.Owner, u, 1));
+        Announce(counter, counted);
         if (!corpse) return u;
-        Counting(u, -1);
+        Announce(counter, Uncount(counter, u, counted));
         Undefend(u, Defends(u));
         if (!hero) Rot(u, Seconds + Bones);
         return u;

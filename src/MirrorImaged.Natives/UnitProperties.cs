@@ -179,14 +179,16 @@ public sealed partial class GameNatives
         if (!u.Dead && !u.Paused) FireUnit(new(u, Order: Stop), UnitIssuedOrder, PlayerUnitIssuedOrder);
         if (u.Owner != previous) return;
         Asleep(u);
-        // The count and food move before any food event, and a food event that gives the unit away ends this call
-        var (lost, gained) = u.Dead ? default : (Count(previous, u, -1), Count(whichPlayer, u, 1));
+        // The count and food move before any food event; a food event that gives the unit away or kills it ends this call,
+        // and one that stops its food use leaves the new owner's food used unannounced (not measured)
+        var (dead, usesFood) = (u.Dead, u.UsesFood);
+        var (lost, gained) = dead ? default : (Count(previous, u, -1), Count(whichPlayer, u, 1));
         u.Owner = whichPlayer;
         if (changeColor) u.Color = whichPlayer.Color;
         Announce(previous, lost);
-        if (u.Owner != whichPlayer) return;
-        Announce(whichPlayer, gained);
-        if (u.Owner != whichPlayer) return;
+        if (u.Owner != whichPlayer || u.Dead != dead) return;
+        Announce(whichPlayer, (u.UsesFood == usesFood ? gained.Used : 0, gained.Made));
+        if (u.Owner != whichPlayer || u.Dead != dead) return;
         FireUnit(new(u, Previous: previous), UnitChangeOwner, PlayerUnitChangeOwner);
         if (u.Paused) u.GivenWhilePaused = true;
         else if (!u.Dead) Undefend(u, Defends(u));

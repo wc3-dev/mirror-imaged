@@ -338,6 +338,48 @@ public sealed class UnitMoreTests : IDisposable
         ], Printed(simulation));
     }
 
+    // From the re-review (not measured): a food event of the old owner's that kills the unit ends SetUnitOwner, so the
+    // new owner's food events don't fire again and no owner change fires for a dead unit
+    [Fact]
+    public void A_food_event_that_kills_the_unit_ends_the_owner_change()
+    {
+        using var simulation = Run("""
+            local p9, p10 = Player(9), Player(10)
+            local g = make("hfoo", p9)
+            local f, once = CreateTrigger(), true
+            TriggerRegisterPlayerStateEvent(f, p9, PLAYER_STATE_RESOURCE_FOOD_USED, LESS_THAN, 1)
+            TriggerAddAction(f, function() if once then once = false KillUnit(g) end end)
+            local e = CreateTrigger()
+            TriggerRegisterPlayerStateEvent(e, p10, PLAYER_STATE_RESOURCE_FOOD_USED, GREATER_THAN_OR_EQUAL, 0)
+            TriggerRegisterPlayerUnitEvent(e, p10, EVENT_PLAYER_UNIT_CHANGE_OWNER, nil)
+            TriggerAddAction(e, function() print("p10", GetHandleId(GetTriggerEventId()), GetPlayerState(p10, PLAYER_STATE_RESOURCE_FOOD_USED)) end)
+            SetUnitOwner(g, p10, false)
+            print(pid(GetOwningPlayer(g)), tf(UnitAlive(g)), GetPlayerUnitCount(p9, false), GetPlayerUnitCount(p10, false), GetPlayerState(p9, PLAYER_STATE_RESOURCE_FOOD_USED))
+            """);
+
+        Assert.Equal(["p10\t11\t0", "10\tf\t0\t0\t0"], Printed(simulation));
+    }
+
+    // From the re-review (not measured): a corpse's count and food are taken back from the owner it was counted for,
+    // also when its first food event gives it away
+    [Fact]
+    public void A_corpse_given_away_in_its_food_event_leaves_no_count()
+    {
+        var game = new World.Game(0);
+        var natives = new Natives.GameNatives(game) { Data = new GameData(Standard()) };
+        var (p9, p10) = (natives.Player(9)!, natives.Player(10)!);
+        var t = natives.CreateTrigger()!;
+        natives.TriggerRegisterPlayerStateEvent(t, p9, natives.ConvertPlayerState(5), natives.ConvertLimitOp(3), 1);
+        var next = 0;
+        next = natives.TriggerAddAction(t, () => natives.SetUnitOwner((Natives.unit)game.Handle(next)!, p10, false))!.Key + 1; // the corpse's
+
+        var corpse = natives.CreateCorpse(p9, Ids.Of("hfoo"), 0, 0, 0)!;
+
+        Assert.Equal(p10, natives.GetOwningPlayer(corpse));
+        Assert.Equal((0, 0, 0, 0), (natives.GetPlayerUnitCount(p9, false), natives.GetPlayerUnitCount(p10, false),
+            natives.GetPlayerState(p9, natives.ConvertPlayerState(5)), natives.GetPlayerState(p10, natives.ConvertPlayerState(5))));
+    }
+
     // From the code review: what changes what a creep's sleep reads settles its sleep first, so dusk and dawn find it as
     // it was: a creep awake at noon, night set, then no creep sleep set, sleeps; one asleep, day set, then paused, wakes
     [Fact]

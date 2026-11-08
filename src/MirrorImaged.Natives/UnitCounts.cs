@@ -29,6 +29,15 @@ public sealed partial class GameNatives
         return (used, made);
     }
 
+    // Takes back what Count counted for p, whatever changed since
+    (int Used, int Made) Uncount(player p, unit u, (int Used, int Made) counted)
+    {
+        p.UnitCounts[u.Type.Id]--;
+        p.States[FoodUsedState] -= counted.Used;
+        p.States[FoodCap] -= counted.Made;
+        return (-counted.Used, -counted.Made);
+    }
+
     void Announce(player p, (int Used, int Made) change)
     {
         if (change.Used != 0) PlayerStateChanged(p, Convert<playerstate>(FoodUsedState), p.States[FoodUsedState]);
