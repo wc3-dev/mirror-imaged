@@ -39,6 +39,28 @@ public sealed class MapArchiveTests : IDisposable
         Assert.True(map.Jass);
     }
 
+    // decisions D130, not measured
+    [Theory]
+    [InlineData(ScriptLanguage.Lua, false)]
+    [InlineData(ScriptLanguage.Jass, true)]
+    public void With_both_scripts_war3map_w3i_s_language_chooses(ScriptLanguage language, bool jass)
+    {
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".w3x");
+        var info = MapFactory.Info(32, 32);
+        info.ScriptLanguage = language;
+        var builder = new MapBuilder(new Map { Info = info, Environment = MapFactory.Environment(info) });
+        builder.AddFiles(MpqFile.New(new MemoryStream("-- lua\n"u8.ToArray()), "war3map.lua"), MpqFile.New(new MemoryStream("// jass\n"u8.ToArray()), "war3map.j"));
+        builder.Build(path);
+        try
+        {
+            var map = MapArchive.Read(path);
+
+            Assert.Equal(jass, map.Jass);
+            Assert.Equal(jass ? "// jass\n" : "-- lua\n", Encoding.UTF8.GetString(map.Script!));
+        }
+        finally { File.Delete(path); }
+    }
+
     // where older maps keep it
     [Fact]
     public void A_war3map_j_in_the_scripts_folder_is_read_too()

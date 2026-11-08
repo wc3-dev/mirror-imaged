@@ -78,6 +78,19 @@ public sealed class LuaLimitTests : IDisposable
         Assert.InRange((int)_lua["n"]!, 4_010, 10_010);
     }
 
+    // MirrorImaged's own Lua (the chunk "mirror") is passed over, so a limit or a native's error names the script's line
+    [Fact]
+    public void An_error_raised_in_MirrorImaged_s_own_Lua_names_the_script_s_line()
+    {
+        _lua.Register("fail", _ => throw new ArgumentException("refused"));
+        _lua.Run("function helper() fail() end\nfunction helperForever() while true do n = n + 1 end end", "mirror");
+        _lua.Run("function script() helper() end\nfunction scriptForever() helperForever() end", "war3map.lua");
+        _lua.OperationLimit = 10_000;
+
+        Assert.StartsWith("war3map.lua:1: refused", Assert.Throws<LuaException>(() => _lua.Call("script")).Message);
+        Assert.StartsWith("war3map.lua:2: the thread passed JASS's operation limit", Assert.Throws<LuaException>(() => _lua.Call("scriptForever")).Message);
+    }
+
     [Fact]
     public void A_limit_of_zero_takes_it_away()
     {

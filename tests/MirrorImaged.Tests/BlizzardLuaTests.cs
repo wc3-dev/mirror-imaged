@@ -111,6 +111,40 @@ public sealed class BlizzardLuaTests : IDisposable
         Assert.Equal(["float", "float", "float", "float", 2000f, -5f, -79f], state.Run("return table.unpack(x)"));
     }
 
+    // With JASS's rules, a variable set on every side of an if needs no check after it, one set on one side does, and
+    // one set before the if needs none inside it (decisions D136)
+    [Fact]
+    public void A_variable_set_on_every_side_of_an_if_is_read_unchecked_after_it()
+    {
+        var lua = Jass.ToLua(
+            [War3Net.CodeAnalysis.Jass.JassSyntaxFactory.ParseCompilationUnit("native Show takes integer i returns nothing")],
+            """
+            function Read takes boolean b returns nothing
+                local integer both
+                local integer one
+                local integer early
+                set early = 0
+                if b then
+                    set both = 1
+                    set one = 1
+                    call Show(early)
+                elseif early == 0 then
+                    set both = 2
+                else
+                    set both = 3
+                    return
+                endif
+                call Show(both)
+                call Show(one)
+            endfunction
+            """,
+            rules: true);
+
+        Assert.DoesNotContain("MirrorImaged_Read(both", lua);
+        Assert.DoesNotContain("MirrorImaged_Read(early", lua);
+        Assert.Contains("MirrorImaged_Read(one, \"one\")", lua);
+    }
+
     [Fact]
     public void The_cache_s_file_is_named_for_the_game_s_build_in_the_user_s_cache()
     {

@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Numerics;
 using CSharpLua;
 using MirrorImaged.Lua;
 using MirrorImaged.Natives;
@@ -34,59 +35,18 @@ static class Jass
         """);
 
     /// <summary>
-    /// The Lua of the functions JASS's rules call, run before blizzard.j in a JASS map's state;
-    /// <c>MirrorImaged_Closes</c>, which closes the game, is C#'s. Each error names the JASS line calling it.
-    /// </summary>
-    internal const string Prelude = """
-        local error, rawequal, pack, unpack, lowest, I2R, closes = error, rawequal, string.pack, string.unpack, math.mininteger, I2R, MirrorImaged_Closes
-        local unset = {}
-        MirrorImaged_Unset, MirrorImaged_Closes = unset, nil
-        function MirrorImaged_Read(value, name)
-          if rawequal(value, unset) then error(name .. " was read before it was set, which ends the thread", 2) end
-          return value
-        end
-        function MirrorImaged_Divide(dividend, divisor)
-          if divisor == 0 then error("an integer was divided by zero, which ends the thread", 2) end
-          if divisor == -1 and dividend == lowest then closes("The game closes: -2147483648 was divided by -1") end
-          local quotient = dividend // divisor
-          if quotient < 0 and quotient * divisor ~= dividend then quotient = quotient + 1 end
-          return quotient
-        end
-        function MirrorImaged_DivideReal(dividend, divisor)
-          if divisor == 0 then error("a real was divided by zero, which ends the thread", 2) end
-          return dividend / divisor
-        end
-        function MirrorImaged_Join(a, b)
-          if a == nil then return b elseif b == nil then return a end
-          return a .. b
-        end
-        function MirrorImaged_Equal(a, b)
-          local d = a - b
-          if d < 0 then d = -d end
-          if d < 0.001 then return true end
-          if a < 0 then a = -a end
-          if b < 0 then b = -b end
-          if b > a then a = b end
-          local exponent = unpack('<I4', pack('<f', a)) & 0x7f800000
-          return exponent > 0x0b000000 and d < unpack('<f', pack('<I4', exponent - 0x0b000000))
-        end
-        function MirrorImaged_Real(i)
-          if i > -16777217 and i < 16777217 then return i + 0.0 end
-          return I2R(i)
-        end
-        function MirrorImaged_Bits(i)
-          return (unpack('<f', pack('<i4', i)))
-        end
-        """;
-
-    /// <summary>
     /// <paramref name="jass"/> as Lua. <paramref name="declarations"/> are the files it calls into, whose types tell
     /// joining strings from adding numbers, and with <paramref name="rules"/>, integers from reals; they aren't made
-    /// into Lua. With <paramref name="rules"/>, the Lua keeps JASS's rules, needing <see cref="Prelude"/>.
+    /// into Lua. JASS the game refuses (it doesn't parse, or names what no file declares) throws an
+    /// <see cref="InvalidDataException"/>, as does the transpiler's own unknown name, a <see cref="KeyNotFoundException"/>.
+    /// With <paramref name="rules"/>, the Lua keeps JASS's rules, through the functions
+    /// <see cref="MirrorImaged.Lua.LuaState.AddJassFunctions"/> adds.
     /// </summary>
     internal static string ToLua(IReadOnlyList<JassCompilationUnitSyntax> declarations, string jass, bool rules)
     {
-        var unit = JassSyntaxFactory.ParseCompilationUnit(jass);
+        JassCompilationUnitSyntax unit;
+        try { unit = JassSyntaxFactory.ParseCompilationUnit(jass); }
+        catch (Exception e) when (e is not OutOfMemoryException) { throw new InvalidDataException($"it doesn't parse: {e.Message}", e); }
         var transpiler = new JassToLuaTranspiler();
         // A map may declare a native itself, as many declare common.ai's UnitAlive, which the transpiler takes once
         var natives = unit.Declarations.OfType<JassNativeFunctionDeclarationSyntax>().Select(native => native.IdentifierName.Token.Text).ToHashSet();
@@ -118,6 +78,10 @@ static class Jass
 
         // The variables that may not be set yet where the rewriter is: those declared without a value, until a set.
         HashSet<string> _unset;
+
+        // Where an if statement's branches put what is still unset at their ends, for after the if (null: a branch that
+        // returns)
+        List<HashSet<string>?>? _branchEnds;
 
         public Rewriter(IEnumerable<JassCompilationUnitSyntax> units, bool rules)
         {
@@ -190,7 +154,7 @@ static class Jass
         {
             JassLiteralExpressionSyntax literal => literal.SyntaxKind switch
             {
-                JassSyntaxKind.DecimalLiteralExpression when int.TryParse(literal.Token.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var n) => n,
+                JassSyntaxKind.DecimalLiteralExpression => Decimal(literal.Token.Text),
                 JassSyntaxKind.HexadecimalLiteralExpression when uint.TryParse(literal.Token.Text[(literal.Token.Text[0] == '$' ? 1 : 2)..],
                     NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var n) => (int)n,
                 JassSyntaxKind.OctalLiteralExpression when literal.Token.Text.Length <= 11 => (int)Convert.ToUInt32(literal.Token.Text, 8),
@@ -204,14 +168,19 @@ static class Jass
             _ => null,
         };
 
+        // A decimal integer as 32 bits, a larger one wrapped (probe jass-integers), where Lua would read it as a float
+        static int Decimal(string text) => (int)(uint)(BigInteger.Parse(text, CultureInfo.InvariantCulture) & uint.MaxValue);
+
         static bool NonZero(JassExpressionSyntax expression) =>
             Whole(expression) is not (null or 0)
             || expression is JassLiteralExpressionSyntax { SyntaxKind: JassSyntaxKind.RealLiteralExpression } real && JassLiteral.ParseReal(real.Token.Text) != 0;
 
         // A number as a JASS literal, a negative one in parentheses, since the Lua of -(-1.0) would otherwise read --1.0,
-        // a comment
+        // a comment; -2147483648 in hexadecimal, which Lua wraps, where its decimal digits read as a float
         static JassExpressionSyntax Number(JassSyntaxToken token) =>
-            token.Text.StartsWith('-') ? JassSyntaxFactory.ParenthesizedExpression(JassSyntaxFactory.LiteralExpression(token)) : JassSyntaxFactory.LiteralExpression(token);
+            token.Text == "-2147483648" ? JassSyntaxFactory.LiteralExpression(JassSyntaxFactory.Token(JassSyntaxKind.HexadecimalLiteralToken, "$80000000"))
+            : token.Text.StartsWith('-') ? JassSyntaxFactory.ParenthesizedExpression(JassSyntaxFactory.LiteralExpression(token))
+            : JassSyntaxFactory.LiteralExpression(token);
 
         static JassExpressionSyntax Call(string helper, params JassExpressionSyntax[] arguments) => JassSyntaxFactory.InvocationExpression(helper, arguments);
 
@@ -272,6 +241,8 @@ static class Jass
         {
             if (literal.SyntaxKind == JassSyntaxKind.FourCCLiteralExpression)
                 result = Number(JassSyntaxFactory.Literal(JassLiteral.ParseFourCC(literal.Token.Text)));
+            else if (literal.SyntaxKind == JassSyntaxKind.DecimalLiteralExpression && !int.TryParse(literal.Token.Text, NumberStyles.None, CultureInfo.InvariantCulture, out _))
+                result = Number(JassSyntaxFactory.Literal(Decimal(literal.Token.Text)));
             else if (_rules && literal.SyntaxKind == JassSyntaxKind.RealLiteralExpression && Real(literal.Token.Text) is var real && float.IsFinite(real))
                 result = JassSyntaxFactory.LiteralExpression(JassSyntaxFactory.Token(JassSyntaxKind.RealLiteralToken, Numeral(real)));
             else return base.RewriteLiteralExpression(literal, out result);
@@ -290,12 +261,14 @@ static class Jass
 
         // A debug statement never runs (probe jass-debug), nor does what follows a return in its block, which War3Net
         // writes after Lua's return, where Lua can't load it (docs/upstream.md). A block's sets may not have happened
-        // after it.
+        // after it, but for an if's branches, which tell the if what they set.
         protected override bool RewriteStatementList(ImmutableArray<JassStatementSyntax> statements, out ImmutableArray<JassStatementSyntax> result)
         {
-            var unset = _unset.ToHashSet();
+            var (ends, unset) = (_branchEnds, _unset.ToHashSet());
+            _branchEnds = null;
             var rewritten = base.RewriteStatementList(statements, out result);
-            _unset = unset;
+            ends?.Add(statements.Any(statement => statement is JassReturnStatementSyntax) ? null : _unset);
+            (_branchEnds, _unset) = (ends, unset);
             if (!rewritten) result = statements;
             var kept = new List<JassStatementSyntax>();
             foreach (var statement in result)
@@ -306,6 +279,17 @@ static class Jass
             if (kept.Count == result.Length) return rewritten;
             result = [.. kept];
             return true;
+        }
+
+        // After an if with an else, what is still unset at the end of a branch that goes on past the if; without an
+        // else, what was before it
+        protected override bool RewriteIfStatement(JassIfStatementSyntax statement, out JassStatementSyntax result)
+        {
+            var ends = _branchEnds = [];
+            var rewritten = base.RewriteIfStatement(statement, out result);
+            _branchEnds = null;
+            if (statement.ElseClause is not null) _unset = [.. ends.OfType<HashSet<string>>().SelectMany(end => end)];
+            return rewritten;
         }
 
         protected override bool RewriteFunctionDeclaration(JassFunctionDeclarationSyntax function, out JassTopLevelDeclarationSyntax result)
@@ -363,6 +347,7 @@ static class Jass
 
         protected override bool RewriteSetStatement(JassSetStatementSyntax set, out JassStatementSyntax result)
         {
+            Declared(set.IdentifierName.Token.Text, function: false);
             var rewritten = base.RewriteSetStatement(set, out result);
             var renamed = (JassSetStatementSyntax)result;
             if (set.ElementAccessClause is null) _unset.Remove(set.IdentifierName.Token.Text);
@@ -437,8 +422,9 @@ static class Jass
             {
                 JassSyntaxKind.DivideExpression when left == "integer" && right == "integer" => "MirrorImaged_Divide",
                 JassSyntaxKind.DivideExpression when !NonZero(binary.Right) => "MirrorImaged_DivideReal",
-                JassSyntaxKind.AddExpression when (left == "string" || right == "string")
-                    && !(binary.Left is JassLiteralExpressionSyntax && binary.Right is JassLiteralExpressionSyntax) => "MirrorImaged_Join",
+                JassSyntaxKind.AddExpression when left is "string" or "null" && right is "string" or "null"
+                    && !(binary.Left is JassLiteralExpressionSyntax { SyntaxKind: JassSyntaxKind.StringLiteralExpression }
+                        && binary.Right is JassLiteralExpressionSyntax { SyntaxKind: JassSyntaxKind.StringLiteralExpression }) => "MirrorImaged_Join",
                 JassSyntaxKind.EqualsExpression when left is "real" or "integer" && right is "real" or "integer" && (left == "real" || right == "real") => "MirrorImaged_Equal",
                 _ => null,
             };

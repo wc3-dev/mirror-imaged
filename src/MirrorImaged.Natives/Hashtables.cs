@@ -88,11 +88,12 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = TablesFact)]
     public bool LoadBoolean(hashtable? table, int parentKey, int childKey) => Load(table, parentKey, childKey, Slot.Boolean) as bool? ?? false;
 
+    /// <summary>The string saved; a key never saved gives "" in Lua and null in JASS (probe jass-threads), as does a saved null.</summary>
     [Native(Level.Exact, Fact = TablesFact)]
     public string? LoadStr(hashtable? table, int parentKey, int childKey) => Load(table, parentKey, childKey, Slot.String) switch
     {
         string s => s,
-        null => "",
+        null when !Jass => "",
         _ => null,
     };
 

@@ -169,7 +169,6 @@ public sealed class ProbeMapTests : IDisposable
         return written.Select(text => text["\")\n".Length..^"\n//".Length]).ToList();
     }
 
-    // Line ends as \n whatever the checkout gives the raw string the script is written from.
     // The game runs a JASS map's war3map.j in its JASS machine; the probe's globals join the map's, which must come first
     [Fact]
     public void A_jass_probe_map_has_the_probe_in_its_war3map_j_and_calls_no_blizzard_j()
@@ -188,6 +187,7 @@ public sealed class ProbeMapTests : IDisposable
         Assert.DoesNotContain("InitBlizzard", script);
     }
 
+    // Line ends as \n whatever the checkout gives the raw string the script is written from.
     Map Build(string name, string lua, bool withComputer = false)
     {
         var path = Path.Combine(_folder, name + ".w3x");

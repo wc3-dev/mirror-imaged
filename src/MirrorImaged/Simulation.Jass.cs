@@ -13,19 +13,23 @@ public sealed partial class Simulation
     /// (probe jass-threads), of which a Lua instruction stands for 1.4 to 3 by the code's shape, 1.82 on average over
     /// the probe's five loops (decisions D135).
     /// </summary>
-    internal const int OperationLimit = 1_650_000;
+    internal const int OperationLimit = 2_100_100;
 
-    // The script made into Lua against common.j's natives and globals and blizzard.j, when given; a script the
-    // transpiler can't take (it doesn't parse, or names what isn't declared) is one the game wouldn't load.
+    // The script made into Lua against common.j's natives and globals and blizzard.j, when given. A script that doesn't
+    // parse or names what isn't declared is one the game wouldn't load; any other failure is MirrorImaged's.
     static byte[] JassLua(string path, byte[] script, JassCompilationUnitSyntax? blizzard)
     {
         try
         {
             return Encoding.UTF8.GetBytes(Jass.ToLua([CommonJ(), .. blizzard is null ? [] : new[] { blizzard }], Encoding.UTF8.GetString(script), rules: true));
         }
-        catch (Exception e) when (e is not OutOfMemoryException)
+        catch (Exception e) when (e is InvalidDataException or KeyNotFoundException)
         {
             throw new InvalidDataException($"The game wouldn't load {path}: its war3map.j can't be made into Lua ({e.Message})", e);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            throw new NotSupportedException($"MirrorImaged can't make {path}'s war3map.j into Lua, though the game may load it: {e.Message}", e);
         }
     }
 
@@ -33,6 +37,6 @@ public sealed partial class Simulation
     void AddJassRules()
     {
         _lua.Register("MirrorImaged_Closes", args => throw new GameClosedException((string)args[0]!));
-        _lua.Run(Jass.Prelude, "mirror");
+        _lua.AddJassFunctions();
     }
 }

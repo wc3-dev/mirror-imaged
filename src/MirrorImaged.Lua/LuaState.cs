@@ -70,6 +70,14 @@ public sealed unsafe class LuaState : IDisposable
 
     const int NoReference = -2;  // Lua's LUA_NOREF, which mirror_limit reads as the main thread
 
+    /// <summary>
+    /// Adds the functions transpiled JASS calls to keep JASS's rules (<c>MirrorImaged_Read</c>, <c>_Divide</c>,
+    /// <c>_DivideReal</c>, <c>_Join</c>, <c>_Equal</c>, <c>_Real</c>, <c>_Bits</c> and the mark <c>MirrorImaged_Unset</c>),
+    /// written in C so <see cref="OperationLimit"/> counts only their calls. <c>MirrorImaged_Divide</c> calls the global
+    /// <c>MirrorImaged_Closes</c> given now, to close the game, which is then taken away.
+    /// </summary>
+    internal void AddJassFunctions() => Use(l => Results(l, lua_gettop(l), mirror_jass(l)));
+
     // Starts the thread's count again, when there is a limit (or it was just taken away)
     object?[] Limit(nint l, int thread) => Results(l, lua_gettop(l), mirror_limit(l, thread, _limit));
 

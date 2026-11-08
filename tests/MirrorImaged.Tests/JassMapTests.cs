@@ -231,7 +231,9 @@ public sealed class JassMapTests : IDisposable
     [InlineData("    call Unknown()", "Unknown is not declared")]
     [InlineData("    call TimerStart(null, 0, false, function Unknown)", "Unknown is not declared")]
     [InlineData("    call I2S(unknown)", "unknown is not declared")]
-    [InlineData("    call I2S(", "")]
+    [InlineData("    call I2S(", "doesn't parse")]
+    [InlineData("    set nope = 1", "nope is not declared")]
+    [InlineData("    set nopes[2] = 3", "nopes is not declared")]
     public void A_war3map_j_that_doesnt_compile_doesnt_load(string line, string problem)
     {
         var map = _maps.Build($"function main takes nothing returns nothing\n{line}\nendfunction\n", ScriptLanguage.Jass);
@@ -278,6 +280,43 @@ public sealed class JassMapTests : IDisposable
             """);
 
         Assert.Equal(["0.000 player 0: 0 0 []"], simulation.Log);
+    }
+
+    // probe jass-threads: null joins as "", and null + null is null
+    [Fact]
+    public void A_null_written_out_joins_as_a_null_string()
+    {
+        using var simulation = Run("""
+            function config takes nothing returns nothing
+            endfunction
+
+            function main takes nothing returns nothing
+                local string both = null + null
+                call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "a" + null + "b")
+                if both == null then
+                    call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "null")
+                endif
+            endfunction
+            """);
+
+        Assert.Equal(["0.000 player 0: ab", "0.000 player 0: null"], simulation.Log);
+    }
+
+    // probe jass-integers: a decimal integer past 32 bits wraps, where Lua would read a float
+    [Fact]
+    public void A_decimal_integer_past_32_bits_wraps()
+    {
+        using var simulation = Run("""
+            function config takes nothing returns nothing
+            endfunction
+
+            function main takes nothing returns nothing
+                local real r = 4294967296
+                call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, I2S(4294967295) + " " + I2S(-2147483648) + " " + I2S(99999999999) + " " + R2S(r))
+            endfunction
+            """);
+
+        Assert.Equal(["0.000 player 0: -1 -2147483648 1215752191 0.000"], simulation.Log);
     }
 
     [Fact]

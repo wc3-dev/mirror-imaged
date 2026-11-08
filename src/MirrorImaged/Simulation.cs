@@ -52,7 +52,7 @@ public sealed partial class Simulation : IDisposable
         var info = data.Map!.Files.Info;
         _jass = data.Map.Jass;
         _game = new Game(options.Seed);
-        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this), Documents = options.Documents, RunPreloadFile = RunPreloadFile, Data = data };
+        _natives = new GameNatives(_game) { Threads = new ScriptThreads(this), Documents = options.Documents, RunPreloadFile = RunPreloadFile, Data = data, Jass = _jass };
         try
         {
             var (users, computers, others) = Lineup(info, options);
@@ -93,6 +93,7 @@ public sealed partial class Simulation : IDisposable
     /// </summary>
     /// <exception cref="FileNotFoundException">The map has no <c>war3map.lua</c> or <c>war3map.j</c>.</exception>
     /// <exception cref="InvalidDataException">The map's <c>war3map.j</c> isn't JASS the game loads.</exception>
+    /// <exception cref="NotSupportedException">MirrorImaged can't make the map's <c>war3map.j</c> into Lua.</exception>
     /// <exception cref="DirectoryNotFoundException">No Warcraft III is installed, whose <c>blizzard.j</c> and standard data every run needs.</exception>
     /// <exception cref="LuaException"><c>blizzard.j</c>'s Lua doesn't load or run (<c>blizzard.lua:N: ...</c>), so no map can.</exception>
     /// <exception cref="ArgumentException">

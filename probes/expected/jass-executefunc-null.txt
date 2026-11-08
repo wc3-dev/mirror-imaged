@@ -1,0 +1,7 @@
+# probes/jass-executefunc-null.j on 3.0.1.24371, single player, 11-08 (W1-7), in the game's JASS machine: the game's
+# lines. One run.
+null start
+null after
+missing start
+missing after
+caller

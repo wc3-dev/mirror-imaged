@@ -333,6 +333,22 @@ static void pushwhere (lua_State *L) {
   lua_pushliteral(L, "");
 }
 
+/* As luaL_where, but passing over MirrorImaged's own Lua (the chunk "mirror"), so a position is the script's; a C
+   function where it looks gives no position, as luaL_where's */
+static void where (lua_State *L, int level) {
+  lua_Debug ar;
+  for (; lua_getstack(L, level, &ar); level++) {
+    lua_getinfo(L, "Sl", &ar);
+    if (strcmp(ar.short_src, "mirror") == 0) continue;
+    if (ar.currentline > 0) {
+      lua_pushfstring(L, "%s:%d: ", ar.short_src, ar.currentline);
+      return;
+    }
+    break;
+  }
+  lua_pushliteral(L, "");
+}
+
 /* Calls back into C#, which only reads the arguments and returns its results (or its error message, as a
    negative count) for this to push, before anything else can call C#. A function argument reaches C# as a
    reference in the registry, a light userdata holding its number, which C# owns. */
@@ -354,7 +370,7 @@ static int trampoline (lua_State *L) {
   }
   pushcsharp(L, results, 1);
   if (n == HALTS) pushwhere(L);
-  else luaL_where(L, 1);
+  else where(L, 1);
   lua_insert(L, -2);
   lua_concat(L, 2);
   return n == HALTS ? halt(L) : lua_error(L);
@@ -525,7 +541,7 @@ LUALIB_API int mirror_resume (lua_State *L, int thread, int *yielded) {
 static void overlimit (lua_State *L, lua_Debug *ar) {
   (void)ar;
   L->allowhook = 1;  /* as rehalt's: the error leaves the hook without turning hooks back on */
-  luaL_where(L, 0);  /* in a hook, level 0 is the Lua function running */
+  where(L, 0);  /* in a hook, level 0 is the Lua function running */
   lua_pushliteral(L, "the thread passed JASS's operation limit");
   lua_concat(L, 2);
   lua_error(L);
@@ -561,4 +577,132 @@ LUALIB_API int mirror_tonumber (const char *s, size_t length, int *integer, floa
   }
   *number = fltvalue(&o);
   return 2;
+}
+
+/* JASS's rules for transpiled JASS (decisions D132 to D136), as C functions, so the operation limit counts only the
+   instructions that call them (D135). Each error names the JASS line calling it. */
+static int jasserror (lua_State *L, const char *message) {
+  where(L, 1);
+  lua_pushstring(L, message);
+  lua_concat(L, 2);
+  return lua_error(L);
+}
+
+/* MirrorImaged_Read(value, name): a variable declared without a value, read before it is set, ends the thread */
+static int jassread (lua_State *L) {
+  if (lua_rawequal(L, 1, lua_upvalueindex(1))) {
+    lua_pushfstring(L, "%s was read before it was set, which ends the thread", luaL_checkstring(L, 2));
+    return jasserror(L, lua_tostring(L, -1));
+  }
+  lua_settop(L, 1);
+  return 1;
+}
+
+/* MirrorImaged_Divide(dividend, divisor): cut toward zero, as C's / does; by zero ends the thread, and -2147483648 by
+   -1 closes the game, through C#'s MirrorImaged_Closes */
+static int jassdivide (lua_State *L) {
+  lua_Integer a = luaL_checkinteger(L, 1), b = luaL_checkinteger(L, 2);
+  if (b == 0) return jasserror(L, "an integer was divided by zero, which ends the thread");
+  if (b == -1 && a == LUA_MININTEGER) {
+    lua_pushvalue(L, lua_upvalueindex(1));
+    lua_pushliteral(L, "The game closes: -2147483648 was divided by -1");
+    lua_call(L, 1, 0);
+  }
+  lua_pushinteger(L, a / b);
+  return 1;
+}
+
+/* MirrorImaged_DivideReal(dividend, divisor): Lua's / in the game's arithmetic; by zero ends the thread */
+static int jassdividereal (lua_State *L) {
+  if (luaL_checknumber(L, 2) == 0) return jasserror(L, "a real was divided by zero, which ends the thread");
+  lua_settop(L, 2);
+  lua_arith(L, LUA_OPDIV);
+  return 1;
+}
+
+/* MirrorImaged_Join(a, b): a string's +, null taken as "", and null + null null */
+static int jassjoin (lua_State *L) {
+  lua_settop(L, 2);
+  if (lua_isnil(L, 1)) return 1;
+  if (lua_isnil(L, 2)) lua_pop(L, 1);
+  else lua_concat(L, 2);
+  return 1;
+}
+
+/* MirrorImaged_Equal(a, b): == on reals, true when |a - b| (in the game's arithmetic) is under 0.001 or under two
+   float steps of the larger magnitude */
+static int jassequal (lua_State *L) {
+  float d, m, n, step;
+  unsigned int bits;
+  lua_settop(L, 2);
+  lua_pushvalue(L, 1);
+  lua_pushvalue(L, 2);
+  lua_arith(L, LUA_OPSUB);
+  d = (float)lua_tonumber(L, -1);
+  m = (float)lua_tonumber(L, 1);
+  n = (float)lua_tonumber(L, 2);
+  if (d < 0) d = -d;
+  if (m < 0) m = -m;
+  if (n < 0) n = -n;
+  if (n > m) m = n;
+  memcpy(&bits, &m, sizeof bits);
+  bits &= 0x7f800000u;
+  step = 0;
+  if (bits > 0x0b000000u) {
+    bits -= 0x0b000000u;
+    memcpy(&step, &bits, sizeof step);
+  }
+  lua_pushboolean(L, d < 0.001f || d < step);
+  return 1;
+}
+
+/* MirrorImaged_Real(i): an integer given to a real, cut toward zero to a float (probe jass-numbers), where C's
+   conversion rounds */
+static int jassreal (lua_State *L) {
+  lua_Integer i = luaL_checkinteger(L, 1);
+  unsigned int u = i < 0 ? 0u - (unsigned int)i : (unsigned int)i;
+  int shift = 0;
+  float f;
+  while ((u >> shift) >= (1u << 24)) shift++;
+  f = (float)((u >> shift) << shift);
+  lua_pushnumber(L, i < 0 ? -f : f);
+  return 1;
+}
+
+/* MirrorImaged_Bits(i): an integer a function returning real returned, its bits read as a float */
+static int jassbits (lua_State *L) {
+  int i = (int)luaL_checkinteger(L, 1);
+  float f;
+  memcpy(&f, &i, sizeof f);
+  lua_pushnumber(L, f);
+  return 1;
+}
+
+static int dojass (lua_State *L) {
+  static const luaL_Reg plain[] = {
+    {"MirrorImaged_DivideReal", jassdividereal}, {"MirrorImaged_Join", jassjoin}, {"MirrorImaged_Equal", jassequal},
+    {"MirrorImaged_Real", jassreal}, {"MirrorImaged_Bits", jassbits}, {NULL, NULL}
+  };
+  const luaL_Reg *f;
+  lua_newtable(L);  /* the mark of a variable not set yet */
+  lua_pushvalue(L, -1);
+  lua_setglobal(L, "MirrorImaged_Unset");
+  lua_pushcclosure(L, jassread, 1);
+  lua_setglobal(L, "MirrorImaged_Read");
+  lua_getglobal(L, "MirrorImaged_Closes");
+  lua_pushcclosure(L, jassdivide, 1);
+  lua_setglobal(L, "MirrorImaged_Divide");
+  lua_pushnil(L);
+  lua_setglobal(L, "MirrorImaged_Closes");
+  for (f = plain; f->name; f++) {
+    lua_pushcfunction(L, f->func);
+    lua_setglobal(L, f->name);
+  }
+  return 0;
+}
+
+/* Makes the functions JASS's rules call globals, taking C#'s MirrorImaged_Closes, which closes the game, and hiding it */
+LUALIB_API int mirror_jass (lua_State *L) {
+  Request r = {NULL, NULL, 0, NULL, LUA_NOREF};
+  return protect(L, dojass, &r, 0);
 }

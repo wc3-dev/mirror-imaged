@@ -12,6 +12,10 @@ globals
     string array jt_strings
     timer array jt_timers
     hashtable jt_table = InitHashtable()
+    integer jt_q = 0
+    real jt_r = 1.0
+    string jt_s = ""
+    string jt_t = "x"
 endglobals
 
 function B takes boolean b returns string
@@ -56,6 +60,59 @@ function SpinExit takes nothing returns nothing
     loop
         exitwhen jt_n > jt_target
         set jt_n = jt_n + 1
+    endloop
+endfunction
+
+// Loops that MirrorImaged runs through its JASS functions: an integer's /, a real's ==, a string's +, an integer
+// added to a real, a variable read where it may not be set yet, and one set on both sides of an if
+function SpinDivide takes nothing returns nothing
+    loop
+        set jt_n = jt_n + 1
+        set jt_q = jt_n / 3
+    endloop
+endfunction
+
+function SpinEqual takes nothing returns nothing
+    loop
+        set jt_n = jt_n + 1
+        if jt_r == 0.5 then
+        endif
+    endloop
+endfunction
+
+function SpinJoin takes nothing returns nothing
+    loop
+        set jt_n = jt_n + 1
+        set jt_s = jt_t + "a"
+    endloop
+endfunction
+
+function SpinMixed takes nothing returns nothing
+    loop
+        set jt_n = jt_n + 1
+        set jt_r = 1.0 + jt_n
+    endloop
+endfunction
+
+function SpinChecked takes nothing returns nothing
+    local integer k
+    loop
+        if jt_n >= 0 then
+            set k = 1
+        endif
+        set jt_n = jt_n + k
+    endloop
+endfunction
+
+function SpinBranches takes nothing returns nothing
+    local integer k
+    loop
+        if jt_n >= 0 then
+            set k = 1
+        else
+            set k = 2
+        endif
+        set jt_n = jt_n + k
     endloop
 endfunction
 
@@ -239,6 +296,10 @@ function NullSaved takes nothing returns nothing
     call out("null saved " + B(SaveStr(jt_table, 1, 2, s)) + " " + B(HaveSavedString(jt_table, 1, 2)) + " " + B(LoadStr(jt_table, 1, 2) == null) + " " + B(LoadStr(jt_table, 1, 2) == ""))
 endfunction
 
+function NullNeverSaved takes nothing returns nothing
+    call out("never saved " + B(LoadStr(jt_table, 9, 9) == null) + " " + B(LoadStr(jt_table, 9, 9) == ""))
+endfunction
+
 function probe takes nothing returns nothing
     local trigger t = CreateTrigger()
     call Count("Spin")
@@ -246,6 +307,12 @@ function probe takes nothing returns nothing
     call Count("SpinNative")
     call Count("SpinLocal")
     set jt_limit = Count("SpinExit")
+    call Count("SpinDivide")
+    call Count("SpinEqual")
+    call Count("SpinJoin")
+    call Count("SpinMixed")
+    call Count("SpinChecked")
+    call Count("SpinBranches")
     call ExecuteFunc("Outer")
     call ExecuteFunc("UninitInteger")
     call ExecuteFunc("UninitIntegerNative")
@@ -268,7 +335,8 @@ function probe takes nothing returns nothing
     call ExecuteFunc("NullSub")
     call ExecuteFunc("NullNumbers")
     call ExecuteFunc("NullSaved")
+    call ExecuteFunc("NullNeverSaved")
     call TriggerAddAction(t, function Waits)
     call TriggerExecute(t)
-    call TimerStart(CreateTimer(), 1.0, false, function done)
+    call TimerStart(CreateTimer(), 3.0, false, function done)
 endfunction

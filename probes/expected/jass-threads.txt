@@ -1,10 +1,17 @@
 # probes/jass-threads.j on 3.0.1.24371, single player, 11-08 (W1-7), in the game's JASS machine: the game's lines.
-# Two runs, the same (the second by the game probe tests).
+# Four runs of the first five loops, two of the six after them, the same; one ended the probe at 1 s, before the
+# wait's end.
 limit Spin 428571
 limit SpinCalling 300000
 limit SpinNative 300000
 limit SpinLocal 333333
 limit SpinExit 230769
+limit SpinDivide 230769
+limit SpinEqual 250000
+limit SpinJoin 230769
+limit SpinMixed 214286
+limit SpinChecked 187499
+limit SpinBranches 187499
 outer first
 inner done
 outer second
@@ -34,5 +41,6 @@ null case true false
 null sub true false
 null numbers 0 0.000 0
 null saved true true true false
+never saved true false
 before wait
 after wait
