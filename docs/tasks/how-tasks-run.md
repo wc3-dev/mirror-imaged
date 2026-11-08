@@ -27,7 +27,9 @@ Every subagent that works on MirrorImaged reads this first. The plan is
 4. Write each design choice the task didn't settle into `docs/decisions.md` (next number, the choice, the reason).
    Write each game behaviour you measure into `docs/facts.md`, in the style of `game-facts.md`.
 5. Tests that need the installed game carry `[Trait("Needs", "Game")]` and are skipped when the game isn't installed,
-   so CI passes without it.
+   so CI passes without it. Use it only when a test really reads the install (a BJ function, `blizzard.j`, the
+   standard data): tests of the runtime itself load their maps through the internal seam that runs without
+   `blizzard.j` (and, from wave 2, with data the test supplies), so CI runs them on all three platforms.
 6. Before the pull request: `git fetch origin`, `git merge origin/release/1.0.0`, resolve any conflict, build, and run
    the tests for the part you changed. All must pass.
 7. Commit in plain imperative lines ("Add the timer natives"). Push, then open the pull request, ready, not a draft:
