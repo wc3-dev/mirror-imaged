@@ -1055,8 +1055,8 @@ model was found in Python against those lines first, then written into `native/m
   of the divisor's mantissa, now as the game builds it: 1024 knots, the k-th `2^47 / (m - 1)`, on straight lines to
   `(2^47 - 2^16) / m` at the next (`2^23` at the last), the interpolated value cut and one added (the knots exact).
   Found from 2,376 measured reciprocals: every knot matches, and with the dividend 2,753 of the 2,887 quotients measured
-  (D29's model 1,597), and `(int)(n / d)` for n 1-2000, d 2-100 now goes wrong 268 times and
-  `Ceiling` 893, as in the game (102 and 956 before). So division stays Close. Also measured: a number divided by the
+  (D29's model 1,597), and `(int)(n / d)` for n 1-2000, d 2-100 now goes wrong 268 times and `Ceiling` 893, as in
+  the game (102 and 956 before). So division stays Close. Also measured: a number divided by the
   same bits is 1 (`0/0` and `-0/-0` too), and any other zero or subnormal dividend gives +0 (`-0/0` and `0/-0` are 0).
 - **D152. The game's maths** (probes `numbers-sqrt`, `numbers-trig`, `numbers-functions`, `numbers-fine-2`).
   `math.sqrt` is exact: one more than the integer root of the mantissa times 2^8 (46341 to 65536), made a number as
@@ -1083,17 +1083,17 @@ model was found in Python against those lines first, then written into `native/m
 - **D153. Timers due at the same moment** (probes `timers`, `timers-2`): they run in the order they were started or
   resumed, a periodic timer keeping the place of its start for every later expiry (D45 queued each expiry when the
   one before ran). A timer paused and resumed in one instant is queued again (timers-2's b2 ran after b4, started
-  before the resume). This matches every order measured but one: in
-  `timers` the timer paused and resumed at 0.25 for 0.75 ran first, before those started at 0, which fits its end
-  falling a hair before 1.0 in the game's float clock (not modelled). The clock reads are not modelled either: the
-  game reads a timer read in the instant it was started a float step past 0 (2^-23 for 2 s, 2^-12 for 3600 s,
+  before the resume). This matches every order measured but one: in `timers` the timer paused and resumed at 0.25 for
+  0.75 ran first, before those started at 0, which fits its end falling a hair before 1.0 in the game's float clock
+  (not modelled). The clock reads are not modelled either: a timer read in the instant it was started reads a float
+  step past 0 (2^-23 for 2 s, 2^-12 for 3600 s,
   2^-7 for 100000 s), and a step past each whole second while the clock's float holds a hair past the start, so its
   clock starts a hair past 0 (between 4.8e-7 and 9.5e-7 s by `game-time`'s 1.01 to 7.01 and 8.00 on, inferred) that a
   timer's end, made as start plus timeout in floats, drops; a 0.01 s periodic timer's expiries read as 0.01 times the
   count, but for the 25th, a step past 0.25. Here the clock is the 1/1024 s step (D45), so `TimerGetElapsed` and
   `TimerGetRemaining` stay Close and the timers probes' read lines are recorded differences.
 - **D154. The string hash seed is `0x1c46318e`** (probes `lua-config` and `string-order`): the 20 keys of `lua-config`
-  fit 49,152 seeds, which share their low 20 bits (12 patterns), and of those the six sets of 24 keys of 8 to 60 letters
+  fit 49,152 seeds, whose low 20 bits are one of 12 patterns, and of those the six sets of 24 keys of 8 to 60 letters
   in `string-order` fit one; Lua 5.3.6's own hash and table code reproduce every order with it. So `pairs` over string
   keys visits them as the game's does (the same in three games over the day; whether it changes between machines or
   installs isn't measured). This replaces D35's seed 0 (`native/lua/lstate.c`); D126's inference holds.
