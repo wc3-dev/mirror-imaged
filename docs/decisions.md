@@ -1235,3 +1235,14 @@ each with `ProbeMap.BuildJass`; where MirrorImaged differs by the decisions belo
   declaring one of these names would replace it, which no map does. The rewriter knows each name's type from the files
   as the transpiler does; `MirrorImaged_Read` is declared real to it, since what JASS's types change (an integer's `/`
   and a string's `+`) is rewritten before the transpiler sees them.
+- **D139. The JASS maps in `Documents\Warcraft III\Maps`,** read-only: `mirror run` of each, 60 s, after W2-1's merge.
+  Of the 299 JASS maps (and 82 Lua ones, which stop as before), 292 run their script and `config` and stop at the first
+  line of `main`, `GetCameraMargin` (Missing, wave 5), as the Lua maps do (D99); five stop earlier at another Missing
+  native (`DialogCreate` twice and `CreateItemPool` among the globals or `main`'s setup, `Location`, and
+  `TriggerRegisterPlayerUnitEvent` through a BJ function); two don't load as Lua: a function with more than 200
+  locals, Lua's limit (Gaia's ORPG, Survival Chaos Reborn), left for later (JASS has no such limit; moving the extra
+  locals into a table would need the transpiler's output rewritten). The first run found two more, now handled: seven
+  maps declare a native themselves (`native UnitAlive takes unit id returns boolean`, `GetUnitGoldCost`), which the
+  transpiler took twice and refused, so a native the map declares is taken from the map alone; and one (WotLK RPG)
+  has statements after a `return`, which War3Net writes where Lua can't load them (`docs/upstream.md`), so they are
+  left out. After W1-7, with W1-8 and W2-1 merged first, the natives' levels are unchanged.
