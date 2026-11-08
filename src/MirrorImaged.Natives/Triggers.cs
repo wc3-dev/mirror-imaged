@@ -95,7 +95,7 @@ public sealed partial class GameNatives
     const int TimerExpired = 4;  // EVENT_GAME_TIMER_EXPIRED
 
     // What the event responses read in a thread: the trigger it runs for and the event that started it (decisions D75)
-    sealed record Firing(trigger? Trigger, eventid Event, gamestate? State = null);
+    sealed record Firing(trigger? Trigger, eventid Event, gamestate? State = null, player? Player = null, playerstate? PlayerState = null);
 
     readonly List<(gamestate State, limitop Op, float Limit, @event Event)> _stateEvents = [];
     Firing? _firing, _outside;
@@ -131,6 +131,9 @@ public sealed partial class GameNatives
         }
         whichTrigger.Events.Clear();
         _stateEvents.RemoveAll(state => state.Event.Trigger == whichTrigger);
+        _playerEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
+        _allianceEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
+        _playerStateEvents.RemoveAll(e => e.Event.Trigger == whichTrigger);
         _game.Remove(whichTrigger.Key);
     }
 
@@ -293,12 +296,14 @@ public sealed partial class GameNatives
     /// <summary>
     /// Waits in a trigger's actions or ExecuteFunc's function until the first tenth of a second of game time after the
     /// timeout (decisions D71). A wait in a timer's callback or a condition never ends; in the main thread, or past a C
-    /// function, it raises.
+    /// function, it raises. The first wait started in the step a force ForForce ran over was destroyed in never ends
+    /// either (DestroyForce).
     /// </summary>
     [Native(Level.Close)]
     public void TriggerSleepAction(float timeout)
     {
-        _sleep = timeout;
+        _sleep = _waitLost == _game.Step ? float.PositiveInfinity : timeout;
+        _waitLost = -1;
         if (Threads is null) throw new InvalidOperationException("attempt to yield from outside a coroutine");
         Threads.Yield();
     }
@@ -427,7 +432,9 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// An integer game state's event fires inside SetIntegerGameState when the value changes to one that passes the
-    /// comparison, and NOT_EQUAL's on every change. The time of day's comes with its clock, in W1-9 (decisions D76).
+    /// comparison, and NOT_EQUAL's on every change. The time of day's fire inside SetFloatGameState and as the day
+    /// passes the limit (GameState.cs). Close: three things the events probe saw the game do in the frames after a set
+    /// aren't modelled (decisions D144).
     /// </summary>
     [Native(Level.Close)]
     public @event? TriggerRegisterGameStateEvent(trigger? whichTrigger, gamestate? whichState, limitop? opcode, float limitval)
@@ -435,6 +442,7 @@ public sealed partial class GameNatives
         if (whichTrigger is null || whichState is null || opcode is null) return null;
         var registered = Register(whichTrigger);
         _stateEvents.Add((whichState, opcode, limitval, registered));
+        ScheduleDay();
         return registered;
     }
 
@@ -447,16 +455,7 @@ public sealed partial class GameNatives
     void IntegerStateChanged(igamestate whichIntegerGameState, int value)
     {
         foreach (var (state, op, limit, registered) in _stateEvents.ToArray())
-            if (state == whichIntegerGameState && op.Id switch
-                {
-                    0 => value < limit,
-                    1 => value <= limit,
-                    2 => value == limit,
-                    3 => value >= limit,
-                    4 => value > limit,
-                    5 => true,
-                    _ => false,
-                })
+            if (state == whichIntegerGameState && (op.Id == 5 || Compare(op.Id, value, limit)))
                 Fire(registered, Convert<gameevent>(op.Id - 255), state);
     }
 
@@ -468,12 +467,12 @@ public sealed partial class GameNatives
     }
 
     // An event: counted; then, when the trigger is enabled and its conditions pass, its actions run (probe triggers-2)
-    void Fire(@event registered, eventid id, gamestate? state = null)
+    void Fire(@event registered, eventid id, gamestate? state = null, player? player = null, playerstate? playerState = null)
     {
         if (registered.Trigger is not { Destroyed: false } t) return;
         t.EvalCount++;
         if (!t.Enabled) return;
-        var firing = new Firing(t, id, state);
+        var firing = new Firing(t, id, state, player, playerState);
         if (!In(firing, () => Passes(t))) return;
         t.ExecCount++;
         Execute(t, firing);

@@ -127,12 +127,24 @@ public sealed class ForceNativesTests
         Assert.Equal([0, 2], Members(force));
     }
 
+    // the events probe: a filter is called for each playing player in slot order with GetFilterPlayer set, nil after
     [Fact]
-    public void A_filter_waits_for_the_boolexprs()
+    public void A_filter_sees_each_playing_player_as_the_filter_player()
     {
-        var error = Assert.Throws<MissingNativeException>(() => _natives.ForceEnumPlayers(_natives.CreateForce(), new boolexpr()));
+        _natives.Seat([0, 2], [5]);
+        var seen = new List<int>();
+        var filter = _natives.Filter(() =>
+        {
+            seen.Add(_natives.GetPlayerId(_natives.GetFilterPlayer()));
+            return _natives.GetFilterPlayer() != P(2);
+        });
+        var force = _natives.CreateForce();
 
-        Assert.Equal("ForceEnumPlayers", error.Native);
+        _natives.ForceEnumPlayers(force, filter);
+
+        Assert.Equal([0, 2, 5], seen);
+        Assert.Equal([0, 5], Members(force));
+        Assert.Null(_natives.GetFilterPlayer());
     }
 
     [Fact]

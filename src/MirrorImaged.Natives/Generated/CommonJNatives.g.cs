@@ -1687,9 +1687,6 @@ public sealed partial class GameNatives
     public void EndCinematicScene() => throw new MissingNativeException("EndCinematicScene");
 
     [Native(Level.Missing)]
-    public void EndGame(bool doScoreScreen) => throw new MissingNativeException("EndGame");
-
-    [Native(Level.Missing)]
     public void EndThematicMusic() => throw new MissingNativeException("EndThematicMusic");
 
     [Native(Level.Missing)]
@@ -1909,9 +1906,6 @@ public sealed partial class GameNatives
     public string? GetEventPlayerChatStringMatched() => throw new MissingNativeException("GetEventPlayerChatStringMatched");
 
     [Native(Level.Missing)]
-    public playerstate? GetEventPlayerState() => throw new MissingNativeException("GetEventPlayerState");
-
-    [Native(Level.Missing)]
     public unit? GetEventTargetUnit() => throw new MissingNativeException("GetEventTargetUnit");
 
     [Native(Level.Missing)]
@@ -1922,9 +1916,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public item? GetFilterItem() => throw new MissingNativeException("GetFilterItem");
-
-    [Native(Level.Missing)]
-    public player? GetFilterPlayer() => throw new MissingNativeException("GetFilterPlayer");
 
     [Native(Level.Missing)]
     public unit? GetFilterUnit() => throw new MissingNativeException("GetFilterUnit");
@@ -2222,9 +2213,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public destructable? GetTriggerDestructable() => throw new MissingNativeException("GetTriggerDestructable");
-
-    [Native(Level.Missing)]
-    public player? GetTriggerPlayer() => throw new MissingNativeException("GetTriggerPlayer");
 
     [Native(Level.Missing)]
     public unit? GetTriggerUnit() => throw new MissingNativeException("GetTriggerUnit");
@@ -3685,22 +3673,10 @@ public sealed partial class GameNatives
     public @event? TriggerRegisterFilterUnitEvent(trigger? whichTrigger, unit? whichUnit, unitevent? whichEvent, boolexpr? filter) => throw new MissingNativeException("TriggerRegisterFilterUnitEvent");
 
     [Native(Level.Missing)]
-    public @event? TriggerRegisterGameEvent(trigger? whichTrigger, gameevent? whichGameEvent) => throw new MissingNativeException("TriggerRegisterGameEvent");
-
-    [Native(Level.Missing)]
     public @event? TriggerRegisterLeaveRegion(trigger? whichTrigger, region? whichRegion, boolexpr? filter) => throw new MissingNativeException("TriggerRegisterLeaveRegion");
 
     [Native(Level.Missing)]
-    public @event? TriggerRegisterPlayerAllianceChange(trigger? whichTrigger, player? whichPlayer, alliancetype? whichAlliance) => throw new MissingNativeException("TriggerRegisterPlayerAllianceChange");
-
-    [Native(Level.Missing)]
     public @event? TriggerRegisterPlayerChatEvent(trigger? whichTrigger, player? whichPlayer, string? chatMessageToDetect, bool exactMatchOnly) => throw new MissingNativeException("TriggerRegisterPlayerChatEvent");
-
-    [Native(Level.Missing)]
-    public @event? TriggerRegisterPlayerEvent(trigger? whichTrigger, player? whichPlayer, playerevent? whichPlayerEvent) => throw new MissingNativeException("TriggerRegisterPlayerEvent");
-
-    [Native(Level.Missing)]
-    public @event? TriggerRegisterPlayerStateEvent(trigger? whichTrigger, player? whichPlayer, playerstate? whichState, limitop? opcode, float limitval) => throw new MissingNativeException("TriggerRegisterPlayerStateEvent");
 
     [Native(Level.Missing)]
     public @event? TriggerRegisterPlayerUnitEvent(trigger? whichTrigger, player? whichPlayer, playerunitevent? whichPlayerUnitEvent, boolexpr? filter) => throw new MissingNativeException("TriggerRegisterPlayerUnitEvent");

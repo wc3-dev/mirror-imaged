@@ -46,7 +46,8 @@ public sealed class PlayerSimulationTests : IDisposable
         print("local", GetPlayerId(GetLocalPlayer()))
         """;
 
-    // A rescuable slot plays as the game likely seats it (decisions D91, inferred)
+    // A rescuable slot plays as the game likely seats it (decisions D91, inferred); a user slot no one plays keeps its
+    // controller and is on team -1 (the lobby probe)
     [Fact]
     public void By_default_the_maps_first_user_plays_with_its_computers_and_rescuable_slots_and_the_other_users_slot_is_empty()
     {
@@ -55,7 +56,7 @@ public sealed class PlayerSimulationTests : IDisposable
         Assert.Equal([
             "0.000 print: 0\tLocal Player\tplaying\tuser\t0",
             "0.000 print: 1\tPlayer 2\tplaying\tcomputer\t1",
-            "0.000 print: 2\tPlayer 3\tempty\tuser\t0",
+            "0.000 print: 2\tPlayer 3\tempty\tuser\t-1",
             "0.000 print: 3\tPlayer 4\tplaying\trescuable\t2",
             "0.000 print: 4\tPlayer 5\tempty\tnone\t-1",
             "0.000 print: local\t0",
@@ -69,7 +70,7 @@ public sealed class PlayerSimulationTests : IDisposable
 
         Assert.Equal([
             "0.000 print: 0\tPlayer 1\tplaying\tuser\t0",
-            "0.000 print: 1\tPlayer 2\tempty\tcomputer\t1",
+            "0.000 print: 1\tPlayer 2\tempty\tcomputer\t-1",
             "0.000 print: 2\tPlayer 3\tplaying\tuser\t0",
             "0.000 print: 3\tPlayer 4\tplaying\trescuable\t2",
             "0.000 print: 4\tPlayer 5\tempty\tnone\t-1",
@@ -126,18 +127,19 @@ public sealed class PlayerSimulationTests : IDisposable
         Assert.Equal(["0.000 print: true\ttrue\tfalse", "0.000 print: true\ttrue\ttrue"], simulation.Log);
     }
 
-    // facts: a map with custom forces and fixed player settings starts with MAP_LOCK_ALLIANCE_CHANGES set
+    // facts: a map with custom forces and fixed player settings starts with MAP_LOCK_ALLIANCE_CHANGES set; the lobby
+    // probe: its game type is melee, as without custom forces
     [Fact]
     public void Custom_forces_with_fixed_settings_lock_alliance_changes()
     {
-        const string read = "print(IsMapFlagSet(MAP_LOCK_ALLIANCE_CHANGES), GetGameTypeSelected() == GAME_TYPE_USE_MAP_SETTINGS)";
+        const string read = "print(IsMapFlagSet(MAP_LOCK_ALLIANCE_CHANGES), GetGameTypeSelected() == GAME_TYPE_MELEE)";
         using var locked = Simulation.Load(Map(read, MapFlags.UseCustomForces | MapFlags.FixedPlayerSettingsForCustomForces), "");
         using var custom = Simulation.Load(Map(read, MapFlags.UseCustomForces), "");
         using var melee = Simulation.Load(Map(read), "");
 
         Assert.Equal(["0.000 print: true\ttrue"], locked.Log);
         Assert.Equal(["0.000 print: false\ttrue"], custom.Log);
-        Assert.Equal(["0.000 print: false\tfalse"], melee.Log);
+        Assert.Equal(["0.000 print: false\ttrue"], melee.Log);
     }
 
     [Fact]

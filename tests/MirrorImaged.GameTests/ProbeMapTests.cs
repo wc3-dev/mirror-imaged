@@ -31,6 +31,22 @@ public sealed class ProbeMapTests : IDisposable
         Assert.False(map.Info.MapFlags.HasFlag(MapFlags.MeleeMap));
     }
 
+    // The lobby and events probes' map (decisions D140)
+    [Fact]
+    public void The_map_with_a_computer_has_three_named_slots_in_custom_forces_and_config_keeps_what_it_read_first()
+    {
+        var map = Build("lobby", "done()", withComputer: true);
+
+        Assert.Equal(["0 User Probe User", "1 Computer Probe Computer", "2 User Probe Empty"], map.Info!.Players.Select(p => $"{p.Id} {p.Controller} {p.Name}"));
+        Assert.True(map.Info.MapFlags.HasFlag(MapFlags.UseCustomForces | MapFlags.FixedPlayerSettingsForCustomForces));
+        Assert.Equal([0b101, 0b10], map.Info.Forces.Select(force => force.Players.ToInt32()));
+        var script = map.Script!;
+        var config = script[script.IndexOf("function config()", StringComparison.Ordinal)..];
+        Assert.True(config.IndexOf("ProbeConfig[#ProbeConfig + 1]", StringComparison.Ordinal) < config.IndexOf("SetMapName", StringComparison.Ordinal));
+        Assert.Contains("SetPlayerController(Player(i), i == 1 and MAP_CONTROL_COMPUTER or MAP_CONTROL_USER)", config);
+        Assert.DoesNotContain("ProbeConfig", Build("hello", "done()").Script!);
+    }
+
     [Fact]
     public void A_probe_map_has_a_minimap_image()
     {
@@ -154,10 +170,10 @@ public sealed class ProbeMapTests : IDisposable
     }
 
     // Line ends as \n whatever the checkout gives the raw string the script is written from.
-    Map Build(string name, string lua)
+    Map Build(string name, string lua, bool withComputer = false)
     {
         var path = Path.Combine(_folder, name + ".w3x");
-        ProbeMap.Build(name, lua, path);
+        ProbeMap.Build(name, lua, path, withComputer);
         var map = Map.Open(path);
         map.Script = map.Script!.ReplaceLineEndings("\n");
         return map;

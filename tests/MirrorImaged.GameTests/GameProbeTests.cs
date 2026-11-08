@@ -76,9 +76,29 @@ public sealed class GameProbeTests
     [GameFact]
     public void The_arguments_probe_gives_the_lines_measured() => Measured("arguments");
 
-    static void Measured(string name)
+    // docs/facts.md, "Players and the game" and "Player and game events"
+    [GameFact]
+    public void The_lobby_probe_gives_the_lines_measured() => Measured("lobby", withComputer: true);
+
+    // and EndGame's evidence (decisions D147): the probe's code after it and a 0 s timer started before it write their
+    // files, and the end-level event's action never writes its own
+    [GameFact]
+    public void The_events_probe_gives_the_lines_measured()
     {
-        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), TimeSpan.FromMinutes(2));
+        var files = new[] { "events-after.pld", "events-timer.pld", "events-end.pld" }.Select(file => Path.Combine(GameRunner.Default.Data, file)).ToList();
+        files.ForEach(File.Delete);
+
+        Measured("events", withComputer: true);
+
+        Assert.Equal([true, true, false], files.Select(File.Exists));
+    }
+
+    [GameFact]
+    public void The_forforce_wait_probe_gives_the_lines_measured() => Measured("forforce-wait");
+
+    static void Measured(string name, bool withComputer = false)
+    {
+        var run = GameRunner.Default.Run(name, ProbeMap.Source(name), TimeSpan.FromMinutes(2), withComputer);
 
         Assert.True(run.State == ProbeState.Done, $"{run.State}: {run.Detail}");
         ExpectedLines.Assert(Path.Combine(AppContext.BaseDirectory, "probes", "expected", name + ".txt"), run.Lines);

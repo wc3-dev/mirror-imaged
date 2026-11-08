@@ -68,24 +68,33 @@ public sealed class Game
     /// </summary>
     public void At(long step, long place, Action action) => _due.Enqueue(action, (Math.Max(step, Step), place));
 
+    /// <summary>
+    /// Takes back <paramref name="action"/>, queued by At, if it hasn't run: the first queued that equals it as delegates
+    /// compare, by target and method, so a closure only matches itself.
+    /// </summary>
+    public void Cancel(Action action) => _due.Remove(action, out _, out _);
+
     /// <summary>Whether the game is paused: the clock doesn't move.</summary>
     public bool Paused { get; set; }
+
+    /// <summary>Whether the game has ended: the clock doesn't move again.</summary>
+    public bool Ended { get; set; }
 
     /// <summary>
     /// Moves the clock <paramref name="steps"/> on, running what falls due with the clock at its step. While paused the
     /// clock stays where it is, and only what is due in its step runs, so a pause from a callback lets the rest of
-    /// that step finish.
+    /// that step finish. An ended game is as a paused one.
     /// </summary>
     public void Advance(long steps)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(steps);
         var end = Step + steps;
-        while (_due.TryPeek(out _, out var due) && due.Step <= (Paused ? Step : end))
+        while (_due.TryPeek(out _, out var due) && due.Step <= (Paused || Ended ? Step : end))
         {
             Step = due.Step;
             _due.Dequeue()();
         }
-        if (!Paused) Step = end;
+        if (!Paused && !Ended) Step = end;
     }
 
     /// <summary>The next agent's id; ids count up from 0x100000 and are never given twice.</summary>
