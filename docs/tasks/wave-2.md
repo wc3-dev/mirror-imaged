@@ -159,6 +159,7 @@ Needs W2-2.
   ability's levels (3 on Blizzard; on a 100-level copy, levels above 2 read level 2's; with `Tooltip = "-"` levels
   0-99 hold and 100 up read 99's), pieces of 200-213 characters come back whole, tooltips make no handles. Then give
   `probes/files.lua` its tooltip read back.
+- From W5-2: `GetAbilitySound` and `GetAbilitySoundById` (an ability's sound labels; D527).
 
 ## W2-8 Tooltip tags and ability columns
 
