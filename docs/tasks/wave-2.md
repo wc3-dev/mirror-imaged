@@ -4,10 +4,10 @@ Plan sections: 4 (A1, A2, A6), 6 (map and game data, units and heroes, items and
 wave 1. Facts are in `C:\Users\mdlsvensson\Repo\wc3-cs\docs\game-facts.md`; the sections named below are the source
 of the tests, and every native a fact measures is Exact.
 
-Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time.
+Order: W2-1, then W2-2; then W2-3 to W2-7, three at a time; W2-8 after W2-7.
 
 Parallel lanes: decision numbers by range: W2-1 D200-D219, W2-2 D220-D239, W2-3 D240-D249, W2-4 D250-D259,
-W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289. Generated-file conflicts are resolved by re-running the generator.
+W2-5 D260-D269, W2-6 D270-D279, W2-7 D280-D289, W2-8 D290-D299. Generated-file conflicts are resolved by re-running the generator.
 W2-1 started before wave 1 finished (11-08): it touches the data loading, which wave 1's open lanes don't.
 
 ## W2-1 Map files and the game's standard data
@@ -44,6 +44,9 @@ Needs W2-1.
   the unit events of this wave (death, owner change), and `SetUnitOwner`'s stop inside the call (facts, "Units",
   "Orders and events").
 - Tests from every measured case in the facts' "Units" section that needs no movement.
+- From W2-1's review: `GetObjectName` (with the facts' "Default string" for a new buff's or destructable's name in the
+  skin files), and which unit fields apply to which units (D205: `useUnit`, `useHero`, `useBuilding`) for the
+  `BlzGetUnit*Field` natives.
 
 ## W2-3 Heroes and items
 
@@ -57,6 +60,8 @@ Needs W2-2.
   `SyncStoredUnit`, with the measured case (game-facts, about line 709) that a Paladin's Gloves of Haste survived a
   store and restore though `StoreUnit` returned false (its attack-speed half needs wave 3). A probe of these never
   calls `SaveGameCache`.
+- From W2-1's review: a fixed-order list of a kind's objects in the data model for `ChooseRandomItem`/`Ex` (the facts
+  on `pickRandom` and levels), and for `ChooseRandomCreep` and `ChooseRandomNPBuilding` (melee creep drops, A4).
 
 ## W2-4 Destructables, trees and doodads
 
@@ -64,6 +69,11 @@ Needs W2-1.
 
 - Destructables and trees: creating (nil for a unit's id), life, restoring, killing, gates, enumerating in a rect,
   trees snapping to the 64 grid, doodad animation natives recorded (facts, "Units" destructables).
+- From W2-1's review: doodad variation numbering (D204: whether the file counts variations from 0); bridges and
+  walkable destructables in `GetLocationZ` (D212); destructable and doodad names are World Editor string keys
+  (`WESTRING_DEST_SUMMER_TREE_WALL`): probe `GetDestructableName` and resolve `UI\WorldEditStrings.txt` if the game
+  does; `(1)SilverpineSprint.w3x`'s `war3map.doo` that War3Net can't read (D209) — fix the reader (our own handling or
+  the fork's fix), since the game makes `.doo` destructables itself (A5).
 
 ## W2-5 Damage
 
@@ -86,6 +96,9 @@ Needs W2-2.
 - From W1-2's review (D70): every callback runs in a Lua thread of its own, measured only for timers, conditions,
   actions and `ExecuteFunc`. Probe `ForGroup`, `ForForce`, `Enum*` and filter callbacks: `coroutine.isyieldable`,
   `coroutine.running`, and a wait inside them (in the game a wait may suspend the whole calling action).
+- From W2-1's review: `(10)DustwallowKeys.w3m`'s `war3map.w3e` that War3Net can't read (D209), an A4 melee map with no
+  terrain without it — fix the reader; and measure the off-map edge rule of `Terrain` (a point off the map reads its
+  nearest edge, inferred).
 
 ## W2-7 Abilities on units, without casting
 
@@ -100,3 +113,13 @@ Needs W2-2.
   ability's levels (3 on Blizzard; on a 100-level copy, levels above 2 read level 2's; with `Tooltip = "-"` levels
   0-99 hold and 100 up read 99's), pieces of 200-213 characters come back whole, tooltips make no handles. Then give
   `probes/files.lua` its tooltip read back.
+
+## W2-8 Tooltip tags and ability columns
+
+Needs W2-1 and W2-7. Decisions D290-D299. From W2-1's review:
+
+- `ParseTags`, with the facts' rules (it reads table columns by name with the map's changes; unit columns don't
+  follow one rule: `HP` reads, `spd` doesn't); standard tooltips carry `<AHhb,DataA1>` tags.
+- Map changes stored by column, not by field id: ability ids share columns (`Hbz1` read on AHhb gives Holy Light's
+  DataA), so a change written under one id must be visible through another id of the same column.
+- Which ability fields apply to which ability (D205's `useSpecific`).
