@@ -1,0 +1,29 @@
+int on real true 9 0
+then real 0.0 400.0 Htb1 0.0
+real back true 7.5 int 0
+real on int true 2.5
+then int 0 Hbz2 30.0
+string past Blizzard - [|cffffcc00Level 1|r]
+string past set true
+string past read Blizzard - [|cffffcc00Level 1|r] | Blizzard - [|cffffcc00Level 3|r]
+string 2 true two | two | two
+string -1 true Blizzard - [|cffffcc00Level 1|r] | two
+string off true Tool tip missing!
+string effect true 
+areq 
+areq array  0
+arqa 
+arqa array  0
+ata0 
+ata0 array  0
+alig 
+alig array  0
+aani 
+aani array  0
+AHtb 1000 0.0 1 1
+Aroc 900 0.15 1 1
+Asp2 1400 0.05 2 1
+Asph 1400 0.05 3 1
+anam false
+Adef extended 130 research 266
+bool read false false

@@ -1,0 +1,12 @@
+plain sets
+ints true2 true2 false0 true2 true2 true2 true2 true2 true2 true2 true2 false1 false1
+bools truefalse false truefalse
+strings falseBlizzard trues trues trues trues
+other types false 0 false 0 false
+levels lower true 3 inc 3 set 1 dec 1 field 10
+levels 5 5 field 0 false 0 cooldown 0.0 tip Blizzard - [|cffffcc00Level 3|r]
+percent 0.25 2.0 0.75
+percent 1.5 12.0 -0.4999999
+adjusted below 0 0.009999998 0.99875
+started again 2.0 1.192093e-07
+idle 0.0 0.0

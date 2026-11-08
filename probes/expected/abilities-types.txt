@@ -1,0 +1,46 @@
+read
+tip Holy Light - [|cffffcc00Level 3|r] | Holy Light - [|cffffcc00Level 1|r] | Holy Light - [|cffffcc00Level 2|r] | Holy Light - [|cffffcc00Level 3|r] | Holy Light - [|cffffcc00Level 3|r] | Holy Light - [|cffffcc00Level 3|r]
+uber 134:A holy light that can he | 134:A holy light that can he | 134:A holy light that can he | 134:A holy light that can he | 134:A holy light that can he
+research Learn Holy Light - [|cffffcc00Level %d|r] | Learn Holy Light - [|cffffcc00Level %d|r] | Learn Holy Light - [|cffffcc00Level %d|r] | Learn Holy Light - [|cffffcc00Level %d|r]
+research uber 266:A holy light that can he | 266:A holy light that can he
+activated Tool tip missing! | Deactivate Divine Shield | Deactivate Divine Shield | Deactivate Divine Shield | Deactivate Divine Shield | Deactivate Divine Shield
+activated uber 0: | 0:
+AHhb icons ReplaceableTextures\CommandButtons\BTNHolyBolt.blp ReplaceableTextures\CommandButtons\BTNTemp.blp
+AHhb places 0 2 0 0
+AHds icons ReplaceableTextures\CommandButtons\BTNDivineIntervention.blp ReplaceableTextures\CommandButtons\BTNDivineShieldOff.blp
+AHds places 1 2 1 2
+Adef icons ReplaceableTextures\CommandButtons\BTNDefend.blp ReplaceableTextures\CommandButtons\BTNDefendStop.blp
+Adef places 0 2 0 2
+Aatk icons ReplaceableTextures\CommandButtons\BTNTemp.blp ReplaceableTextures\CommandButtons\BTNTemp.blp
+Aatk places 0 0 0 0
+AHtb icons ReplaceableTextures\CommandButtons\BTNStormBolt.blp ReplaceableTextures\CommandButtons\BTNTemp.blp
+AHtb places 0 2 0 0
+zzzz 17:Tool tip missing! | 0: | 17:Tool tip missing! | 17:Tool tip missing!
+zzzz 46:ReplaceableTextures\Comm | 46:ReplaceableTextures\Comm | 0 0
+BHbd 17:Tool tip missing! | 0: | 17:Tool tip missing! | 17:Tool tip missing!
+BHbd 46:ReplaceableTextures\Comm | 46:ReplaceableTextures\Comm | 0 0
+hfoo 13:Train Footman | 89:Versatile foot soldier.  | 17:Tool tip missing! | 17:Tool tip missing!
+hfoo 49:ReplaceableTextures\Comm | 46:ReplaceableTextures\Comm | 0 0
+Rhme 29:Upgrade to Iron Forged S | 110:Increases the attack dam | 17:Tool tip missing! | 17:Tool tip missing!
+Rhme 52:ReplaceableTextures\Comm | 46:ReplaceableTextures\Comm | 0 0
+defend Defend | Defend | Stop Defend | Stop Defend
+defend uber 130 82 learn uber 266
+sound StampedeCast StampedeLoop   StampedeCast StampedeCast
+sound by name     AerialShacklesLoop 
+sound field StampedeCast StampedeLoop
+sound field set StampedeCast
+set
+tip t2 | t0 | Blizzard - [|cffffcc00Level 2|r] | t2 | t2 | t2 | t2
+tip -1 t2 | t0 | Blizzard - [|cffffcc00Level 2|r] | t2 | t2
+uber 86:Calls down 10 freezing i | 85:Calls down 6 freezing ic | 2:e1 | 86:Calls down 10 freezing i | 86:Calls down 10 freezing i
+research Learn Blizzard - [|cffffcc00Level %d|r] | Learn Blizzard - [|cffffcc00Level %d|r] | Learn Blizzard - [|cffffcc00Level %d|r] | Learn Blizzard - [|cffffcc00Level %d|r] | Learn Blizzard - [|cffffcc00Level %d|r]
+research uber 3:re0 | 3:re0 | 3:re0 | 3:re0 | 3:re0
+activated Deactivate Divine Shield | Deactivate Divine Shield | Deactivate Divine Shield | Deactivate Divine Shield | Deactivate Divine Shield | Tool tip missing! | Tool tip missing! |  | 
+icons icon.blp on.blp places 3 2 0 2
+before 2:t0 | 8:icon.blp | 3 | 2:e1 | 39:Learn Blizzard - [|cffff | 6:on.blp
+after 2:t0 | 8:icon.blp | 3 | 2:e1 | 39:Learn Blizzard - [|cffff | 6:on.blp
+own t0 | Blizzard - [|cffffcc00Level 2|r] | t2
+unknown 17:Tool tip missing! 46:ReplaceableTextures\Comm 2
+defend Defend | Defend
+long 600
+empty 600

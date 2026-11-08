@@ -1,0 +1,22 @@
+# Where MirrorImaged differs from the game's lines in expected/abilities-fields.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# An extended tooltip's <id,column> tags are filled by the game (<AHhb,DataA1> reads 200) and stay as written here,
+# W2-8's ParseTags (D282, Close).
+
+- uber 134:A holy light that can heal a friendly li | 3 134:A holy light that can heal a friendly li
++ uber 144:A holy light that can heal a friendly li | 3 144:A holy light that can heal a friendly li
+- learn uber 266:A holy light that can heal a friendly li | off 17:Tool tip missing!
++ learn uber 295:A holy light that can heal a friendly li | off 17:Tool tip missing!
+
+# A cooldown started without a cast: the game's reads carry its frames' float error, which the clock's
+# steps here don't (D286, Close).
+
+- started 4.0 1.192093e-07
++ started 4.0 0.0
+- 1 s 3.0 0.2500001 0.0 1.0 0.0
++ 1 s 3.0 0.25 0.0 1.0 0.0
+- adjusted 4.999999 -0.2499998
++ adjusted 5.0 -0.25
+- adjusted percent 3.0 0.2500001
++ adjusted percent 3.0 0.25

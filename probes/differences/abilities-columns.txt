@@ -1,0 +1,8 @@
+# Where MirrorImaged differs from the game's lines in expected/abilities-columns.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# An extended tooltip's <id,column> tags are filled by the game (<AHhb,DataA1> reads 200) and stay as written here,
+# W2-8's ParseTags (D282, Close).
+
+- Adef extended 130 research 266
++ Adef extended 156 research 295

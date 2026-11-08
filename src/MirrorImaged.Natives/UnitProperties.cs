@@ -179,6 +179,7 @@ public sealed partial class GameNatives
         if (!whichUnit.Dead) FireUnit(new(whichUnit, Order: 851972), UnitIssuedOrder, PlayerUnitIssuedOrder);
         if (whichUnit.Owner != previous) return;
         whichUnit.Owner = whichPlayer;
+        foreach (var a in whichUnit.Abilities) Research(a, true);
         if (changeColor) whichUnit.Color = whichPlayer.Color;
         FireUnit(new(whichUnit, Previous: previous), UnitChangeOwner, PlayerUnitChangeOwner);
     }

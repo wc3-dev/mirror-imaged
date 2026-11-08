@@ -88,6 +88,44 @@ public sealed class GameData
     /// <summary>The hotkey of <c>ui/miscui.txt</c> for <paramref name="key"/> (any case), as written (<c>C</c>); null when it has none.</summary>
     public string? Hotkey(string key) => Standard.Hotkeys.GetValueOrDefault(key);
 
+    /// <summary>The metadata row of a kind's field: where its value is, and its type; null when the game has none.</summary>
+    public Field? Field(ObjectKind kind, int id) => Standard.Fields.GetValueOrDefault(kind)?.GetValueOrDefault(id);
+
+    /// <summary>
+    /// The kind's field kept in the column <paramref name="column"/> (any case), at <paramref name="element"/> of its list
+    /// when it is one; null when there is none.
+    /// </summary>
+    public int? FieldAt(ObjectKind kind, string column, int element = 0) =>
+        Standard.Fields.GetValueOrDefault(kind)?.FirstOrDefault(pair => pair.Value.Column.Equals(column, StringComparison.OrdinalIgnoreCase) && (pair.Value.Element == element || pair.Value.Element < 0)).Key is var id and not 0 ? id : null;
+
+    /// <summary>An object the game has without data: the abilities it gives units for what they are (<c>Aque</c>, <c>Aupg</c>).</summary>
+    public GameObject Bare(ObjectKind kind, int id) => Object(kind, id) ?? new GameObject(this, kind, id, id, null);
+
+    /// <summary>
+    /// The field <paramref name="item"/> keeps <paramref name="field"/>'s column in: the one at that column listed for it
+    /// (its id, the object it is made from, or an ability's code), else <paramref name="field"/> itself. Holy Light keeps
+    /// its <c>DataA</c> as <c>Hhb1</c>, a real, which Storm Bolt's <c>Htb1</c> reads there too (probe abilities-fields).
+    /// </summary>
+    public int Own(GameObject item, int field)
+    {
+        if (_own.TryGetValue((item.Kind, item.Id, field), out var own)) return own;
+        own = field;
+        if (Field(item.Kind, field) is { } where && Standard.Fields.GetValueOrDefault(item.Kind) is { } fields)
+        {
+            var code = item.Kind == ObjectKind.Ability && item.Text(Ids.Of("code")) is { Length: 4 } text ? Ids.Of(text) : 0;
+            foreach (var (id, other) in fields)
+                if (other.Column.Equals(where.Column, StringComparison.OrdinalIgnoreCase) && other.PerLevel == where.PerLevel
+                    && other.Specific is { } listed && (listed.Contains(item.Id) || listed.Contains(item.BaseId) || listed.Contains(code)))
+                {
+                    own = id;
+                    break;
+                }
+        }
+        return _own[(item.Kind, item.Id, field)] = own;
+    }
+
+    readonly Dictionary<(ObjectKind, int, int), int> _own = [];
+
     /// <summary>The World Editor string the game keeps for <paramref name="key"/> (any case); null when it has none.</summary>
     public string? EditorString(string key) => Standard.EditorStrings.GetValueOrDefault(key);
 

@@ -29,5 +29,6 @@ mission flushed, have nnn, another mission 3
 cache flushed: 0, by name 0
 stored after the flush: 0, by name 0
 synced: 0
+tooltips: t0 200 200
 stored by Preloader: 42
 late written

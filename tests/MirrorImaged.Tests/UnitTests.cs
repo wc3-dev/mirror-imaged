@@ -31,6 +31,7 @@ public sealed class UnitTests : IDisposable
             .Add(ObjectKind.Unit, "nshe", Values("unam=Sheep;uhpm=15;urac=critters;umvs=100;umvr=0.5;uacq=500;uaen=0"))
             .Add(ObjectKind.Item, "phea", Values("unam=Potion of Healing"))
             .Add(ObjectKind.Ability, "AHhb", Values("anam=Holy Light"))
+            .Add(ObjectKind.Ability, "Avul", Values("alev=1"))
             .Add(ObjectKind.Upgrade, "Rhme", Values("glvl=3;gnam:1=Iron Forged Swords"))
             .Add(ObjectKind.Buff, "Bdef", Values("fnam=Defend"));
         foreach (var (key, value) in Values("StrHitPointBonus=25;IntManaBonus=15;MinUnitSpeed=150;MaxUnitSpeed=400;DecayTime=2;BoneDecayTime=88;StructureDecayTime=30;AgiDefenseBase=-2;AgiDefenseBonus=0.3;Dawn=6;Dusk=18"))

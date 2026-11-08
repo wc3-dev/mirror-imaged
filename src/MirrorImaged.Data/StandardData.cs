@@ -10,7 +10,7 @@ namespace MirrorImaged.Data;
 public enum ObjectKind { Unit, Item, Destructable, Doodad, Ability, Buff, Upgrade }
 
 /// <summary>How a field keeps a value for each level.</summary>
-enum PerLevel
+public enum PerLevel
 {
     /// <summary>One value.</summary>
     None,
@@ -25,8 +25,13 @@ enum PerLevel
     Appended,
 }
 
-/// <summary>Where a field's value is in an object's rows, from its metadata row; <paramref name="Element"/> is its entry in a comma list, or -1 for the whole value.</summary>
-sealed record Field(string Column, PerLevel PerLevel, int Element);
+/// <summary>
+/// Where a field's value is in an object's rows, from its metadata row; <paramref name="Element"/> is its entry in a comma
+/// list, or -1 for the whole value. <paramref name="Type"/> is the row's type (<c>int</c>, <c>unreal</c>, <c>bool</c>,
+/// <c>string</c>...), <paramref name="Profile"/> whether the text files keep it, and <paramref name="Specific"/> the
+/// objects it is listed for (<c>useSpecific</c>), empty for every object.
+/// </summary>
+public sealed record Field(string Column, PerLevel PerLevel, int Element, string Type = "", bool Profile = false, IReadOnlyList<int>? Specific = null);
 
 /// <summary>
 /// A standard object: its tables' and text files' values merged, by column (any case), and the values a test gives by
@@ -150,6 +155,7 @@ public sealed partial class StandardData
             parsed.TryGetValue(path, out var sections) ? sections : parsed[path] = File(path) is { } bytes ? Tables.Profile(bytes) : [];
         string InSet(string path, string? set) => set is not null && File($"_balance/{set}.w3mod/{path}") is not null ? $"_balance/{set}.w3mod/{path}" : path;
         var localized = $"_locales/{locale.ToLowerInvariant()}.w3mod/";
+        var qualifier = values is null ? null : ":" + values.Replace("_v", ",V", StringComparison.Ordinal);
 
         var metadata = new Dictionary<string, Dictionary<int, Field>>();
         foreach (var (kind, meta, tables, text, strings) in Sources)
@@ -188,8 +194,15 @@ public sealed partial class StandardData
                         foreach (var (key, value) in keys) merged[key] = value;
 
             foreach (var (id, merged) in rows)
+            {
+                // A key kept for a balance set (Ubertip:custom,V1) is the key's value on that set (probe abilities-columns: Defend's)
+                foreach (var (key, value) in merged.Where(pair => qualifier is not null && pair.Key.EndsWith(qualifier, StringComparison.OrdinalIgnoreCase)).ToList())
+                    merged[key[..^qualifier!.Length]] = value;
                 if (id.Length == 4) (absent.Contains(id) ? data.Absent : data.Objects)[(kind, Ids.Of(id))] = new StandardObject(merged);
+            }
         }
+        // An ability's code, the ability whose rules it has (ANsb's is AHtb), has no metadata row
+        if (data.Fields.TryGetValue(ObjectKind.Ability, out var abilityFields)) abilityFields.TryAdd(Ids.Of("code"), new Field("code", PerLevel.None, -1));
 
         foreach (var path in new[] { "units/miscdata.txt", "units/miscgame.txt" })
             foreach (var (name, keys) in Profile(InSet(path, values)))
@@ -285,6 +298,13 @@ public sealed partial class StandardData
         return this;
     }
 
+    /// <summary>Adds a field's metadata row for a test: where its value is, as <see cref="Field"/> says.</summary>
+    internal StandardData Add(ObjectKind kind, string id, Field field)
+    {
+        (Fields.TryGetValue(kind, out var fields) ? fields : Fields[kind] = [])[Ids.Of(id)] = field;
+        return this;
+    }
+
     // A metadata table: each field's id to where its value is. A field shares its column with others of the kind when
     // it is one entry of a list (Buttonpos[0] and [1]); one of the text files with an index is that entry of its list
     // too (a unit's Name is the first entry of Name=). Its data pointer is a letter after the column (DataA for 1).
@@ -302,7 +322,8 @@ public sealed partial class StandardData
             var profile = Cell("slk") == "Profile";
             var perLevel = Number("repeat") <= 0 ? PerLevel.None : !profile ? PerLevel.Column : Cell("appendIndex") == "1" ? PerLevel.Appended : PerLevel.List;
             var element = perLevel == PerLevel.None && (shared[cells.GetValueOrDefault("field", "")] > 1 || profile) && Cell("index").Length > 0 ? Number("index") : -1;
-            if (id.Length == 4) fields[Ids.Of(id)] = new Field(column, perLevel, element);
+            var specific = Cell("useSpecific").Split(',', StringSplitOptions.TrimEntries).Where(code => code.Length == 4).Select(Ids.Of).ToList();
+            if (id.Length == 4) fields[Ids.Of(id)] = new Field(column, perLevel, element, Cell("type"), profile, specific);
         }
         return fields;
     }

@@ -97,24 +97,6 @@ public sealed partial class GameNatives
     public void AutomationTestingFinished() => throw new MissingNativeException("AutomationTestingFinished");
 
     [Native(Level.Missing)]
-    public bool BlzAddAbilityBooleanLevelArrayField(ability? whichAbility, abilitybooleanlevelarrayfield? whichField, int level, bool value) => throw new MissingNativeException("BlzAddAbilityBooleanLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzAddAbilityIntegerLevelArrayField(ability? whichAbility, abilityintegerlevelarrayfield? whichField, int level, int value) => throw new MissingNativeException("BlzAddAbilityIntegerLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzAddAbilityRealLevelArrayField(ability? whichAbility, abilityreallevelarrayfield? whichField, int level, float value) => throw new MissingNativeException("BlzAddAbilityRealLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzAddAbilityStringLevelArrayField(ability? whichAbility, abilitystringlevelarrayfield? whichField, int level, string? value) => throw new MissingNativeException("BlzAddAbilityStringLevelArrayField");
-
-    [Native(Level.Missing)]
-    public void BlzAdjustUnitAbilityCooldownPercent(unit? whichUnit, int abilId, float percent) => throw new MissingNativeException("BlzAdjustUnitAbilityCooldownPercent");
-
-    [Native(Level.Missing)]
-    public void BlzAdjustUnitAbilityCooldownRemaining(unit? whichUnit, int abilId, float duration) => throw new MissingNativeException("BlzAdjustUnitAbilityCooldownRemaining");
-
-    [Native(Level.Missing)]
     public int BlzCameraGetCameraType() => throw new MissingNativeException("BlzCameraGetCameraType");
 
     [Native(Level.Missing)]
@@ -173,9 +155,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void BlzEndRecording() => throw new MissingNativeException("BlzEndRecording");
-
-    [Native(Level.Missing)]
-    public void BlzEndUnitAbilityCooldown(unit? whichUnit, int abilCode) => throw new MissingNativeException("BlzEndUnitAbilityCooldown");
 
     [Native(Level.Missing)]
     public void BlzFrameAddText(framehandle? frame, string? text) => throw new MissingNativeException("BlzFrameAddText");
@@ -302,87 +281,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public int BlzFrameToPixelY(float frameY) => throw new MissingNativeException("BlzFrameToPixelY");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityActivatedExtendedTooltip(int abilCode, int level) => throw new MissingNativeException("BlzGetAbilityActivatedExtendedTooltip");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityActivatedIcon(int abilCode) => throw new MissingNativeException("BlzGetAbilityActivatedIcon");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityActivatedPosX(int abilCode) => throw new MissingNativeException("BlzGetAbilityActivatedPosX");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityActivatedPosY(int abilCode) => throw new MissingNativeException("BlzGetAbilityActivatedPosY");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityActivatedTooltip(int abilCode, int level) => throw new MissingNativeException("BlzGetAbilityActivatedTooltip");
-
-    [Native(Level.Missing)]
-    public bool BlzGetAbilityBooleanField(ability? whichAbility, abilitybooleanfield? whichField) => throw new MissingNativeException("BlzGetAbilityBooleanField");
-
-    [Native(Level.Missing)]
-    public bool BlzGetAbilityBooleanLevelArrayField(ability? whichAbility, abilitybooleanlevelarrayfield? whichField, int level, int index) => throw new MissingNativeException("BlzGetAbilityBooleanLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzGetAbilityBooleanLevelField(ability? whichAbility, abilitybooleanlevelfield? whichField, int level) => throw new MissingNativeException("BlzGetAbilityBooleanLevelField");
-
-    [Native(Level.Missing)]
-    public float BlzGetAbilityCooldown(int abilId, int level) => throw new MissingNativeException("BlzGetAbilityCooldown");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityExtendedTooltip(int abilCode, int level) => throw new MissingNativeException("BlzGetAbilityExtendedTooltip");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityIcon(int abilCode) => throw new MissingNativeException("BlzGetAbilityIcon");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityId(ability? whichAbility) => throw new MissingNativeException("BlzGetAbilityId");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityIntegerField(ability? whichAbility, abilityintegerfield? whichField) => throw new MissingNativeException("BlzGetAbilityIntegerField");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityIntegerLevelArrayField(ability? whichAbility, abilityintegerlevelarrayfield? whichField, int level, int index) => throw new MissingNativeException("BlzGetAbilityIntegerLevelArrayField");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityIntegerLevelField(ability? whichAbility, abilityintegerlevelfield? whichField, int level) => throw new MissingNativeException("BlzGetAbilityIntegerLevelField");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityManaCost(int abilId, int level) => throw new MissingNativeException("BlzGetAbilityManaCost");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityPosX(int abilCode) => throw new MissingNativeException("BlzGetAbilityPosX");
-
-    [Native(Level.Missing)]
-    public int BlzGetAbilityPosY(int abilCode) => throw new MissingNativeException("BlzGetAbilityPosY");
-
-    [Native(Level.Missing)]
-    public float BlzGetAbilityRealField(ability? whichAbility, abilityrealfield? whichField) => throw new MissingNativeException("BlzGetAbilityRealField");
-
-    [Native(Level.Missing)]
-    public float BlzGetAbilityRealLevelArrayField(ability? whichAbility, abilityreallevelarrayfield? whichField, int level, int index) => throw new MissingNativeException("BlzGetAbilityRealLevelArrayField");
-
-    [Native(Level.Missing)]
-    public float BlzGetAbilityRealLevelField(ability? whichAbility, abilityreallevelfield? whichField, int level) => throw new MissingNativeException("BlzGetAbilityRealLevelField");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityResearchExtendedTooltip(int abilCode, int level) => throw new MissingNativeException("BlzGetAbilityResearchExtendedTooltip");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityResearchTooltip(int abilCode, int level) => throw new MissingNativeException("BlzGetAbilityResearchTooltip");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityStringField(ability? whichAbility, abilitystringfield? whichField) => throw new MissingNativeException("BlzGetAbilityStringField");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityStringLevelArrayField(ability? whichAbility, abilitystringlevelarrayfield? whichField, int level, int index) => throw new MissingNativeException("BlzGetAbilityStringLevelArrayField");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityStringLevelField(ability? whichAbility, abilitystringlevelfield? whichField, int level) => throw new MissingNativeException("BlzGetAbilityStringLevelField");
-
-    [Native(Level.Missing)]
-    public string? BlzGetAbilityTooltip(int abilCode, int level) => throw new MissingNativeException("BlzGetAbilityTooltip");
 
     [Native(Level.Missing)]
     public item? BlzGetAbsorbingItem() => throw new MissingNativeException("BlzGetAbsorbingItem");
@@ -598,24 +496,6 @@ public sealed partial class GameNatives
     public item? BlzGetUnequippedItem() => throw new MissingNativeException("BlzGetUnequippedItem");
 
     [Native(Level.Missing)]
-    public ability? BlzGetUnitAbility(unit? whichUnit, int abilId) => throw new MissingNativeException("BlzGetUnitAbility");
-
-    [Native(Level.Missing)]
-    public ability? BlzGetUnitAbilityByIndex(unit? whichUnit, int index) => throw new MissingNativeException("BlzGetUnitAbilityByIndex");
-
-    [Native(Level.Missing)]
-    public float BlzGetUnitAbilityCooldown(unit? whichUnit, int abilId, int level) => throw new MissingNativeException("BlzGetUnitAbilityCooldown");
-
-    [Native(Level.Missing)]
-    public float BlzGetUnitAbilityCooldownPercent(unit? whichUnit, int abilId) => throw new MissingNativeException("BlzGetUnitAbilityCooldownPercent");
-
-    [Native(Level.Missing)]
-    public float BlzGetUnitAbilityCooldownRemaining(unit? whichUnit, int abilId) => throw new MissingNativeException("BlzGetUnitAbilityCooldownRemaining");
-
-    [Native(Level.Missing)]
-    public int BlzGetUnitAbilityManaCost(unit? whichUnit, int abilId, int level) => throw new MissingNativeException("BlzGetUnitAbilityManaCost");
-
-    [Native(Level.Missing)]
     public float BlzGetUnitAnimationDuration(unit? whichUnit, string? whichAnimation) => throw new MissingNativeException("BlzGetUnitAnimationDuration");
 
     [Native(Level.Missing)]
@@ -769,18 +649,6 @@ public sealed partial class GameNatives
     public bool BlzQueueTargetOrderById(unit? whichUnit, int order, widget? targetWidget) => throw new MissingNativeException("BlzQueueTargetOrderById");
 
     [Native(Level.Missing)]
-    public bool BlzRemoveAbilityBooleanLevelArrayField(ability? whichAbility, abilitybooleanlevelarrayfield? whichField, int level, bool value) => throw new MissingNativeException("BlzRemoveAbilityBooleanLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzRemoveAbilityIntegerLevelArrayField(ability? whichAbility, abilityintegerlevelarrayfield? whichField, int level, int value) => throw new MissingNativeException("BlzRemoveAbilityIntegerLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzRemoveAbilityRealLevelArrayField(ability? whichAbility, abilityreallevelarrayfield? whichField, int level, float value) => throw new MissingNativeException("BlzRemoveAbilityRealLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzRemoveAbilityStringLevelArrayField(ability? whichAbility, abilitystringlevelarrayfield? whichField, int level, string? value) => throw new MissingNativeException("BlzRemoveAbilityStringLevelArrayField");
-
-    [Native(Level.Missing)]
     public void BlzRemoveEffect(effect? whichEffect) => throw new MissingNativeException("BlzRemoveEffect");
 
     [Native(Level.Missing)]
@@ -794,78 +662,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public bool BlzSendSyncData(string? prefix, string? data) => throw new MissingNativeException("BlzSendSyncData");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityActivatedExtendedTooltip(int abilCode, string? extendedTooltip, int level) => throw new MissingNativeException("BlzSetAbilityActivatedExtendedTooltip");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityActivatedIcon(int abilCode, string? iconPath) => throw new MissingNativeException("BlzSetAbilityActivatedIcon");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityActivatedPosX(int abilCode, int x) => throw new MissingNativeException("BlzSetAbilityActivatedPosX");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityActivatedPosY(int abilCode, int y) => throw new MissingNativeException("BlzSetAbilityActivatedPosY");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityActivatedTooltip(int abilCode, string? tooltip, int level) => throw new MissingNativeException("BlzSetAbilityActivatedTooltip");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityBooleanField(ability? whichAbility, abilitybooleanfield? whichField, bool value) => throw new MissingNativeException("BlzSetAbilityBooleanField");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityBooleanLevelArrayField(ability? whichAbility, abilitybooleanlevelarrayfield? whichField, int level, int index, bool value) => throw new MissingNativeException("BlzSetAbilityBooleanLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityBooleanLevelField(ability? whichAbility, abilitybooleanlevelfield? whichField, int level, bool value) => throw new MissingNativeException("BlzSetAbilityBooleanLevelField");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityExtendedTooltip(int abilCode, string? extendedTooltip, int level) => throw new MissingNativeException("BlzSetAbilityExtendedTooltip");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityIcon(int abilCode, string? iconPath) => throw new MissingNativeException("BlzSetAbilityIcon");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityIntegerField(ability? whichAbility, abilityintegerfield? whichField, int value) => throw new MissingNativeException("BlzSetAbilityIntegerField");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityIntegerLevelArrayField(ability? whichAbility, abilityintegerlevelarrayfield? whichField, int level, int index, int value) => throw new MissingNativeException("BlzSetAbilityIntegerLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityIntegerLevelField(ability? whichAbility, abilityintegerlevelfield? whichField, int level, int value) => throw new MissingNativeException("BlzSetAbilityIntegerLevelField");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityPosX(int abilCode, int x) => throw new MissingNativeException("BlzSetAbilityPosX");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityPosY(int abilCode, int y) => throw new MissingNativeException("BlzSetAbilityPosY");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityRealField(ability? whichAbility, abilityrealfield? whichField, float value) => throw new MissingNativeException("BlzSetAbilityRealField");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityRealLevelArrayField(ability? whichAbility, abilityreallevelarrayfield? whichField, int level, int index, float value) => throw new MissingNativeException("BlzSetAbilityRealLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityRealLevelField(ability? whichAbility, abilityreallevelfield? whichField, int level, float value) => throw new MissingNativeException("BlzSetAbilityRealLevelField");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityResearchExtendedTooltip(int abilCode, string? researchExtendedTooltip, int level) => throw new MissingNativeException("BlzSetAbilityResearchExtendedTooltip");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityResearchTooltip(int abilCode, string? researchTooltip, int level) => throw new MissingNativeException("BlzSetAbilityResearchTooltip");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityStringField(ability? whichAbility, abilitystringfield? whichField, string? value) => throw new MissingNativeException("BlzSetAbilityStringField");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityStringLevelArrayField(ability? whichAbility, abilitystringlevelarrayfield? whichField, int level, int index, string? value) => throw new MissingNativeException("BlzSetAbilityStringLevelArrayField");
-
-    [Native(Level.Missing)]
-    public bool BlzSetAbilityStringLevelField(ability? whichAbility, abilitystringlevelfield? whichField, int level, string? value) => throw new MissingNativeException("BlzSetAbilityStringLevelField");
-
-    [Native(Level.Missing)]
-    public void BlzSetAbilityTooltip(int abilCode, string? tooltip, int level) => throw new MissingNativeException("BlzSetAbilityTooltip");
 
     [Native(Level.Missing)]
     public void BlzSetCameraAllowsHotkeyTargetLock(bool allows) => throw new MissingNativeException("BlzSetCameraAllowsHotkeyTargetLock");
@@ -1060,18 +856,6 @@ public sealed partial class GameNatives
     public void BlzSetThematicMusicAbsoluteVolume(int volume) => throw new MissingNativeException("BlzSetThematicMusicAbsoluteVolume");
 
     [Native(Level.Missing)]
-    public void BlzSetUnitAbilityCooldown(unit? whichUnit, int abilId, int level, float cooldown) => throw new MissingNativeException("BlzSetUnitAbilityCooldown");
-
-    [Native(Level.Missing)]
-    public void BlzSetUnitAbilityCooldownPercent(unit? whichUnit, int abilId, float percent) => throw new MissingNativeException("BlzSetUnitAbilityCooldownPercent");
-
-    [Native(Level.Missing)]
-    public void BlzSetUnitAbilityCooldownRemaining(unit? whichUnit, int abilId, float duration) => throw new MissingNativeException("BlzSetUnitAbilityCooldownRemaining");
-
-    [Native(Level.Missing)]
-    public void BlzSetUnitAbilityManaCost(unit? whichUnit, int abilId, int level, int manaCost) => throw new MissingNativeException("BlzSetUnitAbilityManaCost");
-
-    [Native(Level.Missing)]
     public void BlzSetUnitArmor(unit? whichUnit, float armorAmount) => throw new MissingNativeException("BlzSetUnitArmor");
 
     [Native(Level.Missing)]
@@ -1120,9 +904,6 @@ public sealed partial class GameNatives
     public void BlzStartRecording(int fps) => throw new MissingNativeException("BlzStartRecording");
 
     [Native(Level.Missing)]
-    public void BlzStartUnitAbilityCooldown(unit? whichUnit, int abilCode, float cooldown) => throw new MissingNativeException("BlzStartUnitAbilityCooldown");
-
-    [Native(Level.Missing)]
     public void BlzTextAreaFrameSetAutoScroll(framehandle? frame, bool value) => throw new MissingNativeException("BlzTextAreaFrameSetAutoScroll");
 
     [Native(Level.Missing)]
@@ -1142,9 +923,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void BlzUnitClearOrders(unit? whichUnit, bool onlyQueued) => throw new MissingNativeException("BlzUnitClearOrders");
-
-    [Native(Level.Missing)]
-    public void BlzUnitDisableAbility(unit? whichUnit, int abilId, bool flag, bool hideUI) => throw new MissingNativeException("BlzUnitDisableAbility");
 
     [Native(Level.Missing)]
     public void BlzUnitEnableAuras(unit? whichUnit, bool enable, bool affectsUI) => throw new MissingNativeException("BlzUnitEnableAuras");
@@ -1175,9 +953,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public float BlzUnitHeal(unit? whichUnit, unit? source, float life, bool isItem, bool applyStatBonuses) => throw new MissingNativeException("BlzUnitHeal");
-
-    [Native(Level.Missing)]
-    public void BlzUnitHideAbility(unit? whichUnit, int abilId, bool flag) => throw new MissingNativeException("BlzUnitHideAbility");
 
     [Native(Level.Missing)]
     public void BlzUnitInterruptAttack(unit? whichUnit) => throw new MissingNativeException("BlzUnitInterruptAttack");
@@ -1387,9 +1162,6 @@ public sealed partial class GameNatives
     public void CripplePlayer(player? whichPlayer, force? toWhichPlayers, bool flag) => throw new MissingNativeException("CripplePlayer");
 
     [Native(Level.Missing)]
-    public int DecUnitAbilityLevel(unit? whichUnit, int abilcode) => throw new MissingNativeException("DecUnitAbilityLevel");
-
-    [Native(Level.Missing)]
     public void DefeatConditionSetDescription(defeatcondition? whichCondition, string? description) => throw new MissingNativeException("DefeatConditionSetDescription");
 
     [Native(Level.Missing)]
@@ -1571,12 +1343,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public string? GetAbilityEffectById(int abilityId, effecttype? t, int index) => throw new MissingNativeException("GetAbilityEffectById");
-
-    [Native(Level.Missing)]
-    public string? GetAbilitySound(string? abilityString, soundtype? t) => throw new MissingNativeException("GetAbilitySound");
-
-    [Native(Level.Missing)]
-    public string? GetAbilitySoundById(int abilityId, soundtype? t) => throw new MissingNativeException("GetAbilitySoundById");
 
     [Native(Level.Missing)]
     public int GetAllyColorFilterState() => throw new MissingNativeException("GetAllyColorFilterState");
@@ -1978,9 +1744,6 @@ public sealed partial class GameNatives
     public item? GetUnequippedItem() => throw new MissingNativeException("GetUnequippedItem");
 
     [Native(Level.Missing)]
-    public int GetUnitAbilityLevel(unit? whichUnit, int abilcode) => throw new MissingNativeException("GetUnitAbilityLevel");
-
-    [Native(Level.Missing)]
     public int GetUnitCurrentOrder(unit? whichUnit) => throw new MissingNativeException("GetUnitCurrentOrder");
 
     [Native(Level.Missing)]
@@ -2069,9 +1832,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public bool HeroGlowIsAllowedOnUnit(unit? whichUnit) => throw new MissingNativeException("HeroGlowIsAllowedOnUnit");
-
-    [Native(Level.Missing)]
-    public int IncUnitAbilityLevel(unit? whichUnit, int abilcode) => throw new MissingNativeException("IncUnitAbilityLevel");
 
     [Native(Level.Missing)]
     public bool IsCineFilterDisplayed() => throw new MissingNativeException("IsCineFilterDisplayed");
@@ -2893,9 +2653,6 @@ public sealed partial class GameNatives
     public void SetOpCinematicAvailable(int campaignNumber, bool available) => throw new MissingNativeException("SetOpCinematicAvailable");
 
     [Native(Level.Missing)]
-    public void SetPlayerAbilityAvailable(player? whichPlayer, int abilid, bool avail) => throw new MissingNativeException("SetPlayerAbilityAvailable");
-
-    [Native(Level.Missing)]
     public void SetPlayerOnScoreScreen(player? whichPlayer, bool flag) => throw new MissingNativeException("SetPlayerOnScoreScreen");
 
     [Native(Level.Missing)]
@@ -3032,9 +2789,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void SetUbersplatRenderAlways(ubersplat? whichSplat, bool flag) => throw new MissingNativeException("SetUbersplatRenderAlways");
-
-    [Native(Level.Missing)]
-    public int SetUnitAbilityLevel(unit? whichUnit, int abilcode, int level) => throw new MissingNativeException("SetUnitAbilityLevel");
 
     [Native(Level.Missing)]
     public void SetUnitAnimation(unit? whichUnit, string? whichAnimation) => throw new MissingNativeException("SetUnitAnimation");
@@ -3214,9 +2968,6 @@ public sealed partial class GameNatives
     public void TriggerWaitForSound(sound? s, float offset) => throw new MissingNativeException("TriggerWaitForSound");
 
     [Native(Level.Missing)]
-    public bool UnitAddAbility(unit? whichUnit, int abilityId) => throw new MissingNativeException("UnitAddAbility");
-
-    [Native(Level.Missing)]
     public void UnitAddIndicator(unit? whichUnit, int red, int green, int blue, int alpha) => throw new MissingNativeException("UnitAddIndicator");
 
     [Native(Level.Missing)]
@@ -3322,9 +3073,6 @@ public sealed partial class GameNatives
     public item? UnitItemInSlot(unit? whichUnit, int itemSlot) => throw new MissingNativeException("UnitItemInSlot");
 
     [Native(Level.Missing)]
-    public bool UnitMakeAbilityPermanent(unit? whichUnit, bool permanent, int abilityId) => throw new MissingNativeException("UnitMakeAbilityPermanent");
-
-    [Native(Level.Missing)]
     public bool UnitModifySkillPoints(unit? whichHero, int skillPointDelta) => throw new MissingNativeException("UnitModifySkillPoints");
 
     [Native(Level.Missing)]
@@ -3335,9 +3083,6 @@ public sealed partial class GameNatives
 
     [Native(Level.Missing)]
     public void UnitPoolRemoveUnitType(unitpool? whichPool, int unitId) => throw new MissingNativeException("UnitPoolRemoveUnitType");
-
-    [Native(Level.Missing)]
-    public bool UnitRemoveAbility(unit? whichUnit, int abilityId) => throw new MissingNativeException("UnitRemoveAbility");
 
     [Native(Level.Missing)]
     public void UnitRemoveBuffs(unit? whichUnit, bool removePositive, bool removeNegative) => throw new MissingNativeException("UnitRemoveBuffs");

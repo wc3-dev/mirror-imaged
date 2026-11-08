@@ -1,0 +1,12 @@
+# Where MirrorImaged differs from the game's lines in expected/abilities-sets.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# A cooldown started without a cast: the game's reads carry its frames' float error, which the clock's
+# steps here don't (D286, Close).
+
+- percent 1.5 12.0 -0.4999999
++ percent 1.5 12.0 -0.5
+- adjusted below 0 0.009999998 0.99875
++ adjusted below 0 0.01 0.99875
+- started again 2.0 1.192093e-07
++ started again 2.0 0.0

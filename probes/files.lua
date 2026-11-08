@@ -107,6 +107,15 @@ out("synced: " .. GetStoredInteger(c1, "m", "after"))
 -- SaveGameCache and ReloadGameCachesFromDisk were measured once and are left out here (docs/facts.md, "Files and game
 -- cache"): SaveGameCache rewrites the account's Campaigns.w3v, which a probe mustn't touch.
 
+-- The ability tooltip carrier, as the workspace's facts read files back: each piece a BlzSetAbilityTooltip of a level of
+-- Blizzard, which has 3, so a piece at level 5 is lost and level 5 reads level 2's.
+local function tip(level, text)
+    return "\")\ncall BlzSetAbilityTooltip('AHbz', \"" .. text .. "\", " .. level .. ")\n//"
+end
+write(dir .. "tooltips.pld", tip(0, "t0"), tip(2, string.rep("w", 200)), tip(5, "t5"))
+Preloader(dir .. "tooltips.pld")
+out("tooltips: " .. BlzGetAbilityTooltip(FourCC("AHbz"), 0) .. " " .. #BlzGetAbilityTooltip(FourCC("AHbz"), 2) .. " " .. #BlzGetAbilityTooltip(FourCC("AHbz"), 5))
+
 -- A game cache as the carrier.
 write(dir .. "cache.pld", "\")\ncall StoreInteger(InitGameCache(\"files-probe.w3v\"), \"pre\", \"k\", 42)\n//")
 Preloader(dir .. "cache.pld")

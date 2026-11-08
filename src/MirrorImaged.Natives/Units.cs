@@ -8,7 +8,7 @@ public partial class unit
     internal GameObject Type = null!;
     internal player Owner = null!;
     internal float X, Y, Life, MaxLife, Mana, MaxMana;
-    internal bool Dead, Removed, Hidden, Invulnerable, Exploded, DecaySuspended, Overdue, Paused;
+    internal bool Dead, Removed, Hidden, Exploded, DecaySuspended, Overdue, Paused;
     internal int UserData, Skin, HeroLevel, Color, Pauses;
     internal float Scale = 1, FlyHeight;
     internal int[] Tint = [255, 255, 255, 255];
@@ -71,6 +71,7 @@ public sealed partial class GameNatives
         u.Life = corpse ? 0 : u.MaxLife;
         u.Mana = Math.Min(type.Integer(ManaInitial) + (hero ? Data.Constant("IntManaBonus", 15) * type.Integer(Intelligence) : 0), u.MaxMana);
         u.Dead = corpse;
+        GiveAbilities(u);
         return u;
     }
 
@@ -115,6 +116,7 @@ public sealed partial class GameNatives
         if (!u.Removed) return;
         _game.Remove(u.Key);
         _widgetEvents.Remove(u);
+        TakeAbilities(u);
     }
 
     /// <summary>

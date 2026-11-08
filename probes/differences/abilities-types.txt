@@ -1,0 +1,14 @@
+# Where MirrorImaged differs from the game's lines in expected/abilities-types.txt, in order, with why (decisions D121): a line
+# starting - is the game's, + MirrorImaged's, and ! says MirrorImaged's run stopped without lines. A note starts "# ".
+
+# An extended tooltip's <id,column> tags are filled by the game (<AHhb,DataA1> reads 200) and stay as written here,
+# W2-8's ParseTags (D282, Close).
+
+- uber 134:A holy light that can he | 134:A holy light that can he | 134:A holy light that can he | 134:A holy light that can he | 134:A holy light that can he
++ uber 144:A holy light that can he | 144:A holy light that can he | 144:A holy light that can he | 144:A holy light that can he | 144:A holy light that can he
+- research uber 266:A holy light that can he | 266:A holy light that can he
++ research uber 295:A holy light that can he | 295:A holy light that can he
+- defend uber 130 82 learn uber 266
++ defend uber 156 82 learn uber 295
+- uber 86:Calls down 10 freezing i | 85:Calls down 6 freezing ic | 2:e1 | 86:Calls down 10 freezing i | 86:Calls down 10 freezing i
++ uber 108:Calls down <AHbz,DataA3> | 108:Calls down <AHbz,DataA1> | 2:e1 | 108:Calls down <AHbz,DataA3> | 108:Calls down <AHbz,DataA3>

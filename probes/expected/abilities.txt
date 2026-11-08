@@ -1,0 +1,88 @@
+add
+add true 1 again false 1
+add zzzz false 0
+add Bdef false 0
+add phea false 0
+add hfoo false 0
+add Rhme false 0
+add BHbd false 0
+add 0 false nil false 0
+own 1 1 1 1 1 0
+Hpal 0 0 1 1 nil
+Hpal add true 1
+hpea 1 0 1 1 1 1
+hbar 1 0 0 0
+add Aatk false 0 Amov false 0
+dead add true 1 1 remove true 0
+levels
+set lacking 0 0 inc 0 0 dec 0 0
+set 2 2 2
+set 4 3 3
+set 100 3 3
+set 0 1 1
+set -1 1 1
+set 3 3 3
+set 1 1 1
+dec at 1 1 1
+inc 2 2
+inc 3 3
+inc 4 4
+inc 4 4
+set at 5 to 2 2 2
+set at 2 to 5 3 3
+dec 2 2
+dec 1 1
+defend set 2 1 1 inc 2 2
+remove true 0 again false
+add after inc true 1
+remove own true 0 add back true 1
+remove Aatk true 0 Amov true 0
+nil 0 0 0 false
+handles
+ids 1 1 0 1 ability eq true true
+id Adef nil 0 lacking nil nil
+index ability 3
+hfoo Aihn,Adef,Aatk,Amov nil
+hpea Ahrp,Amil,Ahar,Aatk,Amov,AHbu nil
+Hpal AInv,AHer,Aatk,Amov nil
+hbar Aalr,Afih,ARal,Abds,Aque nil
+hgry Abdt,Asth,Aatk,Amov nil
+nshe Awan,Amov nil
+hkni Aihn,Aatk,Amov nil
+Hamg AInv,AHer,Aatk,Amov nil
+added AHtb,AHhb,Aihn,Adef,Aatk,Amov nil
+removed AHtb,AHhb,Aihn,Aatk,Amov nil
+added back Adef,AHtb,AHhb,Aihn,Aatk,Amov nil
+new handle 48 old id 0 eq false
+removed handle 0 ability
+unit removed Adef
+unit gone 0 ability
+hide
+hidden 1 ability Aihn,Adef,Aatk,Amov nil
+disabled 1 ability Aihn,Adef,Aatk,Amov nil
+lacking 0 0 add true true
+permanent true true true lacking false 0 false unknown false nil false
+permanent removed true 0
+available
+unavailable 1 ability new 1 Aihn,Adef,Aatk,Amov nil
+add unavailable true 1 set 2
+other player 1
+available 1 1 2
+invulnerable
+set 1 ability true Avul,Aihn,Adef,Aatk,Amov nil
+remove true 0 false
+unset 0 false
+add true 1 true
+unset added 0 false
+set added 1 true level 1
+remove added true 0 false
+upgrades
+before 0 1 1 add true 1
+researched 0 0 2 1 1
+added after true 1 other player 0
+level 2 0 0 1 1
+set 0 0 inc 0 0
+unresearched 0 0 1 1 new 0
+given away 1
+given away own 0
+defend researched 1

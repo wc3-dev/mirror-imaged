@@ -1,0 +1,11 @@
+upgrades
+researched 2 new 2 added before 1 added after true 1 other 1
+set 1 1 inc 3 3 dec 1 1
+unresearched 0 2 1 1 new 1
+level 2 2 1 new 2
+back to 1 2 1
+given away 2
+given here 2
+added 2 1
+decreased 1
+re-added 2

@@ -362,7 +362,9 @@ public sealed partial class GameNatives
     [Native(Level.Close)]
     public void SetPlayerTechResearched(player? whichPlayer, int techid, int setToLevel)
     {
-        if (whichPlayer is not null) whichPlayer.TechLevels[techid] = Math.Max(setToLevel, 0);
+        if (whichPlayer is null) return;
+        whichPlayer.TechLevels[techid] = Math.Max(setToLevel, 0);
+        Research(whichPlayer);
     }
 
     /// <summary>

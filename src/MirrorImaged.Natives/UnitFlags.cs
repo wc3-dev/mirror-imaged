@@ -1,3 +1,5 @@
+using MirrorImaged.Data;
+
 namespace MirrorImaged.Natives;
 
 // What a unit shows and is flagged with: pause, hide, invulnerable, its own data, colour, scale and tint.
@@ -37,14 +39,20 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = UnitsProbe)]
     public bool IsUnitHidden(unit? whichUnit) => whichUnit?.Hidden ?? false;
 
-    [Native(Level.Exact, Fact = UnitsProbe)]
+    /// <summary>
+    /// Invulnerable is having Avul: true adds it first in the unit's list, false takes it off, also one UnitAddAbility
+    /// added (probe abilities).
+    /// </summary>
+    [Native(Level.Exact, Fact = UnitsProbe + "; " + AbilitiesProbe)]
     public void SetUnitInvulnerable(unit? whichUnit, bool flag)
     {
-        if (whichUnit is not null) whichUnit.Invulnerable = flag;
+        if (flag && whichUnit is not null && Find(whichUnit, Invulnerable) is null && Data.Object(ObjectKind.Ability, Invulnerable) is { } avul) Give(whichUnit, avul, 0);
+        else if (!flag && Find(whichUnit, Invulnerable) is { } a) Take(a);
     }
 
-    [Native(Level.Exact, Fact = UnitsProbe)]
-    public bool BlzIsUnitInvulnerable(unit? whichUnit) => whichUnit?.Invulnerable ?? false;
+    /// <summary>Whether the unit has Avul, from SetUnitInvulnerable or UnitAddAbility (probe abilities).</summary>
+    [Native(Level.Exact, Fact = UnitsProbe + "; " + AbilitiesProbe)]
+    public bool BlzIsUnitInvulnerable(unit? whichUnit) => Find(whichUnit, Invulnerable) is not null;
 
     [Native(Level.Exact, Fact = UnitsProbe)]
     public void SetUnitUserData(unit? whichUnit, int data)

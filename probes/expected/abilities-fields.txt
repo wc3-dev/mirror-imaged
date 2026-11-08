@@ -1,0 +1,87 @@
+plain
+AHhb int 3 1 0 0 0 2 0 0 0 0 0 1 1 real 0.0 bool true false true
+AHhb name Holy Light sound  
+AHhb icons ReplaceableTextures\CommandButtons\BTNTemp.blp ReplaceableTextures\CommandButtons\BTNHolyBolt.blp
+AHbz int 3 1 0 0 0 2 0 0 0 0 0 1 1 real 0.0 bool true false true
+AHbz name Blizzard sound  
+AHbz icons ReplaceableTextures\CommandButtons\BTNTemp.blp ReplaceableTextures\CommandButtons\BTNBlizzard.blp
+Adef int 1 0 0 0 0 2 0 2 0 0 0 1 1 real 0.0 bool false false true
+Adef name Defend sound  
+Adef icons ReplaceableTextures\CommandButtons\BTNDefendStop.blp ReplaceableTextures\CommandButtons\BTNTemp.blp
+AHds int 3 1 0 0 1 2 1 2 1 0 0 1 1 real 0.0 bool true false true
+AHds name Divine Shield sound  
+AHds icons ReplaceableTextures\CommandButtons\BTNDivineShieldOff.blp ReplaceableTextures\CommandButtons\BTNDivineIntervention.blp
+Aatk int 0 0 0 0 0 0 0 0 0 0 0 1 1 real 0.0 bool false false true
+Aatk name Attack sound  
+Aatk icons ReplaceableTextures\CommandButtons\BTNTemp.blp ReplaceableTextures\CommandButtons\BTNTemp.blp
+nil 0  0
+levels
+mana 0 65 65 65 0 0
+cooldown 0.0 5.0 5.0 5.0 0.0 0.0
+range 0.0 800.0 800.0 800.0 0.0 0.0 area 0.0 0.0 0.0 0.0 0.0 0.0
+duration 0.0 0.0 0.0 0.0 0.0 0.0 hero 0.0 0.0 0.0 0.0 0.0 0.0
+casting 0.0 0.0 0.0 0.0 0.0 0.0
+Hhb1 0.0 200.0 400.0 600.0 0.0 0.0
+Htb1 0.0 200.0 400.0 600.0 0.0 0.0 Hbz1 0 0 0 0 0 0
+Hds1 false false false false false false Def1 0.0 200.0 400.0 600.0 0.0 0.0
+acdn int 0 0 0 0 0 0 amcs real 0.0 0.0 0.0 0.0 0.0 0.0
+Hhb1 int 0 0 0 0 0 0 anam level 
+atar 0 0 0 0 0 0 zzzz 0.0 0.0 0.0 0.0 0.0 0.0
+tip 34:Holy Light - [|cffffcc00Level 1|r] | 34:Holy Light - [|cffffcc00Level 3|r]
+tip -1 34:Holy Light - [|cffffcc00Level 3|r] | 3 34:Holy Light - [|cffffcc00Level 3|r]
+uber 134:A holy light that can heal a friendly li | 3 134:A holy light that can heal a friendly li
+learn 41:Learn Holy Light - [|cffffcc00Level %d|r | 1 41:Learn Holy Light - [|cffffcc00Level %d|r
+learn uber 266:A holy light that can heal a friendly li | off 17:Tool tip missing!
+icon 50:ReplaceableTextures\CommandButtons\BTNHo | 1 50:ReplaceableTextures\CommandButtons\BTNHo
+target 54:Abilities\Spells\Human\HolyBolt\HolyBolt | effect 0:
+Hbz1 0 6 8 10 0 0 real 0.0 0.0 0.0 0.0 0.0 0.0
+Hbz2 0.0 30.0 40.0 50.0 0.0 0.0 Hhb1 0.0 0.0 0.0 0.0 0.0 0.0
+Hds1 false false false false false false off 24:Deactivate Divine Shield
+Def1 0.0 0.5 0.0 0.0 0.0 0.0 Def2 0.0 1.0 0.0 0.0 0.0 0.0
+arrays
+abuf ,,, | 0,0,0,0 | 0.0,0.0,0.0,0.0 | false,false,false,false
+aeff ,,, | 0,0,0,0 | 0.0,0.0,0.0,0.0 | false,false,false,false
+atar ,,, | 0,0,0,0 | 0.0,0.0,0.0,0.0 | false,false,false,false
+aeat ,,, | 0,0,0,0 | 0.0,0.0,0.0,0.0 | false,false,false,false
+Hbz1 ,,, | 0,0,0,0 | 0.0,0.0,0.0,0.0 | false,false,false,false
+set false   level 1 
+set index 3 false  
+add false  
+remove false   
+remove missing false past false
+int set false add false 
+sets
+cooldown true 0.0 2.5 5.0 5.0 0.0 0.0 other 5.0
+cooldown past false false 0.0 2.5 5.0 5.0 0.0 0.0
+mana true 0 65 10 65 0 0 unit 10
+Hhb1 true 1.5
+Htb1 true 5.0 Hhb1 5.0
+Hbz1 true 9 zzzz false acdn int false 2.5
+tip true own tip type 34:Holy Light - [|cffffcc00Level 1|r] other 34:Holy Light - [|cffffcc00Level 1|r]
+tip past true 34:Holy Light - [|cffffcc00Level 3|r]
+icon true x.blp type 50:ReplaceableTextures\CommandButtons\BTNHo
+int true 3 type 0 levels true 5 1 5
+bool false true item true true
+name false Holy Light Holy Light real true 0.5
+level set 2 2.5 10
+re-added 5.0 65 old 0.0 false
+Def1 true 0.25 Def2 past false
+cooldowns
+lacking 0.0 0.0 0.0 0.0 0.0 mana 0 0 0 0 0
+type 0.0 5.0 5.0 5.0 0.0 mana 0 65 65 65 0
+type Adef 0.0 zzzz 0.0 0
+unit 0.0 5.0 5.0 5.0 0.0 mana 0 65 65 65 0
+set 0.0 5.0 7.0 5.0 0.0 mana 0 65 12 65 0 field 7.0 type 5.0 65
+remaining 0.0 0.0 percent 0.0
+started 4.0 1.192093e-07
+lacking started 0.0 add true 0.0
+set remaining 2.0 0.8
+set idle 0.0 0.0
+1 s 3.0 0.2500001 0.0 1.0 0.0
+adjusted 4.999999 -0.2499998
+percent 2.0 0.5
+adjusted percent 3.0 0.2500001
+ended 0.0 0.0
+negative 0.0
+re-added 0.0
+2.5 s 0.0 0.0
