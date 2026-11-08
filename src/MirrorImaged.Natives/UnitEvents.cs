@@ -1,15 +1,33 @@
 namespace MirrorImaged.Natives;
 
-// What happened to a unit, for the event responses: the unit, and the previous owner or order where one fits.
-sealed record Happening(unit Unit, player? Previous = null, int Order = 0);
+// What happened to a unit, for the event responses: the unit, and the previous owner, order or state where one fits.
+sealed record Happening(unit Unit, player? Previous = null, int Order = 0, unitstate? State = null);
 
-// The unit events of wave 2 (death, decay, owner change and SetUnitOwner's stop), fired inside the call, as the units
-// probe measures them (docs/facts.md, "Units"). The other unit events register and wait for their waves.
+// A unit state event's registration: its state and comparison, and whether the comparison held at the last frame's look
+// at the unit's mana
+sealed class UnitLimit(unitstate state, int op, float limit)
+{
+    public readonly unitstate State = state;
+    public readonly int Op = op;
+    public readonly float Limit = limit;
+    public bool Held;
+}
+
+public partial class @event
+{
+    internal boolexpr? Filter;  // TriggerRegisterFilterUnitEvent's
+    internal UnitLimit? Limit;  // TriggerRegisterUnitStateEvent's
+}
+
+// The unit events of wave 2 (death, decay, owner change, the order events of SetUnitOwner, KillUnit, RemoveUnit and
+// PauseUnit, and the unit state events), fired inside the call, as the units probes measure them (docs/facts.md,
+// "Units"). The other unit events register and wait for their waves.
 public sealed partial class GameNatives
 {
     const string UnitsProbe = "facts.md, Units: probe units (11-08)";
-    const int UnitDeath = 53, UnitDecay = 54, UnitIssuedOrder = 75, UnitChangeOwner = 287, WidgetDeath = 89; // EVENT_UNIT_*, EVENT_WIDGET_DEATH
-    const int PlayerUnitDeath = 20, PlayerUnitDecay = 21, PlayerUnitIssuedOrder = 38, PlayerUnitChangeOwner = 270; // EVENT_PLAYER_UNIT_*
+    const string MoreProbe = "facts.md, Units: probes units-more and units-more-2 (11-08)";
+    const int UnitDeath = 53, UnitDecay = 54, UnitStateLimit = 59, UnitIssuedOrder = 75, UnitIssuedPointOrder = 76, UnitChangeOwner = 287, WidgetDeath = 89; // EVENT_UNIT_*, EVENT_WIDGET_DEATH
+    const int PlayerUnitDeath = 20, PlayerUnitDecay = 21, PlayerUnitIssuedOrder = 38, PlayerUnitIssuedPointOrder = 39, PlayerUnitChangeOwner = 270; // EVENT_PLAYER_UNIT_*
 
     // The unit and widget death registrations of each widget, and the player-unit registrations of each player, in the
     // order made, so an event reads only its own unit's and owner's; a list goes once it is empty, or with its unit
@@ -18,11 +36,71 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// Fires for the unit's death (inside KillUnit and a set of its life below 0.405), its decay, its owner changing and
-    /// the stop SetUnitOwner gives it; the other unit events fire once their waves bring them.
+    /// the orders SetUnitOwner, KillUnit, RemoveUnit and PauseUnit give it (stop, undefend, stunned); the other unit
+    /// events fire once their waves bring them.
     /// </summary>
-    [Native(Level.Exact, Fact = UnitsProbe)]
+    [Native(Level.Exact, Fact = UnitsProbe + "; " + MoreProbe)]
     public @event? TriggerRegisterUnitEvent(trigger? whichTrigger, unit? whichUnit, unitevent? whichEvent) =>
         RegisterUnit(whichTrigger, whichUnit, null, whichEvent);
+
+    /// <summary>
+    /// As TriggerRegisterUnitEvent, but the filter runs first, as a trigger's condition does, and the event fires only
+    /// when it passes (nil passes); a death registered so never fires, with a filter or without (probes units-more and
+    /// units-more-2: an owner change fired with nil and a passing filter, not with a failing one).
+    /// </summary>
+    [Native(Level.Exact, Fact = MoreProbe)]
+    public @event? TriggerRegisterFilterUnitEvent(trigger? whichTrigger, unit? whichUnit, unitevent? whichEvent, boolexpr? filter)
+    {
+        if (whichEvent?.Id == UnitDeath) return whichTrigger is null || whichUnit is null ? null : Register(whichTrigger);
+        var registered = RegisterUnit(whichTrigger, whichUnit, null, whichEvent);
+        registered?.Filter = filter;
+        return registered;
+    }
+
+    /// <summary>
+    /// Fires inside the call when the unit's life or mana is set, or it dies, from a value that fails the comparison to
+    /// one that passes it, and the unit's mana again a frame later if it still passes and didn't at the last frame (here
+    /// the next step); never for EQUAL, NOT_EQUAL or the most life and mana, nor for a unit that already passes when
+    /// registered (probes units-more and units-more-2). Close: the game's frame comes 0.005 s later, and its
+    /// regeneration, which can pass a limit, comes with combat (wave 3).
+    /// </summary>
+    [Native(Level.Close)]
+    public @event? TriggerRegisterUnitStateEvent(trigger? whichTrigger, unit? whichUnit, unitstate? whichState, limitop? opcode, float limitval)
+    {
+        if (whichState is null || opcode is null) return null;
+        var registered = RegisterUnit(whichTrigger, whichUnit, null, Convert<unitevent>(UnitStateLimit));
+        if (registered is null) return null;
+        registered.Limit = new(whichState, opcode.Id, limitval) { Held = Compare(opcode.Id, State(whichUnit!, whichState.Id), limitval) };
+        return registered;
+    }
+
+    float State(unit u, int state) => state == ManaState ? u.Mana : u.Life;
+
+    // A life or mana changed: its state events whose comparison now passes and didn't fire (probes units-more and
+    // units-more-2), and for mana the frame's look a step later
+    void StateChanged(unit u, int state, float old, float now)
+    {
+        if (!_widgetEvents.TryGetValue(u, out var list)) return;
+        var limits = list.Where(e => e.Event.Limit is { Op: not (2 or 5) } l && l.State.Id == state).ToArray();
+        foreach (var (_, registered) in limits)
+            if (registered.Limit is { } l && !Compare(l.Op, old, l.Limit) && Compare(l.Op, now, l.Limit))
+                Fire(registered, Convert<unitevent>(UnitStateLimit), player: u.Owner, unit: new(u, State: l.State));
+        if (state != ManaState || limits.Length == 0) return;
+        _game.At(_game.Step + 1, () =>
+        {
+            foreach (var (_, registered) in limits)
+            {
+                if (registered.Limit is not { } l || _game.Handle(u.Key) is null) continue;
+                var holds = Compare(l.Op, u.Mana, l.Limit);
+                if (holds && !l.Held) Fire(registered, Convert<unitevent>(UnitStateLimit), player: u.Owner, unit: new(u, State: l.State));
+                l.Held = holds;
+            }
+        });
+    }
+
+    /// <summary>The state of a unit state event; outside one the state with id 0, UNIT_STATE_LIFE (probe units-more).</summary>
+    [Native(Level.Exact, Fact = MoreProbe)]
+    public unitstate? GetEventUnitState() => Response(UnitStateLimit)?.State ?? Convert<unitstate>(LifeState);
 
     /// <summary>
     /// As TriggerRegisterUnitEvent, for each unit the player owns when it happens; for an owner change, the new owner.
@@ -86,18 +164,18 @@ public sealed partial class GameNatives
     [Native(Level.Exact, Fact = UnitsProbe)]
     public player? GetChangingUnitPrevOwner() => Response(UnitChangeOwner, PlayerUnitChangeOwner)?.Previous;
 
-    [Native(Level.Exact, Fact = UnitsProbe)]
-    public unit? GetOrderedUnit() => Response(UnitIssuedOrder, PlayerUnitIssuedOrder)?.Unit;
+    [Native(Level.Exact, Fact = UnitsProbe + "; " + MoreProbe)]
+    public unit? GetOrderedUnit() => Response(UnitIssuedOrder, PlayerUnitIssuedOrder, UnitIssuedPointOrder, PlayerUnitIssuedPointOrder)?.Unit;
 
     /// <summary>The order of an order event; 0 outside one.</summary>
-    [Native(Level.Exact, Fact = UnitsProbe)]
-    public int GetIssuedOrderId() => Response(UnitIssuedOrder, PlayerUnitIssuedOrder)?.Order ?? 0;
+    [Native(Level.Exact, Fact = UnitsProbe + "; " + MoreProbe)]
+    public int GetIssuedOrderId() => Response(UnitIssuedOrder, PlayerUnitIssuedOrder, UnitIssuedPointOrder, PlayerUnitIssuedPointOrder)?.Order ?? 0;
 
     Happening? Response(params int[] kinds) => Current.Unit is { } happening && kinds.Contains(Current.Event.Id) ? happening : null;
 
     // Fires a unit's event (probe units): for a death its widget registrations first, then its owner's player-unit
-    // registrations, then its own unit registrations, each kind in the order registered; GetTriggerPlayer is the owner,
-    // but in the widget event
+    // registrations, then its own unit registrations, each kind in the order registered, a filter's only when the
+    // filter passes; GetTriggerPlayer is the owner, but in the widget event
     void FireUnit(Happening happening, int unitKind, int playerKind)
     {
         var (u, owner) = (happening.Unit, happening.Unit.Owner);
@@ -108,6 +186,8 @@ public sealed partial class GameNatives
         foreach (var (kind, registered) in players)
             if (kind == playerKind) Fire(registered, Convert<playerunitevent>(kind), player: owner, unit: happening);
         foreach (var (kind, registered) in own)
-            if (kind == unitKind) Fire(registered, Convert<unitevent>(kind), player: owner, unit: happening);
+            if (kind == unitKind && (registered.Filter is not { } filter || registered.Trigger is not { Destroyed: false, Enabled: true } t
+                || In(new Firing(t, Convert<unitevent>(kind), Player: owner, Unit: happening), () => Holds(filter, alone: true))))
+                Fire(registered, Convert<unitevent>(kind), player: owner, unit: happening);
     }
 }

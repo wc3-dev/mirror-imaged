@@ -273,8 +273,8 @@ public sealed partial class GameNatives
 
     /// <summary>
     /// The state as the game starts it (the players probe: game result 3, food cap ceiling 100, placed 1 for a seated
-    /// slot, bounty from neutral hostile and passive) or as set. The food that units and buildings use and give comes
-    /// with them (W2-2).
+    /// slot, bounty from neutral hostile and passive) or as set; the food used and made add the living units' (probe
+    /// units-more, UnitCounts.cs).
     /// </summary>
     [Native(Level.Close)]
     public int GetPlayerState(player? whichPlayer, playerstate? whichPlayerState) =>
@@ -291,6 +291,7 @@ public sealed partial class GameNatives
         if (whichPlayer is null || whichPlayerState is not { Id: >= 0 and < 26 }) return;
         if (whichPlayerState.Id is Gold or Lumber) value = Math.Max(value, 0);
         if (whichPlayer.States[whichPlayerState.Id] == value) return;
+        if (whichPlayerState.Id == NoCreepSleep) SettleSleep(whichPlayer);
         whichPlayer.States[whichPlayerState.Id] = value;
         PlayerStateChanged(whichPlayer, whichPlayerState, value);
     }
@@ -345,12 +346,13 @@ public sealed partial class GameNatives
     }
 
     /// <summary>
-    /// The level set, as the facts and the players probe read it. Close: a unit type's count of the player's units
-    /// comes with the units (W2-2), and <paramref name="specificonly"/>, which then counts only that type and not the
-    /// ones it upgrades to, is ignored.
+    /// The level set, as the facts and the players probe read it; for a unit type, the player's living units of it, as
+    /// GetPlayerTypedUnitCount counts them, with the types it upgrades to unless <paramref name="specificonly"/> (probe
+    /// units-more: a town hall 1 and 3 with a keep and a castle).
     /// </summary>
-    [Native(Level.Close)]
-    public int GetPlayerTechCount(player? whichPlayer, int techid, bool specificonly) => whichPlayer?.TechLevels.GetValueOrDefault(techid) ?? 0;
+    [Native(Level.Exact, Fact = "docs/facts.md, Players and the game: probe players; " + MoreProbe)]
+    public int GetPlayerTechCount(player? whichPlayer, int techid, bool specificonly) =>
+        Data.Object(ObjectKind.Unit, techid) is not null ? Typed(whichPlayer, techid, !specificonly) : whichPlayer?.TechLevels.GetValueOrDefault(techid) ?? 0;
 
     [Native(Level.Close)]
     public bool GetPlayerTechResearched(player? whichPlayer, int techid, bool specificonly) => GetPlayerTechCount(whichPlayer, techid, specificonly) > 0;

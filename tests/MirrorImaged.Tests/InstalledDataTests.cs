@@ -160,6 +160,18 @@ public sealed class InstalledDataTests
         Assert.Equal(["Footman", "Apothecary", "Potion of Healing", "|cffffff00Dungeon Key|r", "Holy Light", "Item Hero Stat Bonus", "Iron Forged Swords", null, null],
             new[] { "hfoo", "fapo", "phea", "ckdk", "AHhb", "AA12", "Rhme", "Bdef", "LTlt" }.Select(id => data.Name(Id(id))));
     }
+
+    // probe units-more (D316): a unit's own name is unitui.slk's, a field 'name' items don't have; units come in
+    // unitdata.slk's order, so of two named paladin Hpal comes first, and of two archmages Hamg
+    [InstallFact]
+    public void Units_keep_their_own_names_in_the_tables_order()
+    {
+        Assert.Equal(["footman", "townhall", null], new[] { ("hfoo", ObjectKind.Unit), ("htow", ObjectKind.Unit), ("phea", ObjectKind.Item) }
+            .Select(o => Data.Object(o.Item2, Id(o.Item1))!.Text(Id("name"))));
+        var named = Data.Objects(ObjectKind.Unit).Where(o => o.Text(Id("name")) is "paladin" or "archmage").Select(o => o.Id).ToList();
+        Assert.Equal([Id("Hamg"), Id("Hpal")], named.Take(2));
+        Assert.True(named.IndexOf(Id("Hpal")) < named.IndexOf(Id("Hssa")));
+    }
 }
 
 /// <summary>A theory that reads the Warcraft III install on this computer; skipped when there is none.</summary>
