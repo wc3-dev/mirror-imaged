@@ -1,6 +1,6 @@
 **MirrorImaged** is headless Warcraft III: Reforged for automated testing.
 
-MirrorImaged loads `.w3x` archives (aka. maps), runs its script against C# copies of the game natives on a simulated clock, and lets tests give orders, input, read the state and check results. The copied game are built from in-game probing.
+MirrorImaged loads `.w3x` archives (aka. maps), runs the map script against C# copies of the game natives on a simulated clock, and lets tests give orders, input, read state and check outcomes. The copied game is built from in-game probing for which I have not standardized methodology yet.
 
 ## Progress `████░░░░░░░░░░░░░░░░` 20%
 
